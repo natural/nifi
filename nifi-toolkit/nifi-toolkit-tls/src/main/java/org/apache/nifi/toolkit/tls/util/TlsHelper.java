@@ -275,7 +275,7 @@ public class TlsHelper {
         return createKeyPairGenerator(algorithm, keySize).generateKeyPair();
     }
 
-    public static JcaPKCS10CertificationRequest generateCertificationRequest(String requestedDn, String domainAlternativeNames,
+    public static JcaPKCS10CertificationRequest generateCertificationRequest(String requestedDn, List<String> domainAlternativeNames,
                                                                              KeyPair keyPair, String signingAlgorithm) throws OperatorCreationException {
         JcaPKCS10CertificationRequestBuilder jcaPKCS10CertificationRequestBuilder = new JcaPKCS10CertificationRequestBuilder(new X500Name(requestedDn), keyPair.getPublic());
 
@@ -290,7 +290,7 @@ public class TlsHelper {
         return new JcaPKCS10CertificationRequest(jcaPKCS10CertificationRequestBuilder.build(jcaContentSignerBuilder.build(keyPair.getPrivate())));
     }
 
-    public static Extensions createDomainAlternativeNamesExtensions(String domainAlternativeNames, String requestedDn) throws IOException {
+    public static Extensions createDomainAlternativeNamesExtensions(List<String> domainAlternativeNames, String requestedDn) throws IOException {
         List<GeneralName> namesList = new ArrayList<>();
 
         try {
@@ -300,8 +300,8 @@ public class TlsHelper {
             throw new IOException("Failed to extract CN from request DN: " + requestedDn, e);
         }
 
-        if (StringUtils.isNotBlank(domainAlternativeNames)) {
-            for (String alternativeName : domainAlternativeNames.split(",")) {
+        if (domainAlternativeNames != null) {
+            for (String alternativeName : domainAlternativeNames) {
                 namesList.add(new GeneralName(GeneralName.dNSName, alternativeName));
             }
         }
