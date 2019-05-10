@@ -298,12 +298,12 @@ public class TlsToolkitStandaloneTest {
         Stream<InstanceIdentifier> hostIds = InstanceIdentifier.createIdentifiers(Arrays.stream(new String[]{nodeNames}));
         Stream<InstanceIdentifier> sansIds = InstanceIdentifier.createIdentifiers(Arrays.stream(new String[]{saNames}));
 
-        String[] cnHosts = hostIds.map(InstanceIdentifier::getHostname).toArray(String[]::new);
+        String[] nodeHosts = hostIds.map(InstanceIdentifier::getHostname).toArray(String[]::new);
         String[] sanHosts = sansIds.map(InstanceIdentifier::getHostname).toArray(String[]::new);
-        assertEquals(cnHosts.length, sanHosts.length);
+        assertEquals(nodeHosts.length, sanHosts.length);
 
-        for (int i = 0; i< cnHosts.length; i++) {
-            String host = cnHosts[i];
+        for (int i = 0; i< nodeHosts.length; i++) {
+            String host = nodeHosts[i];
             String san = sanHosts[i];
 
             Certificate[] certificateChain = loadCertificateChain(host, x509Certificate);
@@ -334,12 +334,12 @@ public class TlsToolkitStandaloneTest {
         Stream<InstanceIdentifier> hostIds = InstanceIdentifier.createIdentifiers(Arrays.stream(new String[]{nodeNames}));
         Stream<InstanceIdentifier> sansIds = InstanceIdentifier.createIdentifiers(Arrays.stream(new String[]{saNames}));
 
-        String[] cnHosts = hostIds.map(InstanceIdentifier::getHostname).toArray(String[]::new);
+        String[] nodeHosts = hostIds.map(InstanceIdentifier::getHostname).toArray(String[]::new);
         String[] sanHosts = sansIds.map(InstanceIdentifier::getHostname).toArray(String[]::new);
-        assertEquals(cnHosts.length, sanHosts.length);
+        assertEquals(nodeHosts.length, sanHosts.length);
 
-        for (int i = 0; i< cnHosts.length; i++) {
-            String host = cnHosts[i];
+        for (int i = 0; i< nodeHosts.length; i++) {
+            String host = nodeHosts[i];
             String san = sanHosts[i];
 
             Certificate[] certificateChain = loadCertificateChain(host, x509Certificate);
@@ -370,13 +370,13 @@ public class TlsToolkitStandaloneTest {
         Stream<InstanceIdentifier> hostIds = InstanceIdentifier.createIdentifiers(Arrays.stream(new String[]{nodeNames}));
         Stream<InstanceIdentifier> sansIds = InstanceIdentifier.createIdentifiers(Arrays.stream(new String[]{saNames}));
 
-        String[] cnHosts = hostIds.map(InstanceIdentifier::getHostname).toArray(String[]::new);
+        String[] nodeHosts = hostIds.map(InstanceIdentifier::getHostname).toArray(String[]::new);
         String[] sanHosts = sansIds.map(InstanceIdentifier::getHostname).toArray(String[]::new);
-        assertEquals(2, cnHosts.length);
+        assertEquals(2, nodeHosts.length);
         assertEquals(3, sanHosts.length);
 
-        for (int i = 0; i< cnHosts.length; i++) {
-            String host = cnHosts[i];
+        for (int i = 0; i< nodeHosts.length; i++) {
+            String host = nodeHosts[i];
 
             Certificate[] certificateChain = loadCertificateChain(host, x509Certificate);
             X509Certificate clientCert = (X509Certificate) certificateChain[0];
@@ -403,13 +403,13 @@ public class TlsToolkitStandaloneTest {
         Stream<InstanceIdentifier> hostIds = InstanceIdentifier.createIdentifiers(Arrays.stream(new String[]{nodeNames}));
         Stream<InstanceIdentifier> sansIds = InstanceIdentifier.createIdentifiers(Arrays.stream(new String[]{saNames}));
 
-        String[] cnHosts = hostIds.map(InstanceIdentifier::getHostname).toArray(String[]::new);
+        String[] nodeHosts = hostIds.map(InstanceIdentifier::getHostname).toArray(String[]::new);
         String[] sanHosts = sansIds.map(InstanceIdentifier::getHostname).toArray(String[]::new);
-        assertTrue(cnHosts.length > 0);
-        assertEquals(cnHosts.length, sanHosts.length);
+        assertTrue(nodeHosts.length > 0);
+        assertEquals(nodeHosts.length, sanHosts.length);
 
-        for (int i = 0; i< cnHosts.length; i++) {
-            String host = cnHosts[i];
+        for (int i = 0; i< nodeHosts.length; i++) {
+            String host = nodeHosts[i];
             String san = sanHosts[i];
 
             Certificate[] certificateChain = loadCertificateChain(host, x509Certificate);
@@ -429,7 +429,6 @@ public class TlsToolkitStandaloneTest {
         }
     }
 
-        // 9:25:08 $ ./bin/tls-toolkit.sh standalone -n node[1-2].nifi.apache.org --subjectAlternativeName alternative[A-B].nifi.apache.org
     @Test
     public void testDynamicHostnameDynamicSansNonNumeric() throws Exception {
         String nodeNames = "node[1-2].nifi.apache.org";
@@ -507,7 +506,7 @@ public class TlsToolkitStandaloneTest {
         return nifiProperties;
     }
 
-    private KeyStore getKeyStore(String clientDn) throws Exception {
+    private void checkClientCert(String clientDn, X509Certificate rootCert) throws Exception {
         String clientDnFile = TlsHelper.escapeFilename(CertificateUtils.reorderDn(clientDn));
         String password;
         try (FileReader fileReader = new FileReader(new File(tempDir, clientDnFile + ".password"))) {
@@ -520,11 +519,7 @@ public class TlsToolkitStandaloneTest {
         try (FileInputStream fileInputStream = new FileInputStream(new File(tempDir, clientDnFile + ".p12"))) {
             keyStore.load(fileInputStream, password.toCharArray());
         }
-        return keyStore;
-    }
 
-    private void checkClientCert(String clientDn, X509Certificate rootCert) throws Exception {
-        KeyStore keyStore = getKeyStore(clientDn);
         PrivateKey privateKey = (PrivateKey) keyStore.getKey(TlsToolkitStandalone.NIFI_KEY, new char[0]);
         Certificate[] certificateChain = keyStore.getCertificateChain(TlsToolkitStandalone.NIFI_KEY);
         assertEquals(2, certificateChain.length);
@@ -535,8 +530,6 @@ public class TlsToolkitStandaloneTest {
         TlsCertificateAuthorityTest.assertPrivateAndPublicKeyMatch(privateKey, publicKey);
 
     }
-
-    // private Certificate[]
 
     private Certificate[] loadCertificateChain(String hostname, X509Certificate rootCert) throws Exception {
         File hostDir = new File(tempDir, hostname);
