@@ -17,7 +17,6 @@
 
 package org.apache.nifi.toolkit.tls.util;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.security.util.CertificateUtils;
 import org.apache.nifi.toolkit.tls.configuration.TlsConfig;
 import org.bouncycastle.asn1.pkcs.Attribute;
