@@ -20,6 +20,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Reader;
 
 import java.lang.InterruptedException;
 
@@ -57,37 +58,38 @@ public class NssUserGroupProvider implements UserGroupProvider {
     private final static Logger logger = LoggerFactory.getLogger(NssUserGroupProvider.class);
 
     private enum Command {
-	LIST_USERS,
-	LIST_GROUPS,
-	READ_GROUP,
-	SYS_CHECK
-    }
+	USERS_LIST,    // list all users in the format "user1:uid1\nuser2:uid2"
+	USER_GROUPS,   // list group membership if the format "group1,group2,groupN"
 
-    private int shellTimeout = 10;
-    private Map<Command, String> runtimeCommands;
+	GROUPS_LIST,   // list all groups in the format "group1:gid1\ngroup2:gid2"
+	GROUP_MEMBERS, // list group members in the format "user1,user2,userN"
+
+	SYS_CHECK      // shell command to determine system suitability
+    }
 
     // This command set is selected for Linux hosts.  Its commands use
     // `getent`, which is part of the unix "Name Service Switch"
     // facility on Linux.
     private final static Map<Command, String> nssCommands = ImmutableMap.of(
-	    Command.LIST_GROUPS, "getent group    | cut -f 1,3,4 -d ':'",
-	    Command.LIST_USERS,  "getent passwd   | cut -f 1,3 -d ':'",
-	    Command.READ_GROUP,  "getent group %s | cut -f 4 -d ':'",
-	    Command.SYS_CHECK,   "which getent"
+	    Command.USERS_LIST,    "getent passwd   | cut -f 1,3 -d ':'",
+	    Command.USER_GROUPS,   "id -nG %s | sed s/\\ /,/g",
+
+	    Command.GROUPS_LIST,   "getent group    | cut -f 1,3 -d ':'",
+	    Command.GROUP_MEMBERS, "getent group %s | cut -f 4   -d ':'",
+
+	    Command.SYS_CHECK,     "which getent"
     );
 
     // This command set is selected for Mac OS X hosts.  Its commands
     // use `dscl` and `awk`.
     private final static Map<Command, String> dsclCommands = ImmutableMap.of(
-	    Command.LIST_GROUPS, "",
-	    
-	    Command.LIST_USERS,  "dscl . -readall /Users UniqueID PrimaryGroupID | " +
-				 "awk 'BEGIN {OFS = \":\"; i=0;} /RecordName: / {name = $2;i = 0;}/PrimaryGroupID: " +
-				 "/ {gid = $2;}  /^ / {if (i == 0) { i++; name = $1;}}  /UniqueID: / " +
-				 "{uid = $2;printf \"%s:%s\n\",name,uid;}' | grep -v ^_",
+	    Command.USERS_LIST,   "dscl . -list /Users  UniqueID | grep -v '^_' | sed 's/ \\{1,\\}/:/g'",
+	    Command.USER_GROUPS,  "id -nG %s | sed 's/\\ /,/g'",
 
-	    Command.READ_GROUP,  "id -nG %s | sed s/\\ /,/g",
-	Command.SYS_CHECK,  "which dscl"
+	    Command.GROUPS_LIST,   "dscl . -list /Groups    PrimaryGroupID  | grep -v '^_'     | sed 's/ \\{1,\\}/:/g'",
+	    Command.GROUP_MEMBERS, "dscl . -read /Groups/%s GroupMembership | cut -f 2- -d ' ' | sed 's/\\ /,/g'",
+
+	    Command.SYS_CHECK,     "which dscl"
     );
 
     private final static String OS_TYPE_ERROR = "Unsupported operating system.";
@@ -101,6 +103,13 @@ public class NssUserGroupProvider implements UserGroupProvider {
 
     // Our scheduler has one thread for users, one for groups:
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
+
+    // Our shell timeout, in seconds:
+    private int shellTimeout = 10;
+
+    // Commands selected during initialization:
+    private Map<Command, String> runtimeCommands;
+
 
     // Start of the UserGroupProvider implementation.  Docstrings
     // copied from the interface definition for reference.
@@ -129,7 +138,6 @@ public class NssUserGroupProvider implements UserGroupProvider {
     @Override
     public User getUser(String identifier) throws AuthorizationAccessException {
 	synchronized (usersById) {
-	    logger.info("getUser has usersById size: " + usersById.size() + " for user identifier: " + identifier);
 	    User user = usersById.get(identifier);
 	    logger.info("getUser has user: " + user);
 	    return user;
@@ -145,8 +153,7 @@ public class NssUserGroupProvider implements UserGroupProvider {
      */
     @Override
     public User getUserByIdentity(String identity) throws AuthorizationAccessException {
-	synchronized (usersById) {
-	    logger.info("getUserByIdentity has usersByName size: " + usersByName.size() + " for user identity: " + identity);
+	synchronized (usersByName) {
 	    User user = usersByName.get(identity);
 	    logger.info("getUserByIdentity has user: " + user);
 	    return user;
@@ -294,7 +301,7 @@ public class NssUserGroupProvider implements UserGroupProvider {
 	List<String> lines;
 
 	try {
-	    lines = runShell(runtimeCommands.get(Command.LIST_USERS));
+	    lines = runShell(runtimeCommands.get(Command.USERS_LIST));
 	} catch (final IOException ioexc)  {
 	    logger.error("refreshUsers shell exception: " + ioexc);
 	    return;
@@ -314,10 +321,11 @@ public class NssUserGroupProvider implements UserGroupProvider {
 	synchronized (usersById) {
 	    usersById.clear();
 	    usersById.putAll(byId);
+	}
 
+	synchronized (usersByName) {
 	    usersByName.clear();
 	    usersByName.putAll(byName);
-
 	    logger.info("refreshUsers users now size: " + usersByName.size());
 	}
     }
@@ -327,9 +335,9 @@ public class NssUserGroupProvider implements UserGroupProvider {
 	List<String> lines;
 
 	try {
-	    lines = runShell(runtimeCommands.get(Command.LIST_GROUPS));
+	    lines = runShell(runtimeCommands.get(Command.GROUPS_LIST));
 	} catch (final IOException ioexc) {
-	    logger.error("refreshGroups shell exception: " + ioexc);
+	    logger.error("refreshGroups list groups shell exception: " + ioexc);
 	    return;
 	}
 
@@ -337,11 +345,22 @@ public class NssUserGroupProvider implements UserGroupProvider {
 		String[] record = line.split(":");
 		if (record.length > 1) {
 		    Set<String> users = new HashSet<>();
-		    if (record.length > 2) {
-			users = Arrays.stream(record[2].split(",")).collect(Collectors.toSet());
+		    String groupName = record[0], groupId = record[1];
+
+		    try {
+			List<String> userLines = runShell(String.format(
+									runtimeCommands.get(Command.GROUP_MEMBERS),
+									groupName
+									));
+			if (userLines.size() > 0) {
+			    users.addAll(Arrays.asList(userLines.get(0).split(":")));
+			}
+		    } catch (final IOException ioexc) {
+			logger.error("refreshGroups list membership shell exception: " + ioexc);
+
 		    }
-		    Group group = new Group.Builder().name(record[0]).identifier(record[1]).addUsers(users).build();
-		    groups.put(record[1], group);
+		    Group group = new Group.Builder().name(groupName).identifier(groupId).addUsers(users).build();
+		    groups.put(groupId, group);
 		}
 	    });
 
@@ -367,8 +386,8 @@ public class NssUserGroupProvider implements UserGroupProvider {
 	    throw new IOException("Command exit non-zero: " + proc.exitValue());
 	}
 
-	try (final InputStream stdin = proc.getInputStream();
-	     final BufferedReader reader = new BufferedReader(new InputStreamReader(stdin))) {
+	try (final Reader stdin = new InputStreamReader(proc.getInputStream());
+	     final BufferedReader reader = new BufferedReader(stdin)) {
 	    String line;
 	    while ((line = reader.readLine()) != null) {
 		lines.add(line.trim());
