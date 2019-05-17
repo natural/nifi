@@ -17,6 +17,7 @@
 package org.apache.nifi.authorization;
 
 import org.apache.nifi.attribute.expression.language.StandardPropertyValue;
+import org.apache.nifi.authorization.AuthorizerConfigurationContext;
 import org.apache.nifi.authorization.exception.AuthorizerCreationException;
 import org.apache.nifi.components.PropertyValue;
 import org.apache.nifi.util.NiFiProperties;
@@ -47,44 +48,39 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class NssUserGroupProviderTest {
-    private NiFiProperties properties;
-    private NssUserGroupProvider userGroupProvider;
+    private NssUserGroupProvider nssProvider;
     private File primaryTenants;
     private File restoreTenants;
-    private AuthorizerConfigurationContext configurationContext;
+    private AuthorizerConfigurationContext authContext;
+    private UserGroupProviderInitializationContext initContext;
+
     
-    private String KNOWN_USER = "root";
-    private String KNOWN_UID = "0";
+    private final String KNOWN_USER = "root";
+    private final String KNOWN_UID = "0";
     
-    private String KNOWN_GROUP = "root";
-    private String KNOWN_GID = "0";
-    
+    private final String KNOWN_GROUP = "root";
+    private final String KNOWN_GID = "0";
 
     @Before
     public void setup() throws IOException {
-        properties = mock(NiFiProperties.class);
-        configurationContext = mock(AuthorizerConfigurationContext.class);
-        userGroupProvider = new NssUserGroupProvider();
-        userGroupProvider.initialize(null);
-	try {
-	    Thread.sleep(1000);
-	} catch (final InterruptedException iexc) {
-	    throw new IOException(iexc.getMessage(), iexc.getCause());
-	}
+        authContext = mock(AuthorizerConfigurationContext.class);
+	initContext = mock(UserGroupProviderInitializationContext.class);
+	
+        nssProvider = new NssUserGroupProvider();
+        nssProvider.initialize(initContext);
+	nssProvider.onConfigured(authContext);
     }
 
     @Test
     public void testNssUsers() throws Exception {
-	Set<User> users = userGroupProvider.getUsers();
+	Set<User> users = nssProvider.getUsers();
 	assertNotNull(users);
 	assertTrue(users.size() > 0);
     }
     
     @Test
     public void testNssUserByIdentifier() throws Exception {
-	User root;
-	
-	root = userGroupProvider.getUser(KNOWN_UID);
+	User root = nssProvider.getUser(KNOWN_UID);
 	assertNotNull(root);
 	assertEquals(KNOWN_USER, root.getIdentity());
 	assertEquals(KNOWN_UID, root.getIdentifier());	
@@ -92,9 +88,7 @@ public class NssUserGroupProviderTest {
     
     @Test
     public void testNssUserByIdentity() throws Exception {
-	User root;
-	
-	root = userGroupProvider.getUserByIdentity(KNOWN_USER);
+	User root = nssProvider.getUserByIdentity(KNOWN_USER);
 	assertNotNull(root);
 	assertEquals(KNOWN_USER, root.getIdentity());
 	assertEquals(KNOWN_UID, root.getIdentifier());	
@@ -102,52 +96,48 @@ public class NssUserGroupProviderTest {
     
     @Test
     public void testNssGroups() throws Exception {
-	Set<Group> groups;
-	
-	groups = userGroupProvider.getGroups();
+	Set<Group> groups = nssProvider.getGroups();
 	assertNotNull(groups);
 	assertTrue(groups.size() > 0);
 	    
-	Group root;
-	
-	root = userGroupProvider.getGroup(KNOWN_GID);
+	Group root = nssProvider.getGroup(KNOWN_GID);
 	assertNotNull(root);
 	assertEquals(KNOWN_GROUP, root.getName());
 	assertEquals(KNOWN_GID, root.getIdentifier());
 	    
-	// bin = userGroupProvider.getGroups();
+	// bin = nssProvider.getGroups();
 	
 	// throw new Exception("HOW THERE PARDDER");
         // when(configurationContext.getProperty(eq(FileAuthorizer.PROP_LEGACY_AUTHORIZED_USERS_FILE)))
         //         .thenReturn(new StandardPropertyValue("src/test/resources/authorized-users.xml", null));
 
         // writeFile(primaryTenants, EMPTY_TENANTS_CONCISE);
-        // userGroupProvider.onConfigured(configurationContext);
+        // nssProvider.onConfigured(configurationContext);
 
         // // verify all users got created correctly
-        // final Set<User> users = userGroupProvider.getUsers();
+        // final Set<User> users = nssProvider.getUsers();
         // assertEquals(6, users.size());
 
-        // final User user1 = userGroupProvider.getUserByIdentity("user1");
+        // final User user1 = nssProvider.getUserByIdentity("user1");
         // assertNotNull(user1);
 
-        // final User user2 = userGroupProvider.getUserByIdentity("user2");
+        // final User user2 = nssProvider.getUserByIdentity("user2");
         // assertNotNull(user2);
 
-        // final User user3 = userGroupProvider.getUserByIdentity("user3");
+        // final User user3 = nssProvider.getUserByIdentity("user3");
         // assertNotNull(user3);
 
-        // final User user4 = userGroupProvider.getUserByIdentity("user4");
+        // final User user4 = nssProvider.getUserByIdentity("user4");
         // assertNotNull(user4);
 
-        // final User user5 = userGroupProvider.getUserByIdentity("user5");
+        // final User user5 = nssProvider.getUserByIdentity("user5");
         // assertNotNull(user5);
 
-        // final User user6 = userGroupProvider.getUserByIdentity("user6");
+        // final User user6 = nssProvider.getUserByIdentity("user6");
         // assertNotNull(user6);
 
         // // verify one group got created
-        // final Set<Group> groups = userGroupProvider.getGroups();
+        // final Set<Group> groups = nssProvider.getGroups();
         // assertEquals(1, groups.size());
         // final Group group1 = groups.iterator().next();
         // assertEquals("group1", group1.getName());
