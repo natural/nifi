@@ -54,60 +54,60 @@ public class NssUserGroupProviderTest {
     private AuthorizerConfigurationContext authContext;
     private UserGroupProviderInitializationContext initContext;
 
-    
+
     private final String KNOWN_USER = "root";
     private final String KNOWN_UID = "0";
-    
+
     private final String KNOWN_GROUP = "root";
+    private final String KNOWN_GROUP_ALT = "wheel"; // on macos
     private final String KNOWN_GID = "0";
 
     @Before
     public void setup() throws IOException {
         authContext = mock(AuthorizerConfigurationContext.class);
-	initContext = mock(UserGroupProviderInitializationContext.class);
-	
+        initContext = mock(UserGroupProviderInitializationContext.class);
+
         nssProvider = new NssUserGroupProvider();
         nssProvider.initialize(initContext);
-	nssProvider.onConfigured(authContext);
+        nssProvider.onConfigured(authContext);
     }
 
     @Test
     public void testNssUsers() throws Exception {
-	Set<User> users = nssProvider.getUsers();
-	assertNotNull(users);
-	assertTrue(users.size() > 0);
+        Set<User> users = nssProvider.getUsers();
+        assertNotNull(users);
+        assertTrue(users.size() > 0);
     }
-    
+
     @Test
     public void testNssUserByIdentifier() throws Exception {
-	User root = nssProvider.getUser(KNOWN_UID);
-	assertNotNull(root);
-	assertEquals(KNOWN_USER, root.getIdentity());
-	assertEquals(KNOWN_UID, root.getIdentifier());	
+        User root = nssProvider.getUser(KNOWN_UID);
+        assertNotNull(root);
+        assertEquals(KNOWN_USER, root.getIdentity());
+        assertEquals(KNOWN_UID, root.getIdentifier());
     }
-    
+
     @Test
     public void testNssUserByIdentity() throws Exception {
-	User root = nssProvider.getUserByIdentity(KNOWN_USER);
-	assertNotNull(root);
-	assertEquals(KNOWN_USER, root.getIdentity());
-	assertEquals(KNOWN_UID, root.getIdentifier());	
+        User root = nssProvider.getUserByIdentity(KNOWN_USER);
+        assertNotNull(root);
+        assertEquals(KNOWN_USER, root.getIdentity());
+        assertEquals(KNOWN_UID, root.getIdentifier());
     }
-    
+
     @Test
     public void testNssGroups() throws Exception {
-	Set<Group> groups = nssProvider.getGroups();
-	assertNotNull(groups);
-	assertTrue(groups.size() > 0);
-	    
-	Group root = nssProvider.getGroup(KNOWN_GID);
-	assertNotNull(root);
-	assertEquals(KNOWN_GROUP, root.getName());
-	assertEquals(KNOWN_GID, root.getIdentifier());
-	    
-	// bin = nssProvider.getGroups();
-	
-	// throw new Exception("HOW THERE PARDDER");
+        Set<Group> groups = nssProvider.getGroups();
+        assertNotNull(groups);
+        assertTrue(groups.size() > 0);
+
+        Group root = nssProvider.getGroup(KNOWN_GID);
+        assertNotNull(root);
+        assertTrue(root.getName().equals(KNOWN_GROUP) || root.getName().equals(KNOWN_GROUP_ALT));
+        assertEquals(KNOWN_GID, root.getIdentifier());
+
+        // bin = nssProvider.getGroups();
+
         // when(configurationContext.getProperty(eq(FileAuthorizer.PROP_LEGACY_AUTHORIZED_USERS_FILE)))
         //         .thenReturn(new StandardPropertyValue("src/test/resources/authorized-users.xml", null));
 
