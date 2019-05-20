@@ -16,9 +16,10 @@
  */
 package org.apache.nifi.authorization;
 
+import com.google.common.collect.ImmutableMap;
+
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 
@@ -31,15 +32,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ScheduledExecutorService;
-
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import org.apache.nifi.authorization.exception.AuthorizationAccessException;
 import org.apache.nifi.authorization.exception.AuthorizerCreationException;
@@ -47,8 +42,6 @@ import org.apache.nifi.authorization.exception.AuthorizerDestructionException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableMap;
 
 
 /*
@@ -58,38 +51,38 @@ public class NssUserGroupProvider implements UserGroupProvider {
     private final static Logger logger = LoggerFactory.getLogger(NssUserGroupProvider.class);
 
     private enum Command {
-	USERS_LIST,    // list all users in the format "user1:uid1\nuser2:uid2"
-	USER_GROUPS,   // list group membership if the format "group1,group2,groupN"
+        USERS_LIST,    // list all users in the format "user1:uid1\nuser2:uid2"
+        USER_GROUPS,   // list group membership if the format "group1,group2,groupN"
 
-	GROUPS_LIST,   // list all groups in the format "group1:gid1\ngroup2:gid2"
-	GROUP_MEMBERS, // list group members in the format "user1,user2,userN"
+        GROUPS_LIST,   // list all groups in the format "group1:gid1\ngroup2:gid2"
+        GROUP_MEMBERS, // list group members in the format "user1,user2,userN"
 
-	SYS_CHECK      // shell command to determine system suitability
+        SYS_CHECK      // shell command to determine system suitability
     }
 
     // This command set is selected for Linux hosts.  Its commands use
     // `getent`, which is part of the unix "Name Service Switch"
     // facility on Linux.
     private final static Map<Command, String> nssCommands = ImmutableMap.of(
-	    Command.USERS_LIST,    "getent passwd   | cut -f 1,3 -d ':'",
-	    Command.USER_GROUPS,   "id -nG %s | sed s/\\ /,/g",
+            Command.USERS_LIST,    "getent passwd   | cut -f 1,3 -d ':'",
+            Command.USER_GROUPS,   "id -nG %s | sed s/\\ /,/g",
 
-	    Command.GROUPS_LIST,   "getent group    | cut -f 1,3 -d ':'",
-	    Command.GROUP_MEMBERS, "getent group %s | cut -f 4   -d ':'",
+            Command.GROUPS_LIST,   "getent group    | cut -f 1,3 -d ':'",
+            Command.GROUP_MEMBERS, "getent group %s | cut -f 4   -d ':'",
 
-	    Command.SYS_CHECK,     "which getent"
+            Command.SYS_CHECK,     "which getent"
     );
 
     // This command set is selected for Mac OS X hosts.  Its commands
     // use `dscl` and `awk`.
     private final static Map<Command, String> dsclCommands = ImmutableMap.of(
-	    Command.USERS_LIST,   "dscl . -list /Users  UniqueID | grep -v '^_' | sed 's/ \\{1,\\}/:/g'",
-	    Command.USER_GROUPS,  "id -nG %s | sed 's/\\ /,/g'",
+            Command.USERS_LIST,    "dscl . -list /Users  UniqueID | grep -v '^_' | sed 's/ \\{1,\\}/:/g'",
+            Command.USER_GROUPS,   "id -nG %s | sed 's/\\ /,/g'",
 
-	    Command.GROUPS_LIST,   "dscl . -list /Groups    PrimaryGroupID  | grep -v '^_'     | sed 's/ \\{1,\\}/:/g'",
-	    Command.GROUP_MEMBERS, "dscl . -read /Groups/%s GroupMembership | cut -f 2- -d ' ' | sed 's/\\ /,/g'",
+            Command.GROUPS_LIST,   "dscl . -list /Groups    PrimaryGroupID  | grep -v '^_'     | sed 's/ \\{1,\\}/:/g'",
+            Command.GROUP_MEMBERS, "dscl . -read /Groups/%s GroupMembership | cut -f 2- -d ' ' | sed 's/\\ /,/g'",
 
-	    Command.SYS_CHECK,     "which dscl"
+            Command.SYS_CHECK,     "which dscl"
     );
 
     private final static String OS_TYPE_ERROR = "Unsupported operating system.";
@@ -122,10 +115,10 @@ public class NssUserGroupProvider implements UserGroupProvider {
      */
     @Override
     public Set<User> getUsers() throws AuthorizationAccessException {
-	synchronized (usersById) {
-	    logger.info("getUsers has user set of size: " + usersById.size());
-	    return new HashSet<User>(usersById.values());
-	}
+        synchronized (usersById) {
+            logger.info("getUsers has user set of size: " + usersById.size());
+            return new HashSet<User>(usersById.values());
+        }
     }
 
     /**
@@ -137,11 +130,11 @@ public class NssUserGroupProvider implements UserGroupProvider {
      */
     @Override
     public User getUser(String identifier) throws AuthorizationAccessException {
-	synchronized (usersById) {
-	    User user = usersById.get(identifier);
-	    logger.info("getUser has user: " + user);
-	    return user;
-	}
+        synchronized (usersById) {
+            User user = usersById.get(identifier);
+            logger.info("getUser has user: " + user);
+            return user;
+        }
     }
 
     /**
@@ -153,11 +146,11 @@ public class NssUserGroupProvider implements UserGroupProvider {
      */
     @Override
     public User getUserByIdentity(String identity) throws AuthorizationAccessException {
-	synchronized (usersByName) {
-	    User user = usersByName.get(identity);
-	    logger.info("getUserByIdentity has user: " + user);
-	    return user;
-	}
+        synchronized (usersByName) {
+            User user = usersByName.get(identity);
+            logger.info("getUserByIdentity has user: " + user);
+            return user;
+        }
     }
 
     /**
@@ -168,10 +161,10 @@ public class NssUserGroupProvider implements UserGroupProvider {
      */
     @Override
     public Set<Group> getGroups() throws AuthorizationAccessException {
-	synchronized (groupsById) {
-	    logger.info("getGroups has group set of size: " + groupsById.size());
-	    return new HashSet<Group>(groupsById.values());
-	}
+        synchronized (groupsById) {
+            logger.info("getGroups has group set of size: " + groupsById.size());
+            return new HashSet<Group>(groupsById.values());
+        }
     }
 
     /**
@@ -183,11 +176,11 @@ public class NssUserGroupProvider implements UserGroupProvider {
      */
     @Override
     public Group getGroup(String identifier) throws AuthorizationAccessException {
-	synchronized (groupsById) {
-	    Group group = groupsById.get(identifier);
-	    logger.info("getGroup has group: " + group);
-	    return group;
-	}
+        synchronized (groupsById) {
+            Group group = groupsById.get(identifier);
+            logger.info("getGroup has group: " + group);
+            return group;
+        }
     }
 
     /**
@@ -199,20 +192,26 @@ public class NssUserGroupProvider implements UserGroupProvider {
      */
     @Override
     public UserAndGroups getUserAndGroups(String identity) throws AuthorizationAccessException {
-	User user = getUser(identity);
-	Set<Group> groups = getGroups(); // WRONG
+        User user = getUser(identity);
+        Set<Group> groups = new HashSet<>();
 
-	return new UserAndGroups() {
-	    @Override
-	    public User getUser() {
-		return user;
-	    }
+        for (Group g: getGroups()) {
+            if (g.getUsers().contains(user.getIdentity())) {
+                groups.add(g);
+            }
+        }
 
-	    @Override
-	    public Set<Group> getGroups() {
-		return groups;
-	    }
-	};
+        return new UserAndGroups() {
+            @Override
+            public User getUser() {
+                return user;
+            }
+
+            @Override
+            public Set<Group> getGroups() {
+                return groups;
+            }
+        };
     }
 
     /**
@@ -222,32 +221,32 @@ public class NssUserGroupProvider implements UserGroupProvider {
      */
     @Override
     public void initialize(UserGroupProviderInitializationContext initializationContext) throws AuthorizerCreationException {
-	// Our first init step is to select the command set based on the
-	// operating system name:
-	final String hostType = System.getProperty("os.name");
+        // Our first init step is to select the command set based on the
+        // operating system name:
+        final String hostType = System.getProperty("os.name");
 
-	if (hostType.startsWith("Linux")) {
-	    runtimeCommands = nssCommands;
-	} else if (hostType.startsWith("Mac OS X")) {
-	    runtimeCommands = dsclCommands;
-	} else {
-	    throw new AuthorizerCreationException(OS_TYPE_ERROR);
-	}
+        if (hostType.startsWith("Linux")) {
+            runtimeCommands = nssCommands;
+        } else if (hostType.startsWith("Mac OS X")) {
+            runtimeCommands = dsclCommands;
+        } else {
+            throw new AuthorizerCreationException(OS_TYPE_ERROR);
+        }
 
-	// Our second init step is to run the SYS_CHECK command from that
-	// command set to determine if the other commands will work on
-	// this host or not.
-	try {
-	    runShell(runtimeCommands.get(Command.SYS_CHECK));
-	} catch (final IOException ioexc) {
-	    logger.error("initialize exception: " + ioexc);
-	    throw new AuthorizerCreationException(SYS_CHECK_ERROR, ioexc.getCause());
-	}
+        // Our second init step is to run the SYS_CHECK command from that
+        // command set to determine if the other commands will work on
+        // this host or not.
+        try {
+            runShell(runtimeCommands.get(Command.SYS_CHECK));
+        } catch (final IOException ioexc) {
+            logger.error("initialize exception: " + ioexc);
+            throw new AuthorizerCreationException(SYS_CHECK_ERROR, ioexc.getCause());
+        }
 
-	// With our command set selected, and our system check passed,
-	// we can pull in the users and groups:
-	refreshUsers();
-	refreshGroups();
+        // With our command set selected, and our system check passed,
+        // we can pull in the users and groups:
+        refreshUsers();
+        refreshGroups();
     }
 
     /**
@@ -258,26 +257,26 @@ public class NssUserGroupProvider implements UserGroupProvider {
      */
     @Override
     public void onConfigured(AuthorizerConfigurationContext configurationContext) throws AuthorizerCreationException {
-	// Our last init step is to fire off the refresh threads per
-	// the context:
-	int initialDelay = 0, fixedDelay = 30;
-	Runnable users = new Runnable () {
-		@Override
-		public void run() {
-		    refreshUsers();
-		}
-	    },
+        // Our last init step is to fire off the refresh threads per
+        // the context:
+        int initialDelay = 0, fixedDelay = 30;
+        Runnable users = new Runnable () {
+                @Override
+                public void run() {
+                    refreshUsers();
+                }
+            },
 
-	    groups = new Runnable () {
-		@Override
-		public void run() {
-		    refreshGroups();
-		}
-	    };
+            groups = new Runnable () {
+                @Override
+                public void run() {
+                    refreshGroups();
+                }
+            };
 
-	// configurationContext.getProperty(PROP_USER_GROUP_REFRESH)
-	scheduler.scheduleWithFixedDelay(users, initialDelay, fixedDelay, TimeUnit.SECONDS);
-	scheduler.scheduleWithFixedDelay(groups, initialDelay, fixedDelay, TimeUnit.SECONDS);
+        // configurationContext.getProperty(PROP_USER_GROUP_REFRESH)
+        scheduler.scheduleWithFixedDelay(users, initialDelay, fixedDelay, TimeUnit.SECONDS);
+        scheduler.scheduleWithFixedDelay(groups, initialDelay, fixedDelay, TimeUnit.SECONDS);
     }
 
     /**
@@ -287,113 +286,110 @@ public class NssUserGroupProvider implements UserGroupProvider {
      */
     @Override
     public void preDestruction() throws AuthorizerDestructionException {
-	try {
-	    scheduler.shutdownNow();
-	} catch (final Exception exc) {
-	}
+        try {
+            scheduler.shutdownNow();
+        } catch (final Exception exc) {
+        }
     }
 
     // End of the UserGroupProvider implementation.
 
     private void refreshUsers() {
-	Map<String, User> byId = new HashMap<>();
-	Map<String, User> byName = new HashMap<>();
-	List<String> lines;
+        Map<String, User> byId = new HashMap<>();
+        Map<String, User> byName = new HashMap<>();
+        List<String> lines;
 
-	try {
-	    lines = runShell(runtimeCommands.get(Command.USERS_LIST));
-	} catch (final IOException ioexc)  {
-	    logger.error("refreshUsers shell exception: " + ioexc);
-	    return;
-	}
+        try {
+            lines = runShell(runtimeCommands.get(Command.USERS_LIST));
+        } catch (final IOException ioexc)  {
+            logger.error("refreshUsers shell exception: " + ioexc);
+            return;
+        }
 
-	lines.forEach(line -> {
-		String[] record = line.split(":");
-		if (record.length > 1) {
-		    String name = record[0],
-			id = record[1];
-		    User user = new User.Builder().identity(name).identifier(id).build();
-		    byId.put(id, user);
-		    byName.put(name, user);
-		}
-	    });
+        lines.forEach(line -> {
+                String[] record = line.split(":");
+                if (record.length > 1) {
+                    String name = record[0],
+                        id = record[1];
+                    User user = new User.Builder().identity(name).identifier(id).build();
+                    byId.put(id, user);
+                    byName.put(name, user);
+                }
+            });
 
-	synchronized (usersById) {
-	    usersById.clear();
-	    usersById.putAll(byId);
-	}
+        synchronized (usersById) {
+            usersById.clear();
+            usersById.putAll(byId);
+        }
 
-	synchronized (usersByName) {
-	    usersByName.clear();
-	    usersByName.putAll(byName);
-	    logger.info("refreshUsers users now size: " + usersByName.size());
-	}
+        synchronized (usersByName) {
+            usersByName.clear();
+            usersByName.putAll(byName);
+            logger.info("refreshUsers users now size: " + usersByName.size());
+        }
     }
 
     private void refreshGroups() {
-	Map<String, Group> groups = new HashMap<>();
-	List<String> lines;
+        Map<String, Group> groups = new HashMap<>();
+        List<String> lines;
 
-	try {
-	    lines = runShell(runtimeCommands.get(Command.GROUPS_LIST));
-	} catch (final IOException ioexc) {
-	    logger.error("refreshGroups list groups shell exception: " + ioexc);
-	    return;
-	}
+        try {
+            lines = runShell(runtimeCommands.get(Command.GROUPS_LIST));
+        } catch (final IOException ioexc) {
+            logger.error("refreshGroups list groups shell exception: " + ioexc);
+            return;
+        }
 
-	lines.forEach(line -> {
-		String[] record = line.split(":");
-		if (record.length > 1) {
-		    Set<String> users = new HashSet<>();
-		    String groupName = record[0], groupId = record[1];
+        lines.forEach(line -> {
+                String[] record = line.split(":");
+                if (record.length > 1) {
+                    Set<String> users = new HashSet<>();
+                    String groupName = record[0], groupId = record[1];
 
-		    try {
-			List<String> userLines = runShell(String.format(
-									runtimeCommands.get(Command.GROUP_MEMBERS),
-									groupName
-									));
-			if (userLines.size() > 0) {
-			    users.addAll(Arrays.asList(userLines.get(0).split(":")));
-			}
-		    } catch (final IOException ioexc) {
-			logger.error("refreshGroups list membership shell exception: " + ioexc);
+                    try {
+                        List<String> userLines = runShell(String.format(runtimeCommands.get(Command.GROUP_MEMBERS), groupName));
+                        if (userLines.size() > 0) {
+                            users.addAll(Arrays.asList(userLines.get(0).split(",")));
+                        }
+                    } catch (final IOException ioexc) {
+                        logger.error("refreshGroups list membership shell exception: " + ioexc);
 
-		    }
-		    Group group = new Group.Builder().name(groupName).identifier(groupId).addUsers(users).build();
-		    groups.put(groupId, group);
-		}
-	    });
+                    }
+                    Group group = new Group.Builder().name(groupName).identifier(groupId).addUsers(users).build();
+                    groups.put(groupId, group);
+                }
+            });
 
-	synchronized (groupsById) {
-	    groupsById.clear();
-	    groupsById.putAll(groups);
-	    logger.info("refreshGroups groups now size: " + groupsById.size());
-	}
+        synchronized (groupsById) {
+            groupsById.clear();
+            groupsById.putAll(groups);
+            logger.info("refreshGroups groups now size: " + groupsById.size());
+        }
     }
 
     private List<String> runShell(String command) throws IOException {
-	final ProcessBuilder builder = new ProcessBuilder(new String[]{"bash", "-c", command});
-	final Process proc = builder.start();
-	final List<String> lines = new ArrayList<>();
+        final ProcessBuilder builder = new ProcessBuilder(new String[]{"bash", "-c", command});
+        final Process proc = builder.start();
+        final List<String> lines = new ArrayList<>();
 
-	try {
-	    proc.waitFor(shellTimeout, TimeUnit.SECONDS);
-	} catch (InterruptedException irexc) {
-	    throw new IOException(irexc.getMessage(), irexc.getCause());
-	}
+        try {
+            proc.waitFor(shellTimeout, TimeUnit.SECONDS);
+        } catch (InterruptedException irexc) {
+            throw new IOException(irexc.getMessage(), irexc.getCause());
+        }
 
-	if (proc.exitValue() != 0) {
-	    throw new IOException("Command exit non-zero: " + proc.exitValue());
-	}
+        if (proc.exitValue() != 0) {
+            throw new IOException("Command exit non-zero: " + proc.exitValue());
+        }
 
-	try (final Reader stdin = new InputStreamReader(proc.getInputStream());
-	     final BufferedReader reader = new BufferedReader(stdin)) {
-	    String line;
-	    while ((line = reader.readLine()) != null) {
-		lines.add(line.trim());
-	    }
-	}
+        try (final Reader stdin = new InputStreamReader(proc.getInputStream());
+             final BufferedReader reader = new BufferedReader(stdin)) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                lines.add(line.trim());
+            }
+        }
 
-	return lines;
+        return lines;
     }
 }
