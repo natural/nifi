@@ -49,11 +49,16 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import org.junit.rules.TemporaryFolder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.BindMode;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.utility.MountableFile;
 
 
 public class NssUserGroupProviderTest {
+    public static final Logger logger = LoggerFactory.getLogger(NssUserGroupProviderTest.class);
+    
     private ClassLoader classLoader;
     
     private NssUserGroupProvider shellProvider;
@@ -84,7 +89,6 @@ public class NssUserGroupProviderTest {
         // purposely not initialized
     }
 
-    //@Ignore
     @Test
     public void testGetUsers() throws Exception {
         Set<User> users = shellProvider.getUsers();
@@ -92,7 +96,6 @@ public class NssUserGroupProviderTest {
         assertTrue(users.size() > 0);
     }
 
-    //@Ignore    
     @Test
     public void testGetUser() throws Exception {
         User root = shellProvider.getUser(KNOWN_UID);
@@ -101,7 +104,6 @@ public class NssUserGroupProviderTest {
         assertEquals(KNOWN_UID, root.getIdentifier());
     }
 
-    //@Ignore    
     @Test
     public void testGetUserByIdentity() throws Exception {
         User root = shellProvider.getUserByIdentity(KNOWN_USER);
@@ -110,7 +112,6 @@ public class NssUserGroupProviderTest {
         assertEquals(KNOWN_UID, root.getIdentifier());
     }
 
-    //@Ignore    
     @Test
     public void testGetGroups() throws Exception {
         Set<Group> groups = shellProvider.getGroups();
@@ -118,7 +119,6 @@ public class NssUserGroupProviderTest {
         assertTrue(groups.size() > 0);
     }
 
-    //@Ignore        
     @Test
     public void testGetGroup() throws Exception {
         Group group = shellProvider.getGroup(KNOWN_GID);
@@ -127,7 +127,6 @@ public class NssUserGroupProviderTest {
         assertEquals(KNOWN_GID, group.getIdentifier());
     }
 
-    //@Ignore        
     @Test
     public void testGroupMembership() throws Exception {
         Group group = shellProvider.getGroup(KNOWN_GID);
@@ -136,7 +135,6 @@ public class NssUserGroupProviderTest {
         assertTrue(group.getUsers().contains(KNOWN_USER));
     }
 
-    //@Ignore        
     @Test
     public void testGetUserAndGroups() throws Exception {
         UserAndGroups principal = shellProvider.getUserAndGroups(KNOWN_UID);
@@ -147,64 +145,61 @@ public class NssUserGroupProviderTest {
         assertTrue(groups.size() > principal.getGroups().size());
     }
     
-    public final static List<String> IMAGES = Arrays.asList("panubo/sshd:latest",
-                                                            "natural/centos-sshd:latest",
-                                                            "natural/debian-sshd:latest");
-    
-    public final static String SSH_KEY_PUB = "ssh-keys/test_id_rsa.pub";
-    public final static String SSH_KEY_PRV = "ssh-keys/test_id_rsa";
-    public final static String AUTH_KEYS_PATH = "/root/.ssh/authorized_keys";
+    public final static List<String> imageNames = Arrays.asList("panubo/sshd:latest",
+                                                                "natural/centos-sshd:latest",
+                                                                "natural/debian-sshd:latest",
+                                                                "natural/ubuntu-sshd:latest"
+                                                                );
+    public final static String CONTAINER_SSH_AUTH_KEYS = "/root/.ssh/authorized_keys";
+    public final static Integer CONTAINER_SSH_PORT = 22;
+
+    // Carefully crafted command replacement string:
+    public final static String remoteCommand = "ssh " +
+        "-o 'StrictHostKeyChecking no' " + 
+        "-o 'PasswordAuthentication no' " +
+        "-o \"RemoteCommand %s\" " + 
+        "-i %s -p %s -l root %s";
     
     @Rule
     public TemporaryFolder tempFolder = new TemporaryFolder();
     
     @Test
     public void testCheckAlpineImage() throws Exception {
-        // Carefully crafted command replacement string:
-        final String remoteCommand = "ssh " +
-            "-o 'StrictHostKeyChecking no' " + 
-            "-o 'PasswordAuthentication no' " +
-            "-o \"RemoteCommand %s\" " + 
-            "-i %s -p %s -l root %s";
+        final String randoSshPrivKeyFile = tempFolder.getRoot().getAbsolutePath() + "/id_rsa";
+        final String randoSshPubKeyFile = randoSshPrivKeyFile + ".pub";
 
-        // Copy the private key to the file system and set it readable
-        // to us only, because the ssh client requires that:
-        final File tempFile = tempFolder.newFile();
-        assertTrue(tempFile.setReadable(false, false));
-        assertTrue(tempFile.setReadable(true));
+        shellProvider.runShell("yes | ssh-keygen -C '' -N '' -t rsa -f " + randoSshPrivKeyFile);
         
-        try (final InputStream stream = classLoader.getResourceAsStream(SSH_KEY_PRV);
-             final FileWriter writer = new FileWriter(tempFile);
-             final InputStreamReader reader = new InputStreamReader(stream)) {
-            
-            char[] buffer = new char[8 * 1024];
-            int bytesRead;
-            while ((bytesRead = reader.read(buffer)) != -1) {
-                writer.write(buffer, 0, bytesRead);
-            }
-        }
-
-        // 
+        Arrays.asList(randoSshPrivKeyFile, randoSshPubKeyFile).forEach(name -> {
+                final File f = new File(name);
+                assertTrue(f.setReadable(false, false));
+                assertTrue(f.setReadable(true));
+            });
+        
         final Map<NssUserGroupProvider.Command, String> nssCommands = shellProvider.getCommands();
-        final String keyPath = tempFile.getAbsolutePath();        
-        
-        IMAGES.forEach(image -> {
+
+        imageNames.forEach(image -> {
                 GenericContainer container = new GenericContainer(image)
                     .withEnv("SSH_ENABLE_ROOT", "true")
-                    .withExposedPorts(22)
-                    .withClasspathResourceMapping(SSH_KEY_PUB, AUTH_KEYS_PATH, BindMode.READ_WRITE);
-
-                container.start();
-                
+                    .withExposedPorts(CONTAINER_SSH_PORT);
+            container.start();
+            try {
+                container.execInContainer("mkdir", "-p", "/root/.ssh");
+            }
+            catch (final Exception e) {
+                logger.error("error: " + e);
+                return;
+            }
+            container.copyFileToContainer(MountableFile.forHostPath(randoSshPubKeyFile),  CONTAINER_SSH_AUTH_KEYS);
             String containerIP = container.getContainerIpAddress();
-            Integer containerPort = container.getMappedPort(22);
+            Integer containerPort = container.getMappedPort(CONTAINER_SSH_PORT);
             Map<NssUserGroupProvider.Command, String> remoteCommands = new HashMap<>();
             
             for (NssUserGroupProvider.Command command : nssCommands.keySet()) {
                 String commandLine = nssCommands.get(command);
                 remoteCommands.put(command, String.format(remoteCommand, 
                                                           commandLine, 
-                                                          keyPath, 
+                                                          randoSshPrivKeyFile,
                                                           containerPort, 
                                                           containerIP));
             }

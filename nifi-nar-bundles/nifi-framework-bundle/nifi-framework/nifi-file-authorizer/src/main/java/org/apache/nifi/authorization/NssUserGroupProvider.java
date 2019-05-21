@@ -378,8 +378,8 @@ public class NssUserGroupProvider implements UserGroupProvider {
         }
     }
 
-    private List<String> runShell(String command) throws IOException {
-        final ProcessBuilder builder = new ProcessBuilder(new String[]{"sh", "-c", command});
+    protected List<String> runShell(String command) throws IOException {
+        final ProcessBuilder builder = new ProcessBuilder(new String[]{"bash", "-c", command});
         final Process proc = builder.start();
         final List<String> lines = new ArrayList<>();
 
