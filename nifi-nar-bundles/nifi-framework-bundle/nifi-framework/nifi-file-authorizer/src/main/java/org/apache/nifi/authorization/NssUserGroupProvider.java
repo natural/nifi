@@ -43,48 +43,111 @@ import org.apache.nifi.authorization.exception.AuthorizerDestructionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+interface ShellCommandsProvider {
+    public String getUsersList();
+    public String getUserGroups();
+    public String getGroupsList();
+    public String getGroupMembers();
+    public String getSystemCheck();
+}
+
+
+class NssShellCommands implements ShellCommandsProvider {
+    public String getUsersList() {
+        return "getent passwd | cut -f 1,3 -d ':'";
+    }
+
+    public String getUserGroups() {
+        return "id -nG %s | sed s/\\ /,/g";
+    }
+
+    public String getGroupsList() {
+        return "getent group | cut -f 1,3 -d ':'";
+    }
+
+    public String getGroupMembers() {
+        return "getent group %s | cut -f 4   -d ':'";
+    }
+
+    public String getSystemCheck() {
+        return "which getent";
+    }
+}
+
+
+class OsxShellCommands implements ShellCommandsProvider {
+    public String getUsersList() {
+        return "dscl . -list /Users UniqueID | grep -v '^_' | sed 's/ \\{1,\\}/:/g'";
+    }
+
+    public String getUserGroups() {
+        return "id -nG %s | sed 's/\\ /,/g'";
+    }
+
+    public String getGroupsList() {
+        return "dscl . -list /Groups PrimaryGroupID  | grep -v '^_' | sed 's/ \\{1,\\}/:/g'";
+    }
+
+    public String getGroupMembers() {
+        return "dscl . -read /Groups/%s GroupMembership | cut -f 2- -d ' ' | sed 's/\\ /,/g'";
+    }
+
+    public String getSystemCheck() {
+        return "which dscl";
+    }
+}
+
+class RemoteShellCommands implements ShellCommandsProvider {
+    // Carefully crafted command replacement string:
+    private final static String remoteCommand = "ssh " +
+        "-o 'StrictHostKeyChecking no' " +
+        "-o 'PasswordAuthentication no' " +
+        "-o \"RemoteCommand %s\" " +
+        "-i %s -p %s -l root %s";
+
+    private ShellCommandsProvider innerProvider;
+    private String privateKeyPath;
+    private String remoteHost;
+    private Integer remotePort;
+
+    public static ShellCommandsProvider wrapOtherProvider(ShellCommandsProvider otherProvider, String keyPath, String host, Integer port) {
+        RemoteShellCommands remote = new RemoteShellCommands();
+        
+        remote.innerProvider = otherProvider;
+        remote.privateKeyPath = keyPath;
+        remote.remoteHost = host;
+        remote.remotePort = port;
+        
+        return remote;
+    }
+
+    public String getUsersList() {
+        return String.format(remoteCommand, innerProvider.getUsersList(), privateKeyPath, remotePort, remoteHost);
+    }
+
+    public String getUserGroups() {
+        return String.format(remoteCommand, innerProvider.getUserGroups(), privateKeyPath, remotePort, remoteHost);
+    }
+
+    public String getGroupsList() {
+        return String.format(remoteCommand, innerProvider.getGroupsList(), privateKeyPath, remotePort, remoteHost);
+    }
+
+    public String getGroupMembers() {
+        return String.format(remoteCommand, innerProvider.getGroupMembers(), privateKeyPath, remotePort, remoteHost);
+    }
+
+    public String getSystemCheck() {
+        return String.format(remoteCommand, innerProvider.getSystemCheck(), privateKeyPath, remotePort, remoteHost);
+    }
+}
+
 
 /*
  * ShellUserGroupProvider implements UserGroupProvider by way of bash commands.
  */
 public class NssUserGroupProvider implements UserGroupProvider {
     private final static Logger logger = LoggerFactory.getLogger(NssUserGroupProvider.class);
-
-    protected enum Command {
-        USERS_LIST,    // list all users in the format "user1:uid1\nuser2:uid2"
-        USER_GROUPS,   // list group membership if the format "group1,group2,groupN"
-
-        GROUPS_LIST,   // list all groups in the format "group1:gid1\ngroup2:gid2"
-        GROUP_MEMBERS, // list group members in the format "user1,user2,userN"
-
-        SYS_CHECK      // shell command to determine system suitability
-    }
-
-    // This command set is selected for Linux hosts.  Its commands use
-    // `getent`, which is part of the unix "Name Service Switch"
-    // facility on Linux.
-    private final static Map<Command, String> nssCommands = ImmutableMap.of(
-            Command.USERS_LIST,    "getent passwd   | cut -f 1,3 -d ':'",
-            Command.USER_GROUPS,   "id -nG %s | sed s/\\ /,/g",
-
-            Command.GROUPS_LIST,   "getent group    | cut -f 1,3 -d ':'",
-            Command.GROUP_MEMBERS, "getent group %s | cut -f 4   -d ':'",
-
-            Command.SYS_CHECK,     "which getent"
-    );
-
-    // This command set is selected for Mac OS X hosts.  Its commands
-    // use `dscl` and `awk`.
-    private final static Map<Command, String> dsclCommands = ImmutableMap.of(
-            Command.USERS_LIST,    "dscl . -list /Users  UniqueID | grep -v '^_' | sed 's/ \\{1,\\}/:/g'",
-            Command.USER_GROUPS,   "id -nG %s | sed 's/\\ /,/g'",
-
-            Command.GROUPS_LIST,   "dscl . -list /Groups    PrimaryGroupID  | grep -v '^_'     | sed 's/ \\{1,\\}/:/g'",
-            Command.GROUP_MEMBERS, "dscl . -read /Groups/%s GroupMembership | cut -f 2- -d ' ' | sed 's/\\ /,/g'",
-
-            Command.SYS_CHECK,     "which dscl"
-    );
-
     private final static String OS_TYPE_ERROR = "Unsupported operating system.";
     private final static String SYS_CHECK_ERROR = "System check failed - cannot provide users and groups.";
 
@@ -101,9 +164,18 @@ public class NssUserGroupProvider implements UserGroupProvider {
     private int shellTimeout = 10;
 
     // Commands selected during initialization:
-    protected Map<Command, String> runtimeCommands;
+    protected ShellCommandsProvider selectedShellCommands;
 
+    public ShellCommandsProvider getCommandsProvider() {
+        return selectedShellCommands;
+    }
 
+    public void setCommandsProvider(ShellCommandsProvider commandsProvider) {
+        selectedShellCommands = commandsProvider;
+        refreshUsers();
+        refreshGroups();
+    }
+    
     // Start of the UserGroupProvider implementation.  Docstrings
     // copied from the interface definition for reference.
 
@@ -236,9 +308,9 @@ public class NssUserGroupProvider implements UserGroupProvider {
         final String hostType = System.getProperty("os.name");
 
         if (hostType.startsWith("Linux")) {
-            runtimeCommands = nssCommands;
+            selectedShellCommands = new NssShellCommands();
         } else if (hostType.startsWith("Mac OS X")) {
-            runtimeCommands = dsclCommands;
+            selectedShellCommands = new OsxShellCommands();
         } else {
             throw new AuthorizerCreationException(OS_TYPE_ERROR);
         }
@@ -247,7 +319,7 @@ public class NssUserGroupProvider implements UserGroupProvider {
         // command set to determine if the other commands will work on
         // this host or not.
         try {
-            runShell(runtimeCommands.get(Command.SYS_CHECK));
+            runShell(selectedShellCommands.getSystemCheck());
         } catch (final IOException ioexc) {
             logger.error("initialize exception: " + ioexc);
             throw new AuthorizerCreationException(SYS_CHECK_ERROR, ioexc.getCause());
@@ -257,7 +329,7 @@ public class NssUserGroupProvider implements UserGroupProvider {
         // we can pull in the users and groups:
         refreshUsers();
         refreshGroups();
-        
+
         // Our last init step is to fire off the refresh threads per
         // the context:
         int initialDelay = 30, fixedDelay = 30;
@@ -293,25 +365,13 @@ public class NssUserGroupProvider implements UserGroupProvider {
         }
     }
 
-    // End of the UserGroupProvider implementation.
-    
-    protected void setCommands(Map<Command, String> commands) {
-        runtimeCommands = commands;
-        refreshUsers();
-        refreshGroups();
-    }
-
-    protected Map<Command, String> getCommands() {
-        return runtimeCommands;
-    }
-    
     private void refreshUsers() {
         Map<String, User> byId = new HashMap<>();
         Map<String, User> byName = new HashMap<>();
         List<String> lines;
 
         try {
-            lines = runShell(runtimeCommands.get(Command.USERS_LIST));
+            lines = runShell(selectedShellCommands.getUsersList());
         } catch (final IOException ioexc)  {
             logger.error("refreshUsers shell exception: " + ioexc);
             return;
@@ -345,7 +405,7 @@ public class NssUserGroupProvider implements UserGroupProvider {
         List<String> lines;
 
         try {
-            lines = runShell(runtimeCommands.get(Command.GROUPS_LIST));
+            lines = runShell(selectedShellCommands.getGroupsList());
         } catch (final IOException ioexc) {
             logger.error("refreshGroups list groups shell exception: " + ioexc);
             return;
@@ -358,7 +418,7 @@ public class NssUserGroupProvider implements UserGroupProvider {
                     String groupName = record[0], groupId = record[1];
 
                     try {
-                        List<String> userLines = runShell(String.format(runtimeCommands.get(Command.GROUP_MEMBERS), groupName));
+                        List<String> userLines = runShell(String.format(selectedShellCommands.getGroupMembers(), groupName));
                         if (userLines.size() > 0) {
                             users.addAll(Arrays.asList(userLines.get(0).split(",")));
                         }

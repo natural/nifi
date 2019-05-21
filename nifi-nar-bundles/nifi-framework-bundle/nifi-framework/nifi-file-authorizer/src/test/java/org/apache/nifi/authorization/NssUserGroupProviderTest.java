@@ -61,8 +61,8 @@ public class NssUserGroupProviderTest {
     
     private ClassLoader classLoader;
     
-    private NssUserGroupProvider shellProvider;
-    private NssUserGroupProvider remoteShellProvider;
+    private NssUserGroupProvider localUsers;
+    private NssUserGroupProvider remoteUsers;
     
     private AuthorizerConfigurationContext authContext;
     private UserGroupProviderInitializationContext initContext;
@@ -81,24 +81,24 @@ public class NssUserGroupProviderTest {
         authContext = mock(AuthorizerConfigurationContext.class);
         initContext = mock(UserGroupProviderInitializationContext.class);
 
-        shellProvider = new NssUserGroupProvider();
-        shellProvider.initialize(initContext);
-        shellProvider.onConfigured(authContext);
+        localUsers = new NssUserGroupProvider();
+        localUsers.initialize(initContext);
+        localUsers.onConfigured(authContext);
         
-        remoteShellProvider = new NssUserGroupProvider(); 
+        remoteUsers = new NssUserGroupProvider(); 
         // purposely not initialized
     }
 
     @Test
     public void testGetUsers() throws Exception {
-        Set<User> users = shellProvider.getUsers();
+        Set<User> users = localUsers.getUsers();
         assertNotNull(users);
         assertTrue(users.size() > 0);
     }
 
     @Test
     public void testGetUser() throws Exception {
-        User root = shellProvider.getUser(KNOWN_UID);
+        User root = localUsers.getUser(KNOWN_UID);
         assertNotNull(root);
         assertEquals(KNOWN_USER, root.getIdentity());
         assertEquals(KNOWN_UID, root.getIdentifier());
@@ -106,7 +106,7 @@ public class NssUserGroupProviderTest {
 
     @Test
     public void testGetUserByIdentity() throws Exception {
-        User root = shellProvider.getUserByIdentity(KNOWN_USER);
+        User root = localUsers.getUserByIdentity(KNOWN_USER);
         assertNotNull(root);
         assertEquals(KNOWN_USER, root.getIdentity());
         assertEquals(KNOWN_UID, root.getIdentifier());
@@ -114,14 +114,14 @@ public class NssUserGroupProviderTest {
 
     @Test
     public void testGetGroups() throws Exception {
-        Set<Group> groups = shellProvider.getGroups();
+        Set<Group> groups = localUsers.getGroups();
         assertNotNull(groups);
         assertTrue(groups.size() > 0);
     }
 
     @Test
     public void testGetGroup() throws Exception {
-        Group group = shellProvider.getGroup(KNOWN_GID);
+        Group group = localUsers.getGroup(KNOWN_GID);
         assertNotNull(group);
         assertTrue(group.getName().equals(KNOWN_GROUP) || group.getName().equals(OTHER_GROUP));
         assertEquals(KNOWN_GID, group.getIdentifier());
@@ -129,7 +129,7 @@ public class NssUserGroupProviderTest {
 
     @Test
     public void testGroupMembership() throws Exception {
-        Group group = shellProvider.getGroup(KNOWN_GID);
+        Group group = localUsers.getGroup(KNOWN_GID);
         assertNotNull(group);
         assertTrue(group.getUsers().size() > 0);
         assertTrue(group.getUsers().contains(KNOWN_USER));
@@ -137,11 +137,11 @@ public class NssUserGroupProviderTest {
 
     @Test
     public void testGetUserAndGroups() throws Exception {
-        UserAndGroups principal = shellProvider.getUserAndGroups(KNOWN_UID);
+        UserAndGroups principal = localUsers.getUserAndGroups(KNOWN_UID);
         assertNotNull(principal);
         assertTrue(principal.getGroups().size() > 0);
 
-        Set<Group> groups = shellProvider.getGroups();
+        Set<Group> groups = localUsers.getGroups();
         assertTrue(groups.size() > principal.getGroups().size());
     }
     
@@ -152,36 +152,28 @@ public class NssUserGroupProviderTest {
                                                                 );
     public final static String CONTAINER_SSH_AUTH_KEYS = "/root/.ssh/authorized_keys";
     public final static Integer CONTAINER_SSH_PORT = 22;
-
-    // Carefully crafted command replacement string:
-    public final static String remoteCommand = "ssh " +
-        "-o 'StrictHostKeyChecking no' " + 
-        "-o 'PasswordAuthentication no' " +
-        "-o \"RemoteCommand %s\" " + 
-        "-i %s -p %s -l root %s";
     
     @Rule
     public TemporaryFolder tempFolder = new TemporaryFolder();
-    
-    @Test
-    public void testCheckAlpineImage() throws Exception {
-        final String randoSshPrivKeyFile = tempFolder.getRoot().getAbsolutePath() + "/id_rsa";
-        final String randoSshPubKeyFile = randoSshPrivKeyFile + ".pub";
 
-        shellProvider.runShell("yes | ssh-keygen -C '' -N '' -t rsa -f " + randoSshPrivKeyFile);
+    @Test
+    public void testVariousSystemImages() throws Exception {
+        final String sshPrivKeyFile = tempFolder.getRoot().getAbsolutePath() + "/id_rsa";
+        final String sshPubKeyFile = sshPrivKeyFile + ".pub";
+
+        localUsers.runShell("yes | ssh-keygen -C '' -N '' -t rsa -f " + sshPrivKeyFile);
         
-        Arrays.asList(randoSshPrivKeyFile, randoSshPubKeyFile).forEach(name -> {
+        Arrays.asList(sshPrivKeyFile, sshPubKeyFile).forEach(name -> {
                 final File f = new File(name);
                 assertTrue(f.setReadable(false, false));
                 assertTrue(f.setReadable(true));
             });
-        
-        final Map<NssUserGroupProvider.Command, String> nssCommands = shellProvider.getCommands();
 
         imageNames.forEach(image -> {
-                GenericContainer container = new GenericContainer(image)
-                    .withEnv("SSH_ENABLE_ROOT", "true")
-                    .withExposedPorts(CONTAINER_SSH_PORT);
+            GenericContainer container = new GenericContainer(image)
+                .withEnv("SSH_ENABLE_ROOT", "true")
+                .withExposedPorts(CONTAINER_SSH_PORT);
+            
             container.start();
             try {
                 container.execInContainer("mkdir", "-p", "/root/.ssh");
@@ -190,26 +182,19 @@ public class NssUserGroupProviderTest {
                 logger.error("error: " + e);
                 return;
             }
-            container.copyFileToContainer(MountableFile.forHostPath(randoSshPubKeyFile),  CONTAINER_SSH_AUTH_KEYS);
-            String containerIP = container.getContainerIpAddress();
-            Integer containerPort = container.getMappedPort(CONTAINER_SSH_PORT);
-            Map<NssUserGroupProvider.Command, String> remoteCommands = new HashMap<>();
+            container.copyFileToContainer(MountableFile.forHostPath(sshPubKeyFile),  CONTAINER_SSH_AUTH_KEYS);
+            final ShellCommandsProvider remoteCommands = RemoteShellCommands.wrapOtherProvider(new NssShellCommands(),
+                                                                                               sshPrivKeyFile,
+                                                                                               container.getContainerIpAddress(),
+                                                                                               container.getMappedPort(CONTAINER_SSH_PORT)
+                                                                                               );
+            remoteUsers.setCommandsProvider(remoteCommands);
             
-            for (NssUserGroupProvider.Command command : nssCommands.keySet()) {
-                String commandLine = nssCommands.get(command);
-                remoteCommands.put(command, String.format(remoteCommand, 
-                                                          commandLine, 
-                                                          randoSshPrivKeyFile,
-                                                          containerPort, 
-                                                          containerIP));
-            }
-            remoteShellProvider.setCommands(remoteCommands);
-            
-            Set<User> users = remoteShellProvider.getUsers();
+            Set<User> users = remoteUsers.getUsers();
             assertNotNull(users);
             assertTrue(users.size() > 0);
 
-            User root = remoteShellProvider.getUser(KNOWN_UID);
+            User root = remoteUsers.getUser(KNOWN_UID);
             assertNotNull(root);
             assertEquals(KNOWN_USER, root.getIdentity());
             assertEquals(KNOWN_UID, root.getIdentifier());
