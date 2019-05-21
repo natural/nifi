@@ -50,7 +50,7 @@ import org.slf4j.LoggerFactory;
 public class NssUserGroupProvider implements UserGroupProvider {
     private final static Logger logger = LoggerFactory.getLogger(NssUserGroupProvider.class);
 
-    private enum Command {
+    protected enum Command {
         USERS_LIST,    // list all users in the format "user1:uid1\nuser2:uid2"
         USER_GROUPS,   // list group membership if the format "group1,group2,groupN"
 
@@ -101,7 +101,7 @@ public class NssUserGroupProvider implements UserGroupProvider {
     private int shellTimeout = 10;
 
     // Commands selected during initialization:
-    private Map<Command, String> runtimeCommands;
+    protected Map<Command, String> runtimeCommands;
 
 
     // Start of the UserGroupProvider implementation.  Docstrings
@@ -221,6 +221,16 @@ public class NssUserGroupProvider implements UserGroupProvider {
      */
     @Override
     public void initialize(UserGroupProviderInitializationContext initializationContext) throws AuthorizerCreationException {
+    }
+
+    /**
+     * Called to configure the Authorizer.
+     *
+     * @param configurationContext at the time of configuration
+     * @throws AuthorizerCreationException for any issues configuring the provider
+     */
+    @Override
+    public void onConfigured(AuthorizerConfigurationContext configurationContext) throws AuthorizerCreationException {
         // Our first init step is to select the command set based on the
         // operating system name:
         final String hostType = System.getProperty("os.name");
@@ -247,19 +257,10 @@ public class NssUserGroupProvider implements UserGroupProvider {
         // we can pull in the users and groups:
         refreshUsers();
         refreshGroups();
-    }
-
-    /**
-     * Called to configure the Authorizer.
-     *
-     * @param configurationContext at the time of configuration
-     * @throws AuthorizerCreationException for any issues configuring the provider
-     */
-    @Override
-    public void onConfigured(AuthorizerConfigurationContext configurationContext) throws AuthorizerCreationException {
+        
         // Our last init step is to fire off the refresh threads per
         // the context:
-        int initialDelay = 0, fixedDelay = 30;
+        int initialDelay = 30, fixedDelay = 30;
         Runnable users = new Runnable () {
                 @Override
                 public void run() {
@@ -293,7 +294,17 @@ public class NssUserGroupProvider implements UserGroupProvider {
     }
 
     // End of the UserGroupProvider implementation.
+    
+    protected void setCommands(Map<Command, String> commands) {
+        runtimeCommands = commands;
+        refreshUsers();
+        refreshGroups();
+    }
 
+    protected Map<Command, String> getCommands() {
+        return runtimeCommands;
+    }
+    
     private void refreshUsers() {
         Map<String, User> byId = new HashMap<>();
         Map<String, User> byName = new HashMap<>();
@@ -368,7 +379,7 @@ public class NssUserGroupProvider implements UserGroupProvider {
     }
 
     private List<String> runShell(String command) throws IOException {
-        final ProcessBuilder builder = new ProcessBuilder(new String[]{"bash", "-c", command});
+        final ProcessBuilder builder = new ProcessBuilder(new String[]{"sh", "-c", command});
         final Process proc = builder.start();
         final List<String> lines = new ArrayList<>();
 
@@ -379,6 +390,13 @@ public class NssUserGroupProvider implements UserGroupProvider {
         }
 
         if (proc.exitValue() != 0) {
+            try (final Reader stderr = new InputStreamReader(proc.getErrorStream());
+                 final BufferedReader reader = new BufferedReader(stderr)) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    logger.error("" + line.trim());
+                }
+            }
             throw new IOException("Command exit non-zero: " + proc.exitValue());
         }
 
