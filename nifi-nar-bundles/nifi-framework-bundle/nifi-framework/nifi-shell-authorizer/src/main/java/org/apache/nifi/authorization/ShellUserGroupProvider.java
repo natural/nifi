@@ -16,136 +16,20 @@
  */
 package org.apache.nifi.authorization;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.nifi.authorization.exception.AuthorizationAccessException;
+import org.apache.nifi.authorization.exception.AuthorizerCreationException;
+import org.apache.nifi.authorization.exception.AuthorizerDestructionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
-
-import java.lang.InterruptedException;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.nifi.authorization.exception.AuthorizationAccessException;
-import org.apache.nifi.authorization.exception.AuthorizerCreationException;
-import org.apache.nifi.authorization.exception.AuthorizerDestructionException;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
-interface ShellCommandsProvider {
-    String getUsersList();
-    String getUserGroups();
-    String getGroupsList();
-    String getGroupMembers();
-    String getSystemCheck();
-}
-
-
-class NssShellCommands implements ShellCommandsProvider {
-    public String getUsersList() {
-        return "getent passwd | cut -f 1,3 -d ':'";
-    }
-
-    public String getUserGroups() {
-        return "id -nG %s | sed s/\\ /,/g";
-    }
-
-    public String getGroupsList() {
-        return "getent group | cut -f 1,3 -d ':'";
-    }
-
-    public String getGroupMembers() {
-        return "getent group %s | cut -f 4   -d ':'";
-    }
-
-    public String getSystemCheck() {
-        return "getent passwd"; // this gives exit code 0 on distros tested.
-    }
-}
-
-
-class OsxShellCommands implements ShellCommandsProvider {
-    public String getUsersList() {
-        return "dscl . -list /Users UniqueID | grep -v '^_' | sed 's/ \\{1,\\}/:/g'";
-    }
-
-    public String getUserGroups() {
-        return "id -nG %s | sed 's/\\ /,/g'";
-    }
-
-    public String getGroupsList() {
-        return "dscl . -list /Groups PrimaryGroupID  | grep -v '^_' | sed 's/ \\{1,\\}/:/g'";
-    }
-
-    public String getGroupMembers() {
-        return "dscl . -read /Groups/%s GroupMembership | cut -f 2- -d ' ' | sed 's/\\ /,/g'";
-    }
-
-    public String getSystemCheck() {
-        return "which dscl";
-    }
-}
-
-
-class RemoteShellCommands implements ShellCommandsProvider {
-    // Carefully crafted command replacement string:
-    private final static String remoteCommand = "ssh " +
-        "-o 'StrictHostKeyChecking no' " +
-        "-o 'PasswordAuthentication no' " +
-        "-o \"RemoteCommand %s\" " +
-        "-i %s -p %s -l root %s";
-
-    private ShellCommandsProvider innerProvider;
-    private String privateKeyPath;
-    private String remoteHost;
-    private Integer remotePort;
-
-    private RemoteShellCommands() {
-    }
-    
-    public static ShellCommandsProvider wrapOtherProvider(ShellCommandsProvider otherProvider, String keyPath, String host, Integer port) {
-        RemoteShellCommands remote = new RemoteShellCommands();
-
-        remote.innerProvider = otherProvider;
-        remote.privateKeyPath = keyPath;
-        remote.remoteHost = host;
-        remote.remotePort = port;
-
-        return remote;
-    }
-
-    public String getUsersList() {
-        return String.format(remoteCommand, innerProvider.getUsersList(), privateKeyPath, remotePort, remoteHost);
-    }
-
-    public String getUserGroups() {
-        return String.format(remoteCommand, innerProvider.getUserGroups(), privateKeyPath, remotePort, remoteHost);
-    }
-
-    public String getGroupsList() {
-        return String.format(remoteCommand, innerProvider.getGroupsList(), privateKeyPath, remotePort, remoteHost);
-    }
-
-    public String getGroupMembers() {
-        return String.format(remoteCommand, innerProvider.getGroupMembers(), privateKeyPath, remotePort, remoteHost);
-    }
-
-    public String getSystemCheck() {
-        return String.format(remoteCommand, innerProvider.getSystemCheck(), privateKeyPath, remotePort, remoteHost);
-    }
-}
 
 
 /*
@@ -166,16 +50,18 @@ public class ShellUserGroupProvider implements UserGroupProvider {
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
 
     // Our shell timeout, in seconds:
-    private int shellTimeout = 10;
+    @SuppressWarnings("FieldCanBeLocal")
+    private final int shellTimeout = 10;
 
     // Commands selected during initialization:
-    protected ShellCommandsProvider selectedShellCommands;
+    private ShellCommandsProvider selectedShellCommands;
 
+    @SuppressWarnings("unused")
     public ShellCommandsProvider getCommandsProvider() {
         return selectedShellCommands;
     }
 
-    public void setCommandsProvider(ShellCommandsProvider commandsProvider) {
+    private void setCommandsProvider(ShellCommandsProvider commandsProvider) {
         selectedShellCommands = commandsProvider;
     }
 
@@ -192,7 +78,7 @@ public class ShellUserGroupProvider implements UserGroupProvider {
     public Set<User> getUsers() throws AuthorizationAccessException {
         synchronized (usersById) {
             logger.info("getUsers has user set of size: " + usersById.size());
-            return new HashSet<User>(usersById.values());
+            return new HashSet<>(usersById.values());
         }
     }
 
@@ -238,7 +124,7 @@ public class ShellUserGroupProvider implements UserGroupProvider {
     public Set<Group> getGroups() throws AuthorizationAccessException {
         synchronized (groupsById) {
             logger.info("getGroups has group set of size: " + groupsById.size());
-            return new HashSet<Group>(groupsById.values());
+            return new HashSet<>(groupsById.values());
         }
     }
 
@@ -321,6 +207,7 @@ public class ShellUserGroupProvider implements UserGroupProvider {
         onConfigured(configurationContext, commands);
     }
 
+    @SuppressWarnings("unused")
     public void onConfigured(AuthorizerConfigurationContext configurationContext, ShellCommandsProvider commands) throws AuthorizerCreationException {
         // Our second init step is to run the SYS_CHECK command from that
         // command set to determine if the other commands will work on
@@ -341,19 +228,8 @@ public class ShellUserGroupProvider implements UserGroupProvider {
         // Our last init step is to fire off the refresh threads per
         // the context:
         int initialDelay = 30, fixedDelay = 30;
-        Runnable users = new Runnable () {
-                @Override
-                public void run() {
-                    refreshUsers();
-                }
-            },
-
-            groups = new Runnable () {
-                    @Override
-                    public void run() {
-                        refreshGroups();
-                    }
-                };
+        Runnable users = this::refreshUsers;
+        Runnable groups = this::refreshGroups;
 
         // configurationContext.getProperty(PROP_USER_GROUP_REFRESH)
         scheduler.scheduleWithFixedDelay(users, initialDelay, fixedDelay, TimeUnit.SECONDS);
@@ -369,7 +245,7 @@ public class ShellUserGroupProvider implements UserGroupProvider {
     public void preDestruction() throws AuthorizerDestructionException {
         try {
             scheduler.shutdownNow();
-        } catch (final Exception exc) {
+        } catch (final Exception ignored) {
         }
     }
 
@@ -446,7 +322,7 @@ public class ShellUserGroupProvider implements UserGroupProvider {
         }
     }
 
-    protected List<String> runShell(String command) throws IOException {
+    List<String> runShell(String command) throws IOException {
         final ProcessBuilder builder = new ProcessBuilder("bash", "-c", command);
         final Process proc = builder.start();
         final List<String> lines = new ArrayList<>();
