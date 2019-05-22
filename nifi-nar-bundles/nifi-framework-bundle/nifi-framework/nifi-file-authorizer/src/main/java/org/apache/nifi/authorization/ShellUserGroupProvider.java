@@ -44,11 +44,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 interface ShellCommandsProvider {
-    public String getUsersList();
-    public String getUserGroups();
-    public String getGroupsList();
-    public String getGroupMembers();
-    public String getSystemCheck();
+    String getUsersList();
+    String getUserGroups();
+    String getGroupsList();
+    String getGroupMembers();
+    String getSystemCheck();
 }
 
 
@@ -146,8 +146,8 @@ class RemoteShellCommands implements ShellCommandsProvider {
 /*
  * ShellUserGroupProvider implements UserGroupProvider by way of bash commands.
  */
-public class NssUserGroupProvider implements UserGroupProvider {
-    private final static Logger logger = LoggerFactory.getLogger(NssUserGroupProvider.class);
+public class ShellUserGroupProvider implements UserGroupProvider {
+    private final static Logger logger = LoggerFactory.getLogger(ShellUserGroupProvider.class);
     private final static String OS_TYPE_ERROR = "Unsupported operating system.";
     private final static String SYS_CHECK_ERROR = "System check failed - cannot provide users and groups.";
 
@@ -172,8 +172,6 @@ public class NssUserGroupProvider implements UserGroupProvider {
 
     public void setCommandsProvider(ShellCommandsProvider commandsProvider) {
         selectedShellCommands = commandsProvider;
-        refreshUsers();
-        refreshGroups();
     }
     
     // Start of the UserGroupProvider implementation.  Docstrings
@@ -305,25 +303,31 @@ public class NssUserGroupProvider implements UserGroupProvider {
     public void onConfigured(AuthorizerConfigurationContext configurationContext) throws AuthorizerCreationException {
         // Our first init step is to select the command set based on the
         // operating system name:
-        final String hostType = System.getProperty("os.name");
+        final String osName = System.getProperty("os.name");
+        ShellCommandsProvider commands;
 
-        if (hostType.startsWith("Linux")) {
-            selectedShellCommands = new NssShellCommands();
-        } else if (hostType.startsWith("Mac OS X")) {
-            selectedShellCommands = new OsxShellCommands();
+        if (osName.startsWith("Linux")) {
+            commands = new NssShellCommands();
+        } else if (osName.startsWith("Mac OS X")) {
+            commands = new OsxShellCommands();
         } else {
             throw new AuthorizerCreationException(OS_TYPE_ERROR);
         }
+        onConfigured(configurationContext, commands);
+    }
 
+    public void onConfigured(AuthorizerConfigurationContext configurationContext, ShellCommandsProvider commands) throws AuthorizerCreationException {
         // Our second init step is to run the SYS_CHECK command from that
         // command set to determine if the other commands will work on
         // this host or not.
         try {
-            runShell(selectedShellCommands.getSystemCheck());
+            runShell(commands.getSystemCheck());
         } catch (final IOException ioexc) {
             logger.error("initialize exception: " + ioexc);
+            logger.error("system check command: " + commands.getSystemCheck());            
             throw new AuthorizerCreationException(SYS_CHECK_ERROR, ioexc.getCause());
         }
+        setCommandsProvider(commands);
 
         // With our command set selected, and our system check passed,
         // we can pull in the users and groups:
@@ -341,11 +345,11 @@ public class NssUserGroupProvider implements UserGroupProvider {
             },
 
             groups = new Runnable () {
-                @Override
-                public void run() {
-                    refreshGroups();
-                }
-            };
+                    @Override
+                    public void run() {
+                        refreshGroups();
+                    }
+                };
 
         // configurationContext.getProperty(PROP_USER_GROUP_REFRESH)
         scheduler.scheduleWithFixedDelay(users, initialDelay, fixedDelay, TimeUnit.SECONDS);
@@ -439,7 +443,7 @@ public class NssUserGroupProvider implements UserGroupProvider {
     }
 
     protected List<String> runShell(String command) throws IOException {
-        final ProcessBuilder builder = new ProcessBuilder(new String[]{"bash", "-c", command});
+        final ProcessBuilder builder = new ProcessBuilder("bash", "-c", command);
         final Process proc = builder.start();
         final List<String> lines = new ArrayList<>();
 
