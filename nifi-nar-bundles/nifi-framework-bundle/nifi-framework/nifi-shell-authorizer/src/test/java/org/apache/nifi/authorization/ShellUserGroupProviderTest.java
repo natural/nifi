@@ -31,6 +31,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import static org.mockito.Mockito.mock;
@@ -163,6 +164,7 @@ public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
                     container = createContainer(image);
                 } catch (final Exception e) {
                     logger.error("create container exception: " + e);
+                    assertNull(e);
                     return;
                 }
                 UserGroupProvider remoteProvider = createRemoteProvider(container);
@@ -172,8 +174,10 @@ public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
                     testGetUser(remoteProvider);
                     testGetGroups(remoteProvider);
                     testGetGroup(remoteProvider);
-                    //testGroupMembership(remoteProvider);
-                    //testGetUserAndGroups(remoteProvider);
+
+                    // disabling these remote checks atm:
+                    // testGroupMembership(remoteProvider);
+                    // testGetUserAndGroups(remoteProvider);
                 } catch (final Exception e) {
                     logger.error("Exception running remote provider on image: " + image +  ", exception: " + e);
                 }

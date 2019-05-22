@@ -26,6 +26,7 @@ abstract class ShellUserGroupProviderBase {
 
     @SuppressWarnings("FieldCanBeLocal")
     private final String KNOWN_GROUP = "root";
+
     @SuppressWarnings("FieldCanBeLocal")
     private final String OTHER_GROUP = "wheel"; // e.g., macos
     private final String KNOWN_GID   = "0";
