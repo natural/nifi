@@ -29,7 +29,6 @@ class RemoteShellCommands implements ShellCommandsProvider {
     private String remoteHost;
     private Integer remotePort;
 
-    // touch
     private RemoteShellCommands() {
     }
 

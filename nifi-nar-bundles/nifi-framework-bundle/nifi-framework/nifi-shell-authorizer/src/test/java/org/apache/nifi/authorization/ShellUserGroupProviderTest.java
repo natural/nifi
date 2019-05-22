@@ -46,7 +46,7 @@ import org.testcontainers.utility.MountableFile;
 public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
     private static final Logger logger = LoggerFactory.getLogger(ShellUserGroupProviderTest.class);
     
-    private final static String ALPINE_IMAGE = "panubo/sshd:latest";
+    private final static String ALPINE_IMAGE = "natural/alpine-sshd:latest";
     private final static String CENTOS_IMAGE = "natural/centos-sshd:latest";
     private final static String DEBIAN_IMAGE = "natural/debian-sshd:latest";
     private final static String UBUNTU_IMAGE = "natural/ubuntu-sshd:latest";
