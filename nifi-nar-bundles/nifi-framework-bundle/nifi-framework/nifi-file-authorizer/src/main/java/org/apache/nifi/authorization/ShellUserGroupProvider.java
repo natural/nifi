@@ -43,6 +43,7 @@ import org.apache.nifi.authorization.exception.AuthorizerDestructionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 interface ShellCommandsProvider {
     String getUsersList();
     String getUserGroups();
@@ -70,7 +71,7 @@ class NssShellCommands implements ShellCommandsProvider {
     }
 
     public String getSystemCheck() {
-        return "which getent";
+        return "getent passwd"; // this gives exit code 0 on distros tested.
     }
 }
 
@@ -97,6 +98,7 @@ class OsxShellCommands implements ShellCommandsProvider {
     }
 }
 
+
 class RemoteShellCommands implements ShellCommandsProvider {
     // Carefully crafted command replacement string:
     private final static String remoteCommand = "ssh " +
@@ -110,14 +112,17 @@ class RemoteShellCommands implements ShellCommandsProvider {
     private String remoteHost;
     private Integer remotePort;
 
+    private RemoteShellCommands() {
+    }
+    
     public static ShellCommandsProvider wrapOtherProvider(ShellCommandsProvider otherProvider, String keyPath, String host, Integer port) {
         RemoteShellCommands remote = new RemoteShellCommands();
-        
+
         remote.innerProvider = otherProvider;
         remote.privateKeyPath = keyPath;
         remote.remoteHost = host;
         remote.remotePort = port;
-        
+
         return remote;
     }
 
@@ -173,7 +178,7 @@ public class ShellUserGroupProvider implements UserGroupProvider {
     public void setCommandsProvider(ShellCommandsProvider commandsProvider) {
         selectedShellCommands = commandsProvider;
     }
-    
+
     // Start of the UserGroupProvider implementation.  Docstrings
     // copied from the interface definition for reference.
 
@@ -323,8 +328,7 @@ public class ShellUserGroupProvider implements UserGroupProvider {
         try {
             runShell(commands.getSystemCheck());
         } catch (final IOException ioexc) {
-            logger.error("initialize exception: " + ioexc);
-            logger.error("system check command: " + commands.getSystemCheck());            
+            logger.error("initialize exception: " + ioexc + " system check command: " + commands.getSystemCheck());
             throw new AuthorizerCreationException(SYS_CHECK_ERROR, ioexc.getCause());
         }
         setCommandsProvider(commands);
