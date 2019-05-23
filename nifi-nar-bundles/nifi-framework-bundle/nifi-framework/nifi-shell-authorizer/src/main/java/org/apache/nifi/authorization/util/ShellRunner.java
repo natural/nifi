@@ -33,7 +33,7 @@ public class ShellRunner {
 
     static String SHELL = "bash";
     static String OPTS = "-c";
-    static Integer TIMEOUT = 10;
+    static Integer TIMEOUT = 30;
 
     // here + elsewhere, add debug logs around command strings, and use 'isDebugEnabled()' pattern
     public static List<String> runShell(String command) throws IOException {
