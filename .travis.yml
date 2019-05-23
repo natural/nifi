@@ -58,5 +58,10 @@ script:
   - bash .travis.sh
   - mvn -T 2 clean install -Pcontrib-check,include-grpc,include-atlas,include-hive3 -Ddir-only | grep -v -F -f .travis-output-filters && exit ${PIPESTATUS[0]}
 
+  
 after_failure:
-  - cat target/surefire-reports/*.txt
+  - cat $TRAVIS_BUILD_DIR/target/surefire-reports/*
+  - echo "Current directory is $(pwd)"
+  - echo "\n=== SUREFIRE REPORTS ===\n"
+  - for F in target/surefire-reports/*.txt;do echo $F;cat $F;echo ;done
+  
