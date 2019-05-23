@@ -21,8 +21,7 @@ import java.io.IOException;
 
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Ignore;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -40,6 +39,8 @@ import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.utility.MountableFile;
 
+import org.apache.nifi.authorization.util.ShellRunner;
+
 
 public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
     private static final Logger logger = LoggerFactory.getLogger(ShellUserGroupProviderTest.class);
@@ -48,24 +49,26 @@ public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
     private final static String CENTOS_IMAGE = "natural/centos-sshd:latest";
     private final static String DEBIAN_IMAGE = "natural/debian-sshd:latest";
     private final static String UBUNTU_IMAGE = "natural/ubuntu-sshd:latest";
-    private final static List<String> TEST_CONTAINER_IMAGES = Arrays.asList(
-            ALPINE_IMAGE,
-            CENTOS_IMAGE,
-            DEBIAN_IMAGE,
-            UBUNTU_IMAGE);
+    private final static List<String> TEST_CONTAINER_IMAGES =
+        Arrays.asList(
+                      ALPINE_IMAGE,
+                      CENTOS_IMAGE,
+                      DEBIAN_IMAGE,
+                      UBUNTU_IMAGE
+                      );
 
     private final static String CONTAINER_SSH_AUTH_KEYS = "/root/.ssh/authorized_keys";
     private final static Integer CONTAINER_SSH_PORT = 22;
 
+    private static String sshPrivKeyFile;
+    private static String sshPubKeyFile;
+
     private AuthorizerConfigurationContext authContext;
     private ShellUserGroupProvider localProvider;
-    private String sshPrivKeyFile;
-    private String sshPubKeyFile;
     private UserGroupProviderInitializationContext initContext;
 
-    @Rule
-    public TemporaryFolder tempFolder = new TemporaryFolder();
-
+    @ClassRule
+    static public TemporaryFolder tempFolder = new TemporaryFolder();
 
     @Before
     public void setup() throws IOException {
@@ -75,11 +78,13 @@ public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
         localProvider = new ShellUserGroupProvider();
         localProvider.initialize(initContext);
         localProvider.onConfigured(authContext);
+    }
 
-        // After the runShell method is made a class, move this into the setupOnce method below.
+    @BeforeClass
+    public static void setupOnce() throws IOException {
         sshPrivKeyFile = tempFolder.getRoot().getAbsolutePath() + "/id_rsa";
         sshPubKeyFile = sshPrivKeyFile + ".pub";
-        localProvider.runShell("yes | ssh-keygen -C '' -N '' -t rsa -f " + sshPrivKeyFile);
+        ShellRunner.runShell("yes | ssh-keygen -C '' -N '' -t rsa -f " + sshPrivKeyFile);
 
         // Fix the file permissions to abide by the ssh client
         // requirements:
@@ -88,11 +93,6 @@ public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
                 assertTrue(f.setReadable(false, false));
                 assertTrue(f.setReadable(true));
             });
-
-    }
-
-    @BeforeClass
-    public static void setupOnce() {
     }
 
     @Test
@@ -123,12 +123,12 @@ public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
 
     @Test
     public void testGroupMembership() {
-        // testGroupMembership(localProvider);
+        testGroupMembership(localProvider);
     }
 
     @Test
     public void testGetUserAndGroups() {
-        // testGetUserAndGroups(localProvider);
+        testGetUserAndGroups(localProvider);
     }
 
     @SuppressWarnings("RedundantThrows")
@@ -138,8 +138,7 @@ public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
             .withExposedPorts(CONTAINER_SSH_PORT);
         container.start();
 
-        // This should go into the docker image, but we don't
-        // control the images much:
+        // This should go into the docker images:
         container.execInContainer("mkdir", "-p", "/root/.ssh");
         container.copyFileToContainer(MountableFile.forHostPath(sshPubKeyFile),  CONTAINER_SSH_AUTH_KEYS);
         return container;
@@ -153,13 +152,12 @@ public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
                                                                                            );
 
         ShellUserGroupProvider remoteProvider = new ShellUserGroupProvider();
+        remoteProvider.setCommandsProvider(remoteCommands);
         remoteProvider.initialize(initContext);
-        remoteProvider.onConfigured(authContext, remoteCommands);
+        remoteProvider.onConfigured(authContext);
         return remoteProvider;
     }
 
-
-    @Ignore
     @Test
     public void testVariousSystemImages() {
         TEST_CONTAINER_IMAGES.forEach(image -> {
