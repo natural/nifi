@@ -18,7 +18,10 @@ package org.apache.nifi.authorization;
 
 import java.util.Set;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 
 abstract class ShellUserGroupProviderBase {
     private final String KNOWN_USER  = "root";
