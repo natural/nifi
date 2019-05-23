@@ -57,3 +57,6 @@ script:
   # won't affect the 'clean install' above
   - bash .travis.sh
   - mvn -T 2 clean install -Pcontrib-check,include-grpc,include-atlas,include-hive3 -Ddir-only | grep -v -F -f .travis-output-filters && exit ${PIPESTATUS[0]}
+
+after_failure:
+  - cat target/surefire-reports/*.txt
