@@ -19,9 +19,6 @@ package org.apache.nifi.authorization;
 import java.io.File;
 import java.io.IOException;
 
-
-import java.util.Set;
-
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -31,8 +28,6 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -53,10 +48,11 @@ public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
     private final static String CENTOS_IMAGE = "natural/centos-sshd:latest";
     private final static String DEBIAN_IMAGE = "natural/debian-sshd:latest";
     private final static String UBUNTU_IMAGE = "natural/ubuntu-sshd:latest";
-    private final static List<String> TEST_CONTAINER_IMAGES = Arrays.asList(ALPINE_IMAGE
-                                                                           , CENTOS_IMAGE
-                                                                           , DEBIAN_IMAGE
-                                                                           , UBUNTU_IMAGE);
+    private final static List<String> TEST_CONTAINER_IMAGES = Arrays.asList(
+            ALPINE_IMAGE,
+            CENTOS_IMAGE,
+            DEBIAN_IMAGE,
+            UBUNTU_IMAGE);
 
     private final static String CONTAINER_SSH_AUTH_KEYS = "/root/.ssh/authorized_keys";
     private final static Integer CONTAINER_SSH_PORT = 22;
