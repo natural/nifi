@@ -197,6 +197,7 @@ public class ShellUserGroupProvider implements UserGroupProvider {
         final String osName = System.getProperty("os.name");
         ShellCommandsProvider commands;
 
+        // check to see if commands provider is null first, then continue w this
         if (osName.startsWith("Linux")) {
             commands = new NssShellCommands();
         } else if (osName.startsWith("Mac OS X")) {
@@ -322,6 +323,7 @@ public class ShellUserGroupProvider implements UserGroupProvider {
         }
     }
 
+    // here + elsewhere, add debug logs around command strings, and use 'isDebugEnabled()' pattern
     List<String> runShell(String command) throws IOException {
         final ProcessBuilder builder = new ProcessBuilder("bash", "-c", command);
         final Process proc = builder.start();
