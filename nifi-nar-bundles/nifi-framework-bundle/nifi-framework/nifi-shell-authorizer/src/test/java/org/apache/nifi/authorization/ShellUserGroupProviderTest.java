@@ -180,8 +180,9 @@ public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
 
         TEST_CONTAINER_IMAGES.forEach(image -> {
                 GenericContainer container;
-
+                UserGroupProvider remoteProvider;
                 logger.debug("creating container from image: " + image);
+
                 try {
                     container = createContainer(image);
                 } catch (final Exception e) {
@@ -189,7 +190,14 @@ public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
                     assertNull(e);
                     return;
                 }
-                UserGroupProvider remoteProvider = createRemoteProvider(container);
+
+                try {
+                    remoteProvider = createRemoteProvider(container);
+                } catch (final Exception e) {
+                    logger.error("create user provider exception: " + e);
+                    assertNull(e);
+                    return;
+                }
 
                 try {
                     testGetUsers(remoteProvider);
