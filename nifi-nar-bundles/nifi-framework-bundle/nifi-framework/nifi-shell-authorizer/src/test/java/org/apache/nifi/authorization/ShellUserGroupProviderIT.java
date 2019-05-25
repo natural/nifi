@@ -42,8 +42,8 @@ import org.testcontainers.utility.MountableFile;
 import org.apache.nifi.authorization.util.ShellRunner;
 
 
-public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
-    private static final Logger logger = LoggerFactory.getLogger(ShellUserGroupProviderTest.class);
+public class ShellUserGroupProviderIT extends ShellUserGroupProviderBase {
+    private static final Logger logger = LoggerFactory.getLogger(ShellUserGroupProviderIT.class);
 
     private final static String ALPINE_IMAGE = "natural/alpine-sshd:latest";
     private final static String CENTOS_IMAGE = "natural/centos-sshd:latest";
