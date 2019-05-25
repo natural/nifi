@@ -35,11 +35,13 @@ public class ShellRunner {
     static String OPTS = "-c";
     static Integer TIMEOUT = 30;
 
-    // here + elsewhere, add debug logs around command strings, and use 'isDebugEnabled()' pattern
     public static List<String> runShell(String command) throws IOException {
         final ProcessBuilder builder = new ProcessBuilder(SHELL, OPTS, command);
+        final List<String> builderCommand = builder.command();
+
+        logger.debug("Starting command: " + builderCommand + ", with timeout: " + TIMEOUT);
         final Process proc = builder.start();
-        final List<String> lines = new ArrayList<>();
+        logger.debug("Started command: " + builderCommand);
 
         try {
             proc.waitFor(TIMEOUT, TimeUnit.SECONDS);
@@ -52,12 +54,14 @@ public class ShellRunner {
                  final BufferedReader reader = new BufferedReader(stderr)) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    logger.error("" + line.trim());
+                    logger.debug("" + line.trim());
                 }
             }
             throw new IOException("Command exit non-zero: " + proc.exitValue());
         }
 
+        logger.debug("Completed command: " + builderCommand);
+        final List<String> lines = new ArrayList<>();
         try (final Reader stdin = new InputStreamReader(proc.getInputStream());
              final BufferedReader reader = new BufferedReader(stdin)) {
             String line;
@@ -69,4 +73,3 @@ public class ShellRunner {
         return lines;
     }
 }
-

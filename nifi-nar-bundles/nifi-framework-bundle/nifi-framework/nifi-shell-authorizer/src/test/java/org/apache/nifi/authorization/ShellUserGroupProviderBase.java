@@ -21,9 +21,15 @@ import java.util.Set;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeFalse;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 abstract class ShellUserGroupProviderBase {
+    private static final Logger logger = LoggerFactory.getLogger(ShellUserGroupProviderBase.class);
+    
     private final String KNOWN_USER  = "root";
     private final String KNOWN_UID   = "0";
 
@@ -34,13 +40,21 @@ abstract class ShellUserGroupProviderBase {
     private final String OTHER_GROUP = "wheel"; // e.g., macos
     private final String KNOWN_GID   = "0";
 
+    protected boolean isWindowsEnvironment() {
+        return System.getProperty("os.name").toLowerCase().startsWith("windows");
+    }
+
     void testGetUsers(UserGroupProvider provider) {
+        assumeFalse(isWindowsEnvironment());
+
         Set<User> users = provider.getUsers();
         assertNotNull(users);
         assertTrue(users.size() > 0);
     }
 
     void testGetUser(UserGroupProvider provider) {
+        assumeFalse(isWindowsEnvironment());
+
         User root = provider.getUser(KNOWN_UID);
         assertNotNull(root);
         assertEquals(KNOWN_USER, root.getIdentity());
@@ -48,6 +62,8 @@ abstract class ShellUserGroupProviderBase {
     }
 
     void testGetUserByIdentity(UserGroupProvider provider) {
+        assumeFalse(isWindowsEnvironment());
+
         User root = provider.getUserByIdentity(KNOWN_USER);
         assertNotNull(root);
         assertEquals(KNOWN_USER, root.getIdentity());
@@ -55,12 +71,16 @@ abstract class ShellUserGroupProviderBase {
     }
 
     void testGetGroups(UserGroupProvider provider) {
+        assumeFalse(isWindowsEnvironment());
+
         Set<Group> groups = provider.getGroups();
         assertNotNull(groups);
         assertTrue(groups.size() > 0);
     }
 
     void testGetGroup(UserGroupProvider provider) {
+        assumeFalse(isWindowsEnvironment());
+
         Group group = provider.getGroup(KNOWN_GID);
         assertNotNull(group);
         assertTrue(group.getName().equals(KNOWN_GROUP) || group.getName().equals(OTHER_GROUP));
@@ -68,18 +88,37 @@ abstract class ShellUserGroupProviderBase {
     }
 
     void testGroupMembership(UserGroupProvider provider) {
+        assumeFalse(isWindowsEnvironment());
+
         Group group = provider.getGroup(KNOWN_GID);
         assertNotNull(group);
 
-        // assertTrue(group.getUsers().size() > 0);
-        // assertTrue(group.getUsers().contains(KNOWN_USER));
+        try {
+            assertTrue(group.getUsers().size() > 0);
+        } catch (final AssertionError ignored) {
+            logger.warn("root group count zero on this system");
+        }
+
+        try {
+            assertTrue(group.getUsers().contains(KNOWN_USER));            
+        } catch (final AssertionError ignored) {
+            logger.warn("root group membership unexpected on this system");
+        }
     }
 
     void testGetUserAndGroups(UserGroupProvider provider) {
+        assumeFalse(isWindowsEnvironment());
+
         UserAndGroups user = provider.getUserAndGroups(KNOWN_UID);
         assertNotNull(user);
-        // assertTrue(user.getGroups().size() > 0);
-        // Set<Group> groups = provider.getGroups();
-        // assertTrue(groups.size() > user.getGroups().size());
+
+        try {
+            assertTrue(user.getGroups().size() > 0);
+        } catch (final AssertionError ignored) {
+            logger.warn("root user and groups group count zero on this system");
+        }
+
+        Set<Group> groups = provider.getGroups();
+        assertTrue(groups.size() > user.getGroups().size());
     }
 }

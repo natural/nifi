@@ -29,6 +29,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeFalse;
 
 import static org.mockito.Mockito.mock;
 
@@ -138,7 +139,7 @@ public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
             .withExposedPorts(CONTAINER_SSH_PORT);
         container.start();
 
-        // This should go into the docker images:
+        // This can go into the docker images:
         container.execInContainer("mkdir", "-p", "/root/.ssh");
         container.copyFileToContainer(MountableFile.forHostPath(sshPubKeyFile),  CONTAINER_SSH_AUTH_KEYS);
         return container;
@@ -160,6 +161,8 @@ public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
 
     @Test
     public void testVariousSystemImages() {
+        assumeFalse(isWindowsEnvironment());
+        
         TEST_CONTAINER_IMAGES.forEach(image -> {
                 GenericContainer container;
 
@@ -178,10 +181,8 @@ public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
                     testGetUser(remoteProvider);
                     testGetGroups(remoteProvider);
                     testGetGroup(remoteProvider);
-
-                    // disabling these remote checks atm:
-                    // testGroupMembership(remoteProvider);
-                    // testGetUserAndGroups(remoteProvider);
+                    testGroupMembership(remoteProvider);
+                    testGetUserAndGroups(remoteProvider);
                 } catch (final Exception e) {
                     logger.error("Exception running remote provider on image: " + image +  ", exception: " + e);
                 }
