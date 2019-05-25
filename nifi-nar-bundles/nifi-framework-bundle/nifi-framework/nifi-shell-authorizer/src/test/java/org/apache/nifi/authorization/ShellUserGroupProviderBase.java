@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 
 abstract class ShellUserGroupProviderBase {
     private static final Logger logger = LoggerFactory.getLogger(ShellUserGroupProviderBase.class);
-    
+
     private final String KNOWN_USER  = "root";
     private final String KNOWN_UID   = "0";
 
@@ -100,7 +100,7 @@ abstract class ShellUserGroupProviderBase {
         }
 
         try {
-            assertTrue(group.getUsers().contains(KNOWN_USER));            
+            assertTrue(group.getUsers().contains(KNOWN_USER));
         } catch (final AssertionError ignored) {
             logger.warn("root group membership unexpected on this system");
         }

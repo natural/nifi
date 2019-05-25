@@ -162,7 +162,7 @@ public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
     @Test
     public void testVariousSystemImages() {
         assumeFalse(isWindowsEnvironment());
-        
+
         TEST_CONTAINER_IMAGES.forEach(image -> {
                 GenericContainer container;
 

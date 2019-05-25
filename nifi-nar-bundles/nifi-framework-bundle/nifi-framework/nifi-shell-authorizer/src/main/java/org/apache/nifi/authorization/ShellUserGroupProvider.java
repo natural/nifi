@@ -159,7 +159,7 @@ public class ShellUserGroupProvider implements UserGroupProvider {
                 groups.add(g);
             }
         }
-        
+
         return new UserAndGroups() {
             @Override
             public User getUser() {
@@ -315,16 +315,48 @@ public class ShellUserGroupProvider implements UserGroupProvider {
                     } catch (final IOException ioexc) {
                         logger.error("refreshGroups list membership shell exception: " + ioexc);
                     }
-                    
+
                     if (name != null && id != null && !name.equals("") && !id.equals("")) {
                         Group group = new Group.Builder().name(name).identifier(id).addUsers(users).build();
                         groups.put(id, group);
-                        logger.debug("refreshed group: " + group);                        
+                        logger.debug("refreshed group: " + group);
                     } else {
                         logger.warn("null or empty group name: " + name + " or id: " + id);
                     }
                 }
             });
+
+        List<String> sublines;
+        try {
+            sublines = ShellRunner.runShell(selectedShellCommands.getUsersList());
+        } catch (final IOException ioexc) {
+            logger.error("refreshGroups list groups shell exception: " + ioexc);
+            return;
+        }
+
+        sublines.forEach(line -> {
+                String[] subrecord = line.split(":");
+
+                if (subrecord.length > 2) {
+                    String primaryGid = subrecord[2];
+                    Group primaryGroup = groups.get(primaryGid);
+                    Group group;
+
+                    if (primaryGroup == null) {
+                        logger.warn("user: " + subrecord[0] + " primary group not found");
+                    } else {
+                        Set<String> groupUsers = primaryGroup.getUsers();
+                        if (!groupUsers.contains(subrecord[0])) {
+                            Set<String> secondSet = new HashSet<>();
+                            secondSet.addAll(groupUsers);
+                            secondSet.add(subrecord[0]);
+                            group = new Group.Builder().name( primaryGroup.getName() ).identifier(primaryGid).addUsers(secondSet).build();
+                            groups.put(primaryGid, group);
+                        }
+                    }
+                }
+            });
+
 
         synchronized (groupsById) {
             groupsById.clear();
