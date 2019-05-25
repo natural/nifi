@@ -185,17 +185,15 @@ public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
 
                 try {
                     container = createContainer(image);
-                } catch (final Exception e) {
-                    logger.error("create container exception: " + e);
-                    assertNull(e);
+                } catch (final Exception exc) {
+                    logger.error("create container exception: " + exc);
                     return;
                 }
 
                 try {
                     remoteProvider = createRemoteProvider(container);
-                } catch (final Exception e) {
-                    logger.error("create user provider exception: " + e);
-                    assertNull(e);
+                } catch (final Exception exc) {
+                    logger.error("create user provider exception: " + exc);
                     return;
                 }
 
