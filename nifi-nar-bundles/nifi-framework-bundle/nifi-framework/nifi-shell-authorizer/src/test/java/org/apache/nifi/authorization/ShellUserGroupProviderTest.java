@@ -29,7 +29,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.Assume.assumeTrue;
 
 import static org.mockito.Mockito.mock;
 
@@ -77,15 +77,30 @@ public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
         initContext = mock(UserGroupProviderInitializationContext.class);
 
         localProvider = new ShellUserGroupProvider();
-        localProvider.initialize(initContext);
-        localProvider.onConfigured(authContext);
+        try {
+            localProvider.initialize(initContext);
+            localProvider.onConfigured(authContext);
+        } catch (final Exception exc) {
+            systemCheckFailed = true;
+            logger.error("setup() exception: " + exc + "; tests cannot run on this system.");
+            return;
+        }
     }
 
     @BeforeClass
     public static void setupOnce() throws IOException {
         sshPrivKeyFile = tempFolder.getRoot().getAbsolutePath() + "/id_rsa";
         sshPubKeyFile = sshPrivKeyFile + ".pub";
-        ShellRunner.runShell("yes | ssh-keygen -C '' -N '' -t rsa -f " + sshPrivKeyFile);
+
+        try {
+            // NB: this command is a bit perplexing: it works without prompt from the shell, but hangs
+            // here without the pipe from `yes`:
+            ShellRunner.runShell("yes | ssh-keygen -C '' -N '' -t rsa -f " + sshPrivKeyFile);
+        } catch (final IOException ioexc) {
+            systemCheckFailed = true;
+            logger.error("setupOnce() exception: " + ioexc + "; tests cannot run on this system.");
+            return;
+        }
 
         // Fix the file permissions to abide by the ssh client
         // requirements:
@@ -100,7 +115,6 @@ public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
     public void testGetUsers() {
         testGetUsers(localProvider);
     }
-
 
     @Test
     public void testGetUser() {
@@ -135,8 +149,7 @@ public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
     @SuppressWarnings("RedundantThrows")
     private GenericContainer createContainer(String image) throws IOException, InterruptedException {
         GenericContainer container = new GenericContainer(image)
-            .withEnv("SSH_ENABLE_ROOT", "true")
-            .withExposedPorts(CONTAINER_SSH_PORT);
+            .withEnv("SSH_ENABLE_ROOT", "true").withExposedPorts(CONTAINER_SSH_PORT);
         container.start();
 
         // This can go into the docker images:
@@ -146,11 +159,11 @@ public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
     }
 
     private UserGroupProvider createRemoteProvider(GenericContainer container) {
-        final ShellCommandsProvider remoteCommands = RemoteShellCommands.wrapOtherProvider(new NssShellCommands(),
-                                                                                           sshPrivKeyFile,
-                                                                                           container.getContainerIpAddress(),
-                                                                                           container.getMappedPort(CONTAINER_SSH_PORT)
-                                                                                           );
+        final ShellCommandsProvider remoteCommands =
+            RemoteShellCommands.wrapOtherProvider(new NssShellCommands(),
+                                                  sshPrivKeyFile,
+                                                  container.getContainerIpAddress(),
+                                                  container.getMappedPort(CONTAINER_SSH_PORT));
 
         ShellUserGroupProvider remoteProvider = new ShellUserGroupProvider();
         remoteProvider.setCommandsProvider(remoteCommands);
@@ -161,12 +174,14 @@ public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
 
     @Test
     public void testVariousSystemImages() {
-        assumeFalse(isWindowsEnvironment());
+        // Here we explicitly clear the system check flag to allow the remote checks that follow:
+        systemCheckFailed = false;
+        assumeTrue(isTestableEnvironment());
 
         TEST_CONTAINER_IMAGES.forEach(image -> {
                 GenericContainer container;
 
-                logger.info("creating container from image: " + image);
+                logger.debug("creating container from image: " + image);
                 try {
                     container = createContainer(image);
                 } catch (final Exception e) {
@@ -189,7 +204,7 @@ public class ShellUserGroupProviderTest extends ShellUserGroupProviderBase {
 
                 container.stop();
                 remoteProvider.preDestruction();
-                logger.info("finished with container image: " + image);
+                logger.debug("finished with container image: " + image);
             });
     }
 }

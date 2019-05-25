@@ -21,7 +21,7 @@ import java.util.Set;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.Assume.assumeTrue;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,12 +40,17 @@ abstract class ShellUserGroupProviderBase {
     private final String OTHER_GROUP = "wheel"; // e.g., macos
     private final String KNOWN_GID   = "0";
 
-    protected boolean isWindowsEnvironment() {
-        return System.getProperty("os.name").toLowerCase().startsWith("windows");
+    // We're using this knob to control the test runs on Travis.  The issue there is that tests
+    // running on Travis do not have `getent`, thus not behaving like a typical Linux installation.
+    protected static boolean systemCheckFailed = false;
+
+    protected boolean isTestableEnvironment() {
+        boolean isWindows = System.getProperty("os.name").toLowerCase().startsWith("windows");
+        return !isWindows && !systemCheckFailed;
     }
 
     void testGetUsers(UserGroupProvider provider) {
-        assumeFalse(isWindowsEnvironment());
+        assumeTrue(isTestableEnvironment());
 
         Set<User> users = provider.getUsers();
         assertNotNull(users);
@@ -53,7 +58,7 @@ abstract class ShellUserGroupProviderBase {
     }
 
     void testGetUser(UserGroupProvider provider) {
-        assumeFalse(isWindowsEnvironment());
+        assumeTrue(isTestableEnvironment());
 
         User root = provider.getUser(KNOWN_UID);
         assertNotNull(root);
@@ -62,7 +67,7 @@ abstract class ShellUserGroupProviderBase {
     }
 
     void testGetUserByIdentity(UserGroupProvider provider) {
-        assumeFalse(isWindowsEnvironment());
+        assumeTrue(isTestableEnvironment());
 
         User root = provider.getUserByIdentity(KNOWN_USER);
         assertNotNull(root);
@@ -71,7 +76,7 @@ abstract class ShellUserGroupProviderBase {
     }
 
     void testGetGroups(UserGroupProvider provider) {
-        assumeFalse(isWindowsEnvironment());
+        assumeTrue(isTestableEnvironment());
 
         Set<Group> groups = provider.getGroups();
         assertNotNull(groups);
@@ -79,7 +84,7 @@ abstract class ShellUserGroupProviderBase {
     }
 
     void testGetGroup(UserGroupProvider provider) {
-        assumeFalse(isWindowsEnvironment());
+        assumeTrue(isTestableEnvironment());
 
         Group group = provider.getGroup(KNOWN_GID);
         assertNotNull(group);
@@ -88,10 +93,14 @@ abstract class ShellUserGroupProviderBase {
     }
 
     void testGroupMembership(UserGroupProvider provider) {
-        assumeFalse(isWindowsEnvironment());
+        assumeTrue(isTestableEnvironment());
 
         Group group = provider.getGroup(KNOWN_GID);
         assertNotNull(group);
+
+        // These next few try/catch blocks are here for debugging.  The user-to-group relationship
+        // is delicate with this implementation, and this approach allows us a measure of control.
+        // Check your logs if you're having problems!
 
         try {
             assertTrue(group.getUsers().size() > 0);
@@ -107,7 +116,7 @@ abstract class ShellUserGroupProviderBase {
     }
 
     void testGetUserAndGroups(UserGroupProvider provider) {
-        assumeFalse(isWindowsEnvironment());
+        assumeTrue(isTestableEnvironment());
 
         UserAndGroups user = provider.getUserAndGroups(KNOWN_UID);
         assertNotNull(user);
