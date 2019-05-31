@@ -33,11 +33,8 @@ import java.security.NoSuchProviderException;
 
 
 import com.amazonaws.services.kms.AWSKMSClientBuilder;
-import static com.amazonaws.util.BinaryUtils.copyAllBytesFrom;
-
-
-// Your customer master key was created with alias aws-at-troy-io-cmk-alias-000 and key ID bd05545c-da2c-4ac2-944e-947b989aa7ef.
-
+import com.amazonaws.services.kms.model.GenerateRandomResult;
+import com.amazonaws.services.kms.model.GenerateRandomRequest;
 
 
 public class AWSSensitivePropertyProvider implements SensitivePropertyProvider {
@@ -59,24 +56,9 @@ public class AWSSensitivePropertyProvider implements SensitivePropertyProvider {
     }
 
     private String validateKey(String keyId) {
-        // Key ID: 1234abcd-12ab-34cd-56ef-1234567890ab
-        // Key ARN: arn:aws:kms:us-east-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab
-        // Alias name: alias/ExampleAlias
-        // Alias ARN: arn:aws:kms:us-east-2:111122223333:alias/ExampleAlias
-        
         if (keyId == null || StringUtils.isBlank(keyId)) {
             throw new SensitivePropertyProtectionException("The key cannot be empty");
         }
-        // keyId = formatHexKey(keyId);
-        // if (!isHexKeyValid(keyId)) {
-        //     throw new SensitivePropertyProtectionException("The key must be a valid hexadecimal key");
-        // }
-        // byte[] key = Hex.decode(keyId);
-        // final List<Integer> validKeyLengths = getValidKeyLengths();
-        // if (!validKeyLengths.contains(key.length * 8)) {
-        //     List<String> validKeyLengthsAsStrings = validKeyLengths.stream().map(i -> Integer.toString(i)).collect(Collectors.toList());
-        //     throw new SensitivePropertyProtectionException("The key (" + key.length * 8 + " bits) must be a valid length: " + StringUtils.join(validKeyLengthsAsStrings, ", "));
-        // }
         return keyId;
     }
 
@@ -136,5 +118,13 @@ public class AWSSensitivePropertyProvider implements SensitivePropertyProvider {
                                 
         DecryptResult response = client.decrypt(request);
         return new String(response.getPlaintext().array());
+    }
+
+    public String generateRandom(Integer size) {
+        GenerateRandomRequest request = new GenerateRandomRequest()
+            .withNumberOfBytes(size);
+        
+        GenerateRandomResult response = client.generateRandom(request);
+        return Hex.toHexString(response.getPlaintext().array());
     }
 }
