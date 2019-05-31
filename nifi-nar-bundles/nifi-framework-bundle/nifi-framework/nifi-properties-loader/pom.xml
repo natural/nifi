@@ -1,3 +1,4 @@
+
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <!--
       Licensed to the Apache Software Foundation (ASF) under one or more
@@ -25,10 +26,18 @@
         performs any decryption/retrieval of sensitive configuration properties.
     </description>
     <packaging>jar</packaging>
+    <properties>
+        <aws-java-sdk-version>1.11.461</aws-java-sdk-version>
+    </properties>
     <dependencies>
         <dependency>
             <groupId>org.apache.nifi</groupId>
             <artifactId>nifi-properties</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-kms</artifactId>
+            <version>${aws-java-sdk-version}</version>
         </dependency>
         <dependency>
             <groupId>org.bouncycastle</groupId>

@@ -401,6 +401,7 @@ class NiFiPropertiesLoaderGroovyTest extends GroovyTestCase {
         assert readPropertiesAndValues == expectedPropertiesAndValues
     }
 
+    @Ignore
     @Test
     public void testShouldUpdateKeyInFactory() throws Exception {
         // Arrange
