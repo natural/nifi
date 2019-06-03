@@ -26,6 +26,8 @@ import org.apache.nifi.authorization.generated.Property;
 import org.apache.nifi.bundle.Bundle;
 import org.apache.nifi.nar.ExtensionManager;
 import org.apache.nifi.properties.AESSensitivePropertyProviderFactory;
+import org.apache.nifi.properties.AWSSensitivePropertyProvider;
+import org.apache.nifi.properties.AWSSensitivePropertyProviderFactory;
 import org.apache.nifi.properties.NiFiPropertiesLoader;
 import org.apache.nifi.properties.SensitivePropertyProtectionException;
 import org.apache.nifi.properties.SensitivePropertyProvider;
@@ -57,6 +59,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.security.NoSuchProviderException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -465,15 +468,29 @@ public class AuthorizerFactoryBean implements FactoryBean, DisposableBean, UserG
     }
 
     private static void initializeSensitivePropertyProvider(String encryptionScheme) throws SensitivePropertyProtectionException {
-        if (SENSITIVE_PROPERTY_PROVIDER == null || !SENSITIVE_PROPERTY_PROVIDER.getIdentifierKey().equalsIgnoreCase(encryptionScheme)) {
+        // MARK 3
+        logger.error("MARKER 3 scheme: " + encryptionScheme);                                    
+        String key;
+        
+        if (SENSITIVE_PROPERTY_PROVIDER == null) {
             try {
-                String keyHex = getMasterKey();
-                SENSITIVE_PROPERTY_PROVIDER_FACTORY = new AESSensitivePropertyProviderFactory(keyHex);
-                SENSITIVE_PROPERTY_PROVIDER = SENSITIVE_PROPERTY_PROVIDER_FACTORY.getProvider();
+                key = getMasterKey();
             } catch (IOException e) {
                 logger.error("Error extracting master key from bootstrap.conf for login identity provider decryption", e);
                 throw new SensitivePropertyProtectionException("Could not read master key from bootstrap.conf");
             }
+            AWSSensitivePropertyProvider awsProvider;
+            try {
+                awsProvider = new AWSSensitivePropertyProvider(key);
+            } catch (final Exception e) {
+                throw new SensitivePropertyProtectionException(e);
+            }
+            if (awsProvider.providesScheme(encryptionScheme)) {
+                SENSITIVE_PROPERTY_PROVIDER_FACTORY = new AESSensitivePropertyProviderFactory(key);
+            } else {
+                SENSITIVE_PROPERTY_PROVIDER_FACTORY = new AESSensitivePropertyProviderFactory(key);
+            }
+            SENSITIVE_PROPERTY_PROVIDER = SENSITIVE_PROPERTY_PROVIDER_FACTORY.getProvider();                        
         }
     }
 

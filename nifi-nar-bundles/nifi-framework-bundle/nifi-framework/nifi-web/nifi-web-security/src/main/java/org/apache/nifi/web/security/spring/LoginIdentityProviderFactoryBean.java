@@ -219,7 +219,9 @@ public class LoginIdentityProviderFactoryBean implements FactoryBean, Disposable
     }
 
     private String decryptValue(String cipherText, String encryptionScheme) throws SensitivePropertyProtectionException {
-            initializeSensitivePropertyProvider(encryptionScheme);
+        initializeSensitivePropertyProvider(encryptionScheme);
+        // MARK 2
+        logger.error("MARKER 2: " + cipherText + " scheme: " + encryptionScheme);                            
         return SENSITIVE_PROPERTY_PROVIDER.unprotect(cipherText);
     }
 

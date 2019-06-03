@@ -72,7 +72,7 @@ class AWSSensitivePropertyProviderTest extends GroovyTestCase {
                 propProvider = new AWSSensitivePropertyProvider("bad key")
                 propProvider.protect("value")
             }
-            assert propProvider != null
+            // assert propProvider != null
             assert msg =~ "Invalid keyId"
         }
     }

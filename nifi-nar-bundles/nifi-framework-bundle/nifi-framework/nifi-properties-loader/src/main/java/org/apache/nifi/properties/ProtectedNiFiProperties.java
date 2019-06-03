@@ -27,8 +27,11 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.util.NiFiProperties;
+import org.apache.nifi.properties.AWSSensitivePropertyProvider;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -434,6 +437,8 @@ class ProtectedNiFiProperties extends StandardNiFiProperties {
         for (String key : getSensitivePropertyKeys()) {
             final String plainValue = getInternalNiFiProperties().getProperty(key);
             if (plainValue != null && !plainValue.trim().isEmpty()) {
+                // MARK 0 ; protectionScheme == 'aes/gcm/256'
+                logger.error("MARKER 0: " + plainValue + " scheme: " + protectionScheme);
                 final String protectedValue = spp.protect(plainValue);
                 protectedProperties.setProperty(key, protectedValue);
                 protectedProperties.setProperty(getProtectionKey(key), protectionScheme);
@@ -490,15 +495,34 @@ class ProtectedNiFiProperties extends StandardNiFiProperties {
     }
 
     private SensitivePropertyProvider getSensitivePropertyProvider(String protectionScheme) {
+        AWSSensitivePropertyProvider awsProvider;
+        try {
+            awsProvider = new AWSSensitivePropertyProvider("ignore me for i am wrong");
+        } catch (final Exception ignored) {
+            throw new SensitivePropertyProtectionException("Cannot make basic aws provider");
+        }
+        
         if (isProviderAvailable(protectionScheme)) {
             return getSensitivePropertyProviders().get(protectionScheme);
+        } else if (awsProvider.providesScheme(protectionScheme)) {
+            try {
+                return new AWSSensitivePropertyProvider(protectionScheme);
+            } catch (final Exception ex) {
+                throw new SensitivePropertyProtectionException(ex);
+            }
         } else {
             throw new SensitivePropertyProtectionException("No provider available for " + protectionScheme);
         }
     }
 
     private boolean isProviderAvailable(String protectionScheme) {
-        return getSensitivePropertyProviders().containsKey(protectionScheme);
+        List<SensitivePropertyProvider> availables = getSensitivePropertyProviders()
+            .values()
+            .stream()
+            .filter(provider ->  provider.providesScheme(protectionScheme))
+            .collect(Collectors.toList());
+        
+        return availables.size() > 0;
     }
 
     /**
@@ -521,6 +545,8 @@ class ProtectedNiFiProperties extends StandardNiFiProperties {
 
             try {
                 SensitivePropertyProvider sensitivePropertyProvider = getSensitivePropertyProvider(protectionScheme);
+                // MARK 1
+                logger.error("MARKER 1: " + key + " scheme: " + protectionScheme);                
                 return sensitivePropertyProvider.unprotect(retrievedValue);
             } catch (SensitivePropertyProtectionException e) {
                 throw new SensitivePropertyProtectionException("Error unprotecting value for " + key, e.getCause());

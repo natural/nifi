@@ -37,19 +37,16 @@ import com.amazonaws.services.kms.model.GenerateRandomResult;
 import com.amazonaws.services.kms.model.GenerateRandomRequest;
 
 
+// Rename to AWSKMS
 public class AWSSensitivePropertyProvider implements SensitivePropertyProvider {
     private static final Logger logger = LoggerFactory.getLogger(AWSSensitivePropertyProvider.class);
 
     private static final String IMPLEMENTATION_NAME = "AWS KMS Sensitive Property Provider";
-    private static final String IMPLEMENTATION_KEY = "aws/kms/";
+    private static final String IMPLEMENTATION_KEY = "aws/kms/"; // .protected=aws/kms/some-key-id-goes-here // follow-on ticket for ConfigEncryption toolkit
 
     private AWSKMS client;
     private final String key;
 
-    public AWSSensitivePropertyProvider(byte[] key) throws NoSuchPaddingException, NoSuchAlgorithmException, NoSuchProviderException {
-        this(key == null ? "" : Hex.toHexString(key));
-    }
-    
     public AWSSensitivePropertyProvider(String keyId) throws NoSuchPaddingException, NoSuchAlgorithmException, NoSuchProviderException {
         this.key = validateKey(keyId);
         this.client = AWSKMSClientBuilder.standard().build();
@@ -80,8 +77,9 @@ public class AWSSensitivePropertyProvider implements SensitivePropertyProvider {
      */
     @Override
     public String getIdentifierKey() {
-        return IMPLEMENTATION_KEY;
+        return IMPLEMENTATION_KEY + key; // getIdentifierKey() has to include the kms key id/alias/arn
     }
+    
 
     /**
      * Returns the encrypted cipher text.
@@ -127,4 +125,13 @@ public class AWSSensitivePropertyProvider implements SensitivePropertyProvider {
         GenerateRandomResult response = client.generateRandom(request);
         return Hex.toHexString(response.getPlaintext().array());
     }
+
+    public boolean providesScheme(String protectionScheme) throws SensitivePropertyProtectionException {
+        return protectionScheme != null && protectionScheme.startsWith(IMPLEMENTATION_KEY);        
+    }
+    
+    public static boolean canHandleScheme(String protectionScheme) throws SensitivePropertyProtectionException {
+        return protectionScheme != null && protectionScheme.startsWith(IMPLEMENTATION_KEY);        
+    }
+    
 }
