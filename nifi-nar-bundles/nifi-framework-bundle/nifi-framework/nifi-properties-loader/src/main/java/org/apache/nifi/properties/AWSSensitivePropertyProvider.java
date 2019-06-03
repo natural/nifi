@@ -79,7 +79,7 @@ public class AWSSensitivePropertyProvider implements SensitivePropertyProvider {
     public String getIdentifierKey() {
         return IMPLEMENTATION_KEY + key; // getIdentifierKey() has to include the kms key id/alias/arn
     }
-    
+
 
     /**
      * Returns the encrypted cipher text.
@@ -113,7 +113,7 @@ public class AWSSensitivePropertyProvider implements SensitivePropertyProvider {
     public String unprotect(String protectedValue) throws SensitivePropertyProtectionException {
         DecryptRequest request = new DecryptRequest()
             .withCiphertextBlob(ByteBuffer.wrap(Hex.decode(protectedValue)));
-                                
+
         DecryptResult response = client.decrypt(request);
         return new String(response.getPlaintext().array());
     }
@@ -121,17 +121,13 @@ public class AWSSensitivePropertyProvider implements SensitivePropertyProvider {
     public String generateRandom(Integer size) {
         GenerateRandomRequest request = new GenerateRandomRequest()
             .withNumberOfBytes(size);
-        
+
         GenerateRandomResult response = client.generateRandom(request);
         return Hex.toHexString(response.getPlaintext().array());
     }
 
-    public boolean providesScheme(String protectionScheme) throws SensitivePropertyProtectionException {
-        return protectionScheme != null && protectionScheme.startsWith(IMPLEMENTATION_KEY);        
-    }
-    
     public static boolean canHandleScheme(String protectionScheme) throws SensitivePropertyProtectionException {
-        return protectionScheme != null && protectionScheme.startsWith(IMPLEMENTATION_KEY);        
+        return protectionScheme != null && protectionScheme.startsWith(IMPLEMENTATION_KEY);
     }
-    
+
 }

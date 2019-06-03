@@ -49,6 +49,4 @@ public interface SensitivePropertyProvider {
      * @return the raw value to be used by the application
      */
     String unprotect(String protectedValue) throws SensitivePropertyProtectionException;
-    
-    boolean providesScheme(String protectionScheme) throws SensitivePropertyProtectionException;
 }

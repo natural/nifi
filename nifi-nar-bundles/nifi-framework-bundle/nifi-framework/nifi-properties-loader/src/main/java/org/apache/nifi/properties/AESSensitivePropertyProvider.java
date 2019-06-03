@@ -60,14 +60,14 @@ public class AESSensitivePropertyProvider implements SensitivePropertyProvider {
             f.getProvider();
         } catch (final Exception ignored) {
         }
-            
+
         byte[] key = validateKey(keyHex);
 
         try {
             cipher = Cipher.getInstance(ALGORITHM, PROVIDER);
             // Only store the key if the cipher was initialized successfully
             this.key = new SecretKeySpec(key, "AES");
-        
+
         } catch (NoSuchAlgorithmException | NoSuchProviderException | NoSuchPaddingException e) {
             logger.error("Encountered an error initializing the {}: {}", IMPLEMENTATION_NAME, e.getMessage());
             throw new SensitivePropertyProtectionException("Error initializing the protection cipher", e);
@@ -265,13 +265,8 @@ public class AESSensitivePropertyProvider implements SensitivePropertyProvider {
     public static String getDelimiter() {
         return DELIMITER;
     }
-    
-    public boolean providesScheme(String protectionScheme) throws SensitivePropertyProtectionException {
-        return protectionScheme != null && protectionScheme.startsWith(IMPLEMENTATION_KEY);
-    }
-    
+
     public static boolean canHandleScheme(String protectionScheme) throws SensitivePropertyProtectionException {
         return true; // backwards compat
-        // return protectionScheme != null && protectionScheme.startsWith(IMPLEMENTATION_KEY);        
     }
 }

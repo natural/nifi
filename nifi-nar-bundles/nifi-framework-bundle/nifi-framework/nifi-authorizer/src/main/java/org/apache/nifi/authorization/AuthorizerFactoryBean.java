@@ -469,28 +469,18 @@ public class AuthorizerFactoryBean implements FactoryBean, DisposableBean, UserG
 
     private static void initializeSensitivePropertyProvider(String encryptionScheme) throws SensitivePropertyProtectionException {
         // MARK 3
-        logger.error("MARKER 3 scheme: " + encryptionScheme);                                    
+        logger.error("MARKER 3 scheme: " + encryptionScheme);
         String key;
-        
+
         if (SENSITIVE_PROPERTY_PROVIDER == null) {
             try {
                 key = getMasterKey();
+                SENSITIVE_PROPERTY_PROVIDER_FACTORY = new AESSensitivePropertyProviderFactory(key);
+                SENSITIVE_PROPERTY_PROVIDER = SENSITIVE_PROPERTY_PROVIDER_FACTORY.getProvider();
             } catch (IOException e) {
                 logger.error("Error extracting master key from bootstrap.conf for login identity provider decryption", e);
                 throw new SensitivePropertyProtectionException("Could not read master key from bootstrap.conf");
             }
-            AWSSensitivePropertyProvider awsProvider;
-            try {
-                awsProvider = new AWSSensitivePropertyProvider(key);
-            } catch (final Exception e) {
-                throw new SensitivePropertyProtectionException(e);
-            }
-            if (awsProvider.providesScheme(encryptionScheme)) {
-                SENSITIVE_PROPERTY_PROVIDER_FACTORY = new AESSensitivePropertyProviderFactory(key);
-            } else {
-                SENSITIVE_PROPERTY_PROVIDER_FACTORY = new AESSensitivePropertyProviderFactory(key);
-            }
-            SENSITIVE_PROPERTY_PROVIDER = SENSITIVE_PROPERTY_PROVIDER_FACTORY.getProvider();                        
         }
     }
 
