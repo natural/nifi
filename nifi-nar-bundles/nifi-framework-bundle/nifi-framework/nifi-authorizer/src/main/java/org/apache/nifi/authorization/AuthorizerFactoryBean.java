@@ -49,6 +49,7 @@ import org.apache.nifi.authorization.generated.Property;
 import org.apache.nifi.bundle.Bundle;
 import org.apache.nifi.nar.ExtensionManager;
 import org.apache.nifi.properties.NiFiPropertiesLoader;
+import org.apache.nifi.properties.SensitivePropertyProviderFactorySelector;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProviderFactory;
@@ -474,11 +475,7 @@ public class AuthorizerFactoryBean implements FactoryBean, DisposableBean, UserG
                 logger.error("Error extracting master key from bootstrap.conf for login identity provider decryption", e);
                 throw new SensitivePropertyProtectionException("Could not read master key from bootstrap.conf");
             }
-            if (AWSKMSSensitivePropertyProvider.canHandleScheme(encryptionScheme)) {
-                SENSITIVE_PROPERTY_PROVIDER_FACTORY = new AWSKMSSensitivePropertyProviderFactory(key);
-            } else {
-                SENSITIVE_PROPERTY_PROVIDER_FACTORY = new AESSensitivePropertyProviderFactory(key);
-            }
+            SENSITIVE_PROPERTY_PROVIDER_FACTORY = SensitivePropertyProviderFactorySelector.selectProviderFactory(key);
             SENSITIVE_PROPERTY_PROVIDER = SENSITIVE_PROPERTY_PROVIDER_FACTORY.getProvider();                        
         }
     }

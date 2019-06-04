@@ -20,6 +20,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import javax.crypto.NoSuchPaddingException;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.nifi.properties.PropertyMetadata;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProviderFactory;
@@ -30,17 +31,17 @@ import org.slf4j.LoggerFactory;
 public class AWSKMSSensitivePropertyProviderFactory implements SensitivePropertyProviderFactory {
     private static final Logger logger = LoggerFactory.getLogger(AWSKMSSensitivePropertyProviderFactory.class);
 
-    private String keyHex;
+    PropertyMetadata property;
 
-    // TODO: I don't think the KMS provider factory needs a key at all; there is some kind of credential to connect to the KMS instead
-    public AWSKMSSensitivePropertyProviderFactory(String keyHex) {
-        this.keyHex = keyHex;
+    public AWSKMSSensitivePropertyProviderFactory(PropertyMetadata props) {
+        this.property = props;
     }
 
     public SensitivePropertyProvider getProvider() throws SensitivePropertyProtectionException {
+        final String selector = property.getPropertyValue();
         try {
-            if (keyHex != null && !StringUtils.isBlank(keyHex)) {
-                return new AWSKMSSensitivePropertyProvider(keyHex);
+            if (selector != null && !StringUtils.isBlank(selector)) {
+                return new AWSKMSSensitivePropertyProvider(selector);
             } else {
                 throw new SensitivePropertyProtectionException("The provider factory cannot generate providers without a key");
             }
@@ -54,5 +55,9 @@ public class AWSKMSSensitivePropertyProviderFactory implements SensitiveProperty
     @Override
     public String toString() {
         return "SensitivePropertyProviderFactory for creating AWSSensitivePropertyProviders";
+    }
+    
+    public static boolean accepts(PropertyMetadata prop) {
+        return false;
     }
 }

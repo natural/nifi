@@ -33,6 +33,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.nifi.properties.PropertyMetadata;
 import org.apache.nifi.properties.sensitive.SensitivePropertyMetadata;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
@@ -296,11 +297,5 @@ public class AESSensitivePropertyProvider implements SensitivePropertyProvider {
 
     public static String getDelimiter() {
         return DELIMITER;
-    }
-    
-    // TODO: I see this is because of the reflection in SelectiveSensitivePropertyProviderFactory but I think there are better ways to handle it
-    public static boolean canHandleScheme(String protectionScheme) throws SensitivePropertyProtectionException {
-        return true; // backwards compat
-        // return protectionScheme != null && protectionScheme.startsWith(IMPLEMENTATION_KEY);
     }
 }

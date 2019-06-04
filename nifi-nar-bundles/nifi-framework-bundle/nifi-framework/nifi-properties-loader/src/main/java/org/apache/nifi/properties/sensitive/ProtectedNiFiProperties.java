@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.properties.NiFiPropertiesLoader;
 import org.apache.nifi.properties.StandardNiFiProperties;
+import org.apache.nifi.properties.SensitivePropertyProviderFactorySelector;
 import org.apache.nifi.properties.sensitive.aws.kms.AWSKMSSensitivePropertyProvider;
 import org.apache.nifi.properties.sensitive.aws.kms.AWSKMSSensitivePropertyProviderFactory;
 import org.apache.nifi.util.NiFiProperties;
@@ -496,14 +497,11 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
     private SensitivePropertyProvider getSensitivePropertyProvider(String protectionScheme) {
         if (isProviderAvailable(protectionScheme)) {
             return getSensitivePropertyProviders().get(protectionScheme);
-        } else if (AWSKMSSensitivePropertyProvider.canHandleScheme(protectionScheme)) {
-            try {
-                return new AWSKMSSensitivePropertyProvider(protectionScheme);
-            } catch (final Exception ex) {
-                throw new SensitivePropertyProtectionException(ex);
-            }
-        } else {
-            throw new SensitivePropertyProtectionException("No provider available for " + protectionScheme);
+        } 
+        try {
+            return SensitivePropertyProviderFactorySelector.selectProviderFactory(protectionScheme).getProvider();
+        } catch (final Exception ex) {
+            throw new SensitivePropertyProtectionException(ex);
         }
     }
 

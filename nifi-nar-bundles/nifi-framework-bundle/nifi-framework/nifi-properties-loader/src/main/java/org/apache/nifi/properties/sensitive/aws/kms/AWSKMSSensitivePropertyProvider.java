@@ -155,10 +155,4 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
         GenerateRandomResult response = client.generateRandom(request);
         return Hex.toHexString(response.getPlaintext().array());
     }
-
-    // TODO: Remove as this is unused and duplicates providesScheme? If required by SSPPF, invoke it from the #providesScheme method
-    public static boolean canHandleScheme(String protectionScheme) throws SensitivePropertyProtectionException {
-        return protectionScheme != null && protectionScheme.startsWith(IMPLEMENTATION_KEY);        
-    }
-    
 }

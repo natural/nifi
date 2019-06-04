@@ -16,47 +16,39 @@
  */
 package org.apache.nifi.properties;
 
-import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import org.apache.nifi.properties.PropertyMetadata;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProviderFactory;
 import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProviderFactory;
-import org.apache.nifi.properties.sensitive.aws.kms.AWSKMSSensitivePropertyProvider;
+import org.apache.nifi.properties.sensitive.aws.kms.AWSKMSSensitivePropertyProviderFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 
 public class SensitivePropertyProviderFactorySelector {
     private static final Logger logger = LoggerFactory.getLogger(SensitivePropertyProviderFactorySelector.class);
     
+    public static SensitivePropertyProviderFactory selectProviderFactory(String value) throws SensitivePropertyProtectionException {
+        return selectProviderFactory(new PropertyMetadata().withPropertyValue(value));
+    }
+        
+
     public static SensitivePropertyProviderFactory selectProviderFactory(PropertyMetadata prop) throws SensitivePropertyProtectionException {
-        logger.error("FAIL: " + prop.getPropertyValue());
-        return new AESSensitivePropertyProviderFactory(prop.getPropertyValue());
+        if (AWSKMSSensitivePropertyProviderFactory.accepts(prop)) {
+            logger.info("Selected AWS KMS sensitive property provider factory.");
+            return new AWSKMSSensitivePropertyProviderFactory(prop);
+        }
+
+        if (AESSensitivePropertyProviderFactory.accepts(prop)) {
+            logger.info("Selected AES sensitive property provider factory.");            
+            return new AESSensitivePropertyProviderFactory(prop);
+        }
+        
+        throw new SensitivePropertyProtectionException("Unable to select SensitivePropertyProviderFactory.");
     }
 }
-
-// SensitiveProviderFactorySelector
-    //        AWS(AWSKMSSensitivePropertyProvider.class),
-    //        AES(AESSensitivePropertyProvider.class);
-    
-    // same logic w/o reflection, use map;
-    // update .getProvider() to .getProvider(String any) -> aes = key, aws = key id
-    // send metadata to ctor
-
-
-        // for (ProviderType providerType : ProviderType.values()) {
-        //     Class <?> type = providerType.getType();
-        //     try {
-        //         if ((boolean) type.getMethod("canHandleScheme", String.class).invoke(null, selector)) {
-        //             Constructor <?> ctor = type.getConstructor(String.class);
-        //             return (SensitivePropertyProvider) ctor.newInstance(selector);
-        //         }
-        //     } catch (final NoSuchMethodException exc) {
-        //         logger.error("Exception selecting provider: " + exc);
-        //     } catch (final IllegalAccessException | InstantiationException | InvocationTargetException exc) {
-        //         logger.error("Exception creating provider: " + exc);                
-        //     }
-        // }
-        // throw new SensitivePropertyProtectionException("Could not create any provider");
