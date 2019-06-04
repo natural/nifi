@@ -69,6 +69,4 @@ public interface SensitivePropertyProvider {
      * @return the raw value to be used by the application
      */
     String unprotect(String protectedValue, SensitivePropertyMetadata metadata) throws SensitivePropertyProtectionException;
-    
-    boolean providesScheme(String protectionScheme) throws SensitivePropertyProtectionException;
 }

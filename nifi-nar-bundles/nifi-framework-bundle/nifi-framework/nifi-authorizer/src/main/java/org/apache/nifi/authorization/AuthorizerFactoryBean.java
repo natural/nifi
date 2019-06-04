@@ -54,6 +54,7 @@ import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProviderFactory;
 import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProviderFactory;
 import org.apache.nifi.properties.sensitive.aws.kms.AWSKMSSensitivePropertyProvider;
+import org.apache.nifi.properties.sensitive.aws.kms.AWSKMSSensitivePropertyProviderFactory;
 import org.apache.nifi.security.xml.XmlUtils;
 import org.apache.nifi.util.NiFiProperties;
 import org.apache.nifi.util.file.classloader.ClassLoaderUtils;
@@ -465,25 +466,16 @@ public class AuthorizerFactoryBean implements FactoryBean, DisposableBean, UserG
     }
 
     private static void initializeSensitivePropertyProvider(String encryptionScheme) throws SensitivePropertyProtectionException {
-        // MARK 3
-        logger.error("MARKER 3 scheme: " + encryptionScheme);                                    
-        String key;
-        
         if (SENSITIVE_PROPERTY_PROVIDER == null) {
+            String key;
             try {
                 key = getMasterKey();
             } catch (IOException e) {
                 logger.error("Error extracting master key from bootstrap.conf for login identity provider decryption", e);
                 throw new SensitivePropertyProtectionException("Could not read master key from bootstrap.conf");
             }
-            AWSKMSSensitivePropertyProvider awsProvider;
-            try {
-                awsProvider = new AWSKMSSensitivePropertyProvider(key);
-            } catch (final Exception e) {
-                throw new SensitivePropertyProtectionException(e);
-            }
-            if (awsProvider.providesScheme(encryptionScheme)) {
-                SENSITIVE_PROPERTY_PROVIDER_FACTORY = new AESSensitivePropertyProviderFactory(key);
+            if (AWSKMSSensitivePropertyProvider.canHandleScheme(encryptionScheme)) {
+                SENSITIVE_PROPERTY_PROVIDER_FACTORY = new AWSKMSSensitivePropertyProviderFactory(key);
             } else {
                 SENSITIVE_PROPERTY_PROVIDER_FACTORY = new AESSensitivePropertyProviderFactory(key);
             }

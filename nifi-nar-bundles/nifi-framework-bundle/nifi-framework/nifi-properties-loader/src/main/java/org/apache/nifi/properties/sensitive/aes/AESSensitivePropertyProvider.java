@@ -298,10 +298,6 @@ public class AESSensitivePropertyProvider implements SensitivePropertyProvider {
         return DELIMITER;
     }
     
-    public boolean providesScheme(String protectionScheme) throws SensitivePropertyProtectionException {
-        return protectionScheme != null && protectionScheme.startsWith(IMPLEMENTATION_KEY);
-    }
-
     // TODO: I see this is because of the reflection in SelectiveSensitivePropertyProviderFactory but I think there are better ways to handle it
     public static boolean canHandleScheme(String protectionScheme) throws SensitivePropertyProtectionException {
         return true; // backwards compat
