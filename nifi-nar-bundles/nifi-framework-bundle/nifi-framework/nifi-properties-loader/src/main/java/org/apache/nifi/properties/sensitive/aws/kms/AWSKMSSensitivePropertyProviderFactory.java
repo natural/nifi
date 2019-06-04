@@ -32,6 +32,7 @@ public class AWSKMSSensitivePropertyProviderFactory implements SensitiveProperty
 
     private String keyHex;
 
+    // TODO: I don't think the KMS provider factory needs a key at all; there is some kind of credential to connect to the KMS instead
     public AWSKMSSensitivePropertyProviderFactory(String keyHex) {
         this.keyHex = keyHex;
     }
