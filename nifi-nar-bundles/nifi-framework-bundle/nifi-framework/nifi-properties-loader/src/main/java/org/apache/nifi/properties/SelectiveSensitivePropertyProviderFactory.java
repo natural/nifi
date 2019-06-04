@@ -16,16 +16,9 @@
  */
 package org.apache.nifi.properties;
 
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.crypto.NoSuchPaddingException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-
-import com.amazonaws.services.kms.AWSKMSClientBuilder;
-import java.lang.reflect.Method;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Constructor;
 
@@ -35,49 +28,53 @@ public class SelectiveSensitivePropertyProviderFactory implements SensitivePrope
     private static final Logger logger = LoggerFactory.getLogger(SelectiveSensitivePropertyProviderFactory.class);
 
     private enum ProviderType {
-        AWS(AWSSensitivePropertyProvider.class),   
+        AWS(AWSSensitivePropertyProvider.class),
         AES(AESSensitivePropertyProvider.class);
 
         Class<?> type;
-    
+
         Class<?> getType() {
             return type;
         }
-        
+
         void setType(Class<?> type) {
             this.type = type;
         }
-        
+
         ProviderType(Class<?> type) {
             setType(type);
         }
     }
-    
-    // The selector is typically the property value, which may or may
+
+    // The description is typically the property value, which may or may
     // not contain both a scheme and a key:
-    private String selector;
-    
-    public SelectiveSensitivePropertyProviderFactory(String selector) {
-        this.selector = selector;
+    private SensitivePropertyMetadata description;
+
+    public SelectiveSensitivePropertyProviderFactory(SensitivePropertyMetadata propertyMetadata) {
+        this.description = propertyMetadata;
     }
 
     public SensitivePropertyProvider getProvider() throws SensitivePropertyProtectionException {
         for (ProviderType providerType : ProviderType.values()) {
             Class <?> type = providerType.getType();
             try {
-                if ((boolean) type.getMethod("canHandleScheme", String.class).invoke(null, selector)) {
+                if ((boolean) type.getMethod("canHandleScheme", String.class).invoke(null, description.getProtectionScheme() )) {
                     Constructor <?> ctor = type.getConstructor(String.class);
-                    return (SensitivePropertyProvider) ctor.newInstance(selector);
+                    return (SensitivePropertyProvider) ctor.newInstance(description.getProtectionScheme() );
+                }
+                if ((boolean) type.getMethod("canHandleScheme", String.class).invoke(null, description.getPropertyValue() )) {
+                    Constructor <?> ctor = type.getConstructor(String.class);
+                    return (SensitivePropertyProvider) ctor.newInstance(description.getPropertyValue() );
                 }
             } catch (final NoSuchMethodException exc) {
                 logger.error("Exception selecting provider: " + exc);
             } catch (final IllegalAccessException | InstantiationException | InvocationTargetException exc) {
-                logger.error("Exception creating provider: " + exc);                
+                logger.error("Exception creating provider: " + exc);
             }
         }
         throw new SensitivePropertyProtectionException("Could not create any provider");
     }
-    
+
     @Override
     public String toString() {
         return "SelectiveSensitivePropertyProviderFactory for selectivly creating SensitivePropertyProviders";

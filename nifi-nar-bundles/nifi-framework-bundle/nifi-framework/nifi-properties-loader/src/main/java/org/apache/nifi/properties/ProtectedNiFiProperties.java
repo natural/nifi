@@ -16,8 +16,6 @@
  */
 package org.apache.nifi.properties;
 
-import static java.util.Arrays.asList;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -30,10 +28,11 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.util.NiFiProperties;
-import org.apache.nifi.properties.AWSSensitivePropertyProvider;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static java.util.Arrays.asList;
 
 /**
  * Decorator class for intermediate phase when {@link NiFiPropertiesLoader} loads the
@@ -421,8 +420,6 @@ class ProtectedNiFiProperties extends StandardNiFiProperties {
      * @return the protected properties in a {@link StandardNiFiProperties} object
      */
     NiFiProperties protectPlainProperties(String protectionScheme) {
-        SensitivePropertyProvider spp = getSensitivePropertyProvider(protectionScheme);
-
         // Make a new holder (settable)
         Properties protectedProperties = new Properties();
 
@@ -436,6 +433,12 @@ class ProtectedNiFiProperties extends StandardNiFiProperties {
         // Add the protected keys and the protection schemes
         for (String key : getSensitivePropertyKeys()) {
             final String plainValue = getInternalNiFiProperties().getProperty(key);
+            final SensitivePropertyMetadata smd = new SensitivePropertyMetadata()
+                .withPropertyName(key)
+                .withPropertyValue(plainValue)
+                .withProtectionScheme(protectionScheme);
+
+            final SensitivePropertyProvider spp = new SelectiveSensitivePropertyProviderFactory(smd).getProvider();
             if (plainValue != null && !plainValue.trim().isEmpty()) {
                 // MARK 0 ; protectionScheme == 'aes/gcm/256'
                 logger.error("MARKER 0: " + plainValue + " scheme: " + protectionScheme);
@@ -523,13 +526,25 @@ class ProtectedNiFiProperties extends StandardNiFiProperties {
                 logger.warn("No provider available for {} so passing the protected {} value back", protectionScheme, key);
                 return retrievedValue;
             }
+            final SensitivePropertyMetadata smd = new SensitivePropertyMetadata()
+                .withPropertyName(key)
+                .withPropertyValue(retrievedValue)
+                .withProtectionScheme(protectionScheme);
 
             try {
-                SensitivePropertyProvider sensitivePropertyProvider = getSensitivePropertyProvider(protectionScheme);
+                // not using the new factory in leiu of using the
+                // providers already added to the hash.
+                SensitivePropertyProvider spp = getSensitivePropertyProviders().get(protectionScheme);
                 // MARK 1
-                logger.error("MARKER 1: " + key + " scheme: " + protectionScheme);
-                return sensitivePropertyProvider.unprotect(retrievedValue);
-            } catch (SensitivePropertyProtectionException e) {
+                SensitivePropertyProvider other;
+                try {
+                    other = new SelectiveSensitivePropertyProviderFactory(smd).getProvider();
+                } catch (final Exception e) {
+                    logger.error("FML: " + e);
+                }
+                logger.error("MARKER 1: " + key + " scheme: " + protectionScheme + " OW: " + smd.getPropertyValue() + " " + smd.getProtectionScheme());
+                return spp.unprotect(retrievedValue);
+            } catch (final SensitivePropertyProtectionException e) {
                 throw new SensitivePropertyProtectionException("Error unprotecting value for " + key, e.getCause());
             }
         }

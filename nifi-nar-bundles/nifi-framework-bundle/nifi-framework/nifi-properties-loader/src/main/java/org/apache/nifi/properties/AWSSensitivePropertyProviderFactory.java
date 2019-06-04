@@ -24,8 +24,6 @@ import javax.crypto.NoSuchPaddingException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 
-import com.amazonaws.services.kms.AWSKMSClientBuilder;
-
 
 public class AWSSensitivePropertyProviderFactory implements SensitivePropertyProviderFactory {
     private static final Logger logger = LoggerFactory.getLogger(AWSSensitivePropertyProviderFactory.class);

@@ -55,12 +55,6 @@ public class AESSensitivePropertyProvider implements SensitivePropertyProvider {
     private final SecretKey key;
 
     public AESSensitivePropertyProvider(String keyHex) throws NoSuchPaddingException, NoSuchAlgorithmException, NoSuchProviderException {
-        try {
-            SelectiveSensitivePropertyProviderFactory f = new SelectiveSensitivePropertyProviderFactory(keyHex);
-            f.getProvider();
-        } catch (final Exception ignored) {
-        }
-
         byte[] key = validateKey(keyHex);
 
         try {

@@ -32,6 +32,8 @@ import org.apache.nifi.properties.NiFiPropertiesLoader;
 import org.apache.nifi.properties.SensitivePropertyProtectionException;
 import org.apache.nifi.properties.SensitivePropertyProvider;
 import org.apache.nifi.properties.SensitivePropertyProviderFactory;
+import org.apache.nifi.properties.SensitivePropertyMetadata;
+import org.apache.nifi.properties.SelectiveSensitivePropertyProviderFactory;
 import org.apache.nifi.security.xml.XmlUtils;
 import org.apache.nifi.util.NiFiProperties;
 import org.apache.nifi.util.file.classloader.ClassLoaderUtils;
@@ -468,14 +470,12 @@ public class AuthorizerFactoryBean implements FactoryBean, DisposableBean, UserG
     }
 
     private static void initializeSensitivePropertyProvider(String encryptionScheme) throws SensitivePropertyProtectionException {
-        // MARK 3
-        logger.error("MARKER 3 scheme: " + encryptionScheme);
-        String key;
-
         if (SENSITIVE_PROPERTY_PROVIDER == null) {
             try {
-                key = getMasterKey();
-                SENSITIVE_PROPERTY_PROVIDER_FACTORY = new AESSensitivePropertyProviderFactory(key);
+                SensitivePropertyMetadata sensitivePropertyMeta = new SensitivePropertyMetadata()
+                    .withPropertyValue(getMasterKey())
+                    .withProtectionScheme(encryptionScheme);
+                SENSITIVE_PROPERTY_PROVIDER_FACTORY = new SelectiveSensitivePropertyProviderFactory(sensitivePropertyMeta);
                 SENSITIVE_PROPERTY_PROVIDER = SENSITIVE_PROPERTY_PROVIDER_FACTORY.getProvider();
             } catch (IOException e) {
                 logger.error("Error extracting master key from bootstrap.conf for login identity provider decryption", e);

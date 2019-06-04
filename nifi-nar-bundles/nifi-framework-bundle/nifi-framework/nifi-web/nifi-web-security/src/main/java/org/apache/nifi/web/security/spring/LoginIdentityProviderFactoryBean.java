@@ -55,6 +55,7 @@ import org.apache.nifi.properties.NiFiPropertiesLoader;
 import org.apache.nifi.properties.SensitivePropertyProtectionException;
 import org.apache.nifi.properties.SensitivePropertyProvider;
 import org.apache.nifi.properties.SensitivePropertyProviderFactory;
+import org.apache.nifi.properties.SensitivePropertyMetadata;
 import org.apache.nifi.security.xml.XmlUtils;
 import org.apache.nifi.util.NiFiProperties;
 import org.slf4j.Logger;
@@ -62,6 +63,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.FactoryBean;
 import org.xml.sax.SAXException;
+import org.apache.nifi.properties.SelectiveSensitivePropertyProviderFactory;
 
 /**
  *
@@ -220,16 +222,17 @@ public class LoginIdentityProviderFactoryBean implements FactoryBean, Disposable
 
     private String decryptValue(String cipherText, String encryptionScheme) throws SensitivePropertyProtectionException {
         initializeSensitivePropertyProvider(encryptionScheme);
-        // MARK 2
-        logger.error("MARKER 2: " + cipherText + " scheme: " + encryptionScheme);                            
         return SENSITIVE_PROPERTY_PROVIDER.unprotect(cipherText);
     }
 
     private static void initializeSensitivePropertyProvider(String encryptionScheme) throws SensitivePropertyProtectionException {
         if (SENSITIVE_PROPERTY_PROVIDER == null || !SENSITIVE_PROPERTY_PROVIDER.getIdentifierKey().equalsIgnoreCase(encryptionScheme)) {
             try {
-                String keyHex = getMasterKey();
-                SENSITIVE_PROPERTY_PROVIDER_FACTORY = new AESSensitivePropertyProviderFactory(keyHex);
+                SensitivePropertyMetadata sensitivePropertyMeta = new SensitivePropertyMetadata()
+                    .withPropertyValue(getMasterKey())
+                    .withProtectionScheme(encryptionScheme);
+
+                SENSITIVE_PROPERTY_PROVIDER_FACTORY = new SelectiveSensitivePropertyProviderFactory(sensitivePropertyMeta);
                 SENSITIVE_PROPERTY_PROVIDER = SENSITIVE_PROPERTY_PROVIDER_FACTORY.getProvider();
             } catch (IOException e) {
                 logger.error("Error extracting master key from bootstrap.conf for login identity provider decryption", e);
