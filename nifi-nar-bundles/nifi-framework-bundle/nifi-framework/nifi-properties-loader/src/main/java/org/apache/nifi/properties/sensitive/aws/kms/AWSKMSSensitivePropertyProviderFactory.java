@@ -14,32 +14,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.properties;
+package org.apache.nifi.properties.sensitive.aws.kms;
 
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import javax.crypto.NoSuchPaddingException;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
+import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
+import org.apache.nifi.properties.sensitive.SensitivePropertyProviderFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.crypto.NoSuchPaddingException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 
-import com.amazonaws.services.kms.AWSKMSClientBuilder;
-
-
-public class AWSSensitivePropertyProviderFactory implements SensitivePropertyProviderFactory {
-    private static final Logger logger = LoggerFactory.getLogger(AWSSensitivePropertyProviderFactory.class);
+public class AWSKMSSensitivePropertyProviderFactory implements SensitivePropertyProviderFactory {
+    private static final Logger logger = LoggerFactory.getLogger(AWSKMSSensitivePropertyProviderFactory.class);
 
     private String keyHex;
 
-    public AWSSensitivePropertyProviderFactory(String keyHex) {
+    public AWSKMSSensitivePropertyProviderFactory(String keyHex) {
         this.keyHex = keyHex;
     }
 
     public SensitivePropertyProvider getProvider() throws SensitivePropertyProtectionException {
         try {
             if (keyHex != null && !StringUtils.isBlank(keyHex)) {
-                return new AWSSensitivePropertyProvider(keyHex);
+                return new AWSKMSSensitivePropertyProvider(keyHex);
             } else {
                 throw new SensitivePropertyProtectionException("The provider factory cannot generate providers without a key");
             }

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.properties;
+package org.apache.nifi.properties.sensitive;
 
 import static java.util.Arrays.asList;
 
@@ -27,11 +27,11 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.apache.commons.lang3.StringUtils;
+import org.apache.nifi.properties.NiFiPropertiesLoader;
+import org.apache.nifi.properties.StandardNiFiProperties;
+import org.apache.nifi.properties.sensitive.aws.kms.AWSKMSSensitivePropertyProvider;
 import org.apache.nifi.util.NiFiProperties;
-import org.apache.nifi.properties.AWSSensitivePropertyProvider;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
  * This encapsulates the sensitive property access logic from external consumers
  * of {@code NiFiProperties}.
  */
-class ProtectedNiFiProperties extends StandardNiFiProperties {
+public class ProtectedNiFiProperties extends StandardNiFiProperties {
     private static final Logger logger = LoggerFactory.getLogger(ProtectedNiFiProperties.class);
 
     private NiFiProperties niFiProperties;
@@ -376,7 +376,7 @@ class ProtectedNiFiProperties extends StandardNiFiProperties {
      *
      * @param sensitivePropertyProvider the provider
      */
-    void addSensitivePropertyProvider(SensitivePropertyProvider sensitivePropertyProvider) {
+    public void addSensitivePropertyProvider(SensitivePropertyProvider sensitivePropertyProvider) {
         if (sensitivePropertyProvider == null) {
             throw new IllegalArgumentException("Cannot add null SensitivePropertyProvider");
         }
@@ -495,9 +495,9 @@ class ProtectedNiFiProperties extends StandardNiFiProperties {
     }
 
     private SensitivePropertyProvider getSensitivePropertyProvider(String protectionScheme) {
-        AWSSensitivePropertyProvider awsProvider;
+        AWSKMSSensitivePropertyProvider awsProvider;
         try {
-            awsProvider = new AWSSensitivePropertyProvider("ignore me for i am wrong");
+            awsProvider = new AWSKMSSensitivePropertyProvider("ignore me for i am wrong");
         } catch (final Exception ignored) {
             throw new SensitivePropertyProtectionException("Cannot make basic aws provider");
         }
@@ -506,7 +506,7 @@ class ProtectedNiFiProperties extends StandardNiFiProperties {
             return getSensitivePropertyProviders().get(protectionScheme);
         } else if (awsProvider.providesScheme(protectionScheme)) {
             try {
-                return new AWSSensitivePropertyProvider(protectionScheme);
+                return new AWSKMSSensitivePropertyProvider(protectionScheme);
             } catch (final Exception ex) {
                 throw new SensitivePropertyProtectionException(ex);
             }

@@ -30,6 +30,11 @@ import java.util.Properties;
 import java.util.stream.Stream;
 import javax.crypto.Cipher;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.nifi.properties.sensitive.ProtectedNiFiProperties;
+import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
+import org.apache.nifi.properties.sensitive.SensitivePropertyProviderFactory;
+import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProvider;
+import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProviderFactory;
 import org.apache.nifi.util.NiFiProperties;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
@@ -182,7 +187,18 @@ public class NiFiPropertiesLoader {
     }
 
     private void initializeSensitivePropertyProviderFactory() {
+        // TODO: Detect protection scheme from nifi.properties?
+        // TODO: Overload method with String protectionScheme parameter
         sensitivePropertyProviderFactory = new AESSensitivePropertyProviderFactory(keyHex);
+    }
+
+    private void initializeSensitivePropertyProviderFactory(String protectionScheme) {
+        sensitivePropertyProviderFactory = determineFactory(protectionScheme);
+    }
+
+    SensitivePropertyProviderFactory determineFactory(String protectionScheme) {
+        // TODO: Implement
+        return new AESSensitivePropertyProviderFactory(keyHex);
     }
 
     private SensitivePropertyProvider getSensitivePropertyProvider() {

@@ -15,10 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.properties
+package org.apache.nifi.properties.sensitive.aws.kms
 
+import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException
+import org.apache.nifi.properties.sensitive.SensitivePropertyProvider
 import org.bouncycastle.util.encoders.Hex
-import org.junit.*
+import org.junit.After
+import org.junit.Before
+import org.junit.BeforeClass
+import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 import org.slf4j.Logger
@@ -26,10 +31,9 @@ import org.slf4j.LoggerFactory
 
 import java.security.SecureRandom
 
-
 @RunWith(JUnit4.class)
-class AWSSensitivePropertyProviderTest extends GroovyTestCase {
-    private static final Logger logger = LoggerFactory.getLogger(AWSSensitivePropertyProviderTest.class)
+class AWSKMSSensitivePropertyProviderTest extends GroovyTestCase {
+    private static final Logger logger = LoggerFactory.getLogger(AWSKMSSensitivePropertyProviderTest.class)
     
     private static final Base64.Encoder encoder = Base64.encoder
     private static final Base64.Decoder decoder = Base64.decoder
@@ -58,7 +62,7 @@ class AWSSensitivePropertyProviderTest extends GroovyTestCase {
         String msg
         
         msg = shouldFail(SensitivePropertyProtectionException) {
-            propProvider = new AWSSensitivePropertyProvider("")
+            propProvider = new AWSKMSSensitivePropertyProvider("")
         }
         
         assert msg =~ "The key cannot be empty"
@@ -69,7 +73,7 @@ class AWSSensitivePropertyProviderTest extends GroovyTestCase {
 
         badKeyExceptions.each { exc -> 
             msg = shouldFail(exc) {
-                propProvider = new AWSSensitivePropertyProvider("bad key")
+                propProvider = new AWSKMSSensitivePropertyProvider("bad key")
                 propProvider.protect("value")
             }
             // assert propProvider != null
@@ -81,10 +85,10 @@ class AWSSensitivePropertyProviderTest extends GroovyTestCase {
     void testShouldProtectAndUnprotectValues() throws Exception {
         // com.amazonaws.services.kms.model.InvalidCiphertextException
         SensitivePropertyProvider propProvider
-        String plainText;
-        
+        String plainText
+
         knownGoodKeys.each { k ->
-            propProvider = new AWSSensitivePropertyProvider(k)
+            propProvider = new AWSKMSSensitivePropertyProvider(k)
             assert propProvider != null
 
             byte[] randBytes = new byte[32]
@@ -104,7 +108,7 @@ class AWSSensitivePropertyProviderTest extends GroovyTestCase {
         final List<String> EMPTY_PLAINTEXTS = ["", "    ", null]
         
         knownGoodKeys.each { k ->
-            propProvider = new AWSSensitivePropertyProvider(k)
+            propProvider = new AWSKMSSensitivePropertyProvider(k)
             assert propProvider != null
 
             EMPTY_PLAINTEXTS.each { String emptyPlaintext ->
@@ -122,7 +126,7 @@ class AWSSensitivePropertyProviderTest extends GroovyTestCase {
         final List<String> BAD_CIPHERTEXTS = ["any", "bad", "value"]
         
         knownGoodKeys.each { k ->
-            propProvider = new AWSSensitivePropertyProvider(k)
+            propProvider = new AWSKMSSensitivePropertyProvider(k)
             assert propProvider != null
 
             BAD_CIPHERTEXTS.each { String emptyPlaintext ->
@@ -163,7 +167,7 @@ class AWSSensitivePropertyProviderTest extends GroovyTestCase {
         def values = ["thisIsABadPassword", "thisIsABadSensitiveKeyPassword", "thisIsABadKeystorePassword", "thisIsABadKeyPassword", "thisIsABadTruststorePassword", "This is an encrypted banner message", "nififtw!"]
 
         knownGoodKeys.each { k ->
-            SensitivePropertyProvider propProvider = new AWSSensitivePropertyProvider(k)
+            SensitivePropertyProvider propProvider = new AWSKMSSensitivePropertyProvider(k)
             assert propProvider != null
 
             // Act

@@ -14,32 +14,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.properties;
+package org.apache.nifi.properties.sensitive.aws.kms;
 
 import com.amazonaws.services.kms.AWSKMS;
+import com.amazonaws.services.kms.AWSKMSClientBuilder;
 import com.amazonaws.services.kms.model.DecryptRequest;
 import com.amazonaws.services.kms.model.DecryptResult;
 import com.amazonaws.services.kms.model.EncryptRequest;
 import com.amazonaws.services.kms.model.EncryptResult;
+import com.amazonaws.services.kms.model.GenerateRandomRequest;
+import com.amazonaws.services.kms.model.GenerateRandomResult;
+import java.nio.ByteBuffer;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import javax.crypto.NoSuchPaddingException;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
+import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
 import org.bouncycastle.util.encoders.Hex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.crypto.NoSuchPaddingException;
-import java.nio.ByteBuffer;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-
-
-import com.amazonaws.services.kms.AWSKMSClientBuilder;
-import com.amazonaws.services.kms.model.GenerateRandomResult;
-import com.amazonaws.services.kms.model.GenerateRandomRequest;
-
 
 // Rename to AWSKMS
-public class AWSSensitivePropertyProvider implements SensitivePropertyProvider {
-    private static final Logger logger = LoggerFactory.getLogger(AWSSensitivePropertyProvider.class);
+public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvider {
+    private static final Logger logger = LoggerFactory.getLogger(AWSKMSSensitivePropertyProvider.class);
 
     private static final String IMPLEMENTATION_NAME = "AWS KMS Sensitive Property Provider";
     private static final String IMPLEMENTATION_KEY = "aws/kms/"; // .protected=aws/kms/some-key-id-goes-here // follow-on ticket for ConfigEncryption toolkit
@@ -47,7 +46,7 @@ public class AWSSensitivePropertyProvider implements SensitivePropertyProvider {
     private AWSKMS client;
     private final String key;
 
-    public AWSSensitivePropertyProvider(String keyId) throws NoSuchPaddingException, NoSuchAlgorithmException, NoSuchProviderException {
+    public AWSKMSSensitivePropertyProvider(String keyId) throws NoSuchPaddingException, NoSuchAlgorithmException, NoSuchProviderException {
         this.key = validateKey(keyId);
         this.client = AWSKMSClientBuilder.standard().build();
     }

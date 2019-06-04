@@ -14,10 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.properties
+package org.apache.nifi.properties.sensitive.aws.kms
 
+import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException
+import org.apache.nifi.properties.sensitive.SensitivePropertyProvider
+import org.apache.nifi.properties.sensitive.SensitivePropertyProviderFactory
+import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProvider
+import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProviderFactory
 import org.bouncycastle.jce.provider.BouncyCastleProvider
-import org.junit.*
+import org.junit.After
+import org.junit.Before
+import org.junit.BeforeClass
+import org.junit.Ignore
+import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 import org.slf4j.Logger
@@ -26,13 +35,13 @@ import org.slf4j.LoggerFactory
 import java.security.Security
 
 @RunWith(JUnit4.class)
-class AWSSensitivePropertyProviderFactoryTest extends GroovyTestCase {
-    private static final Logger logger = LoggerFactory.getLogger(AWSSensitivePropertyProviderFactoryTest.class)
+class AWSKMSSensitivePropertyProviderFactoryTest extends GroovyTestCase {
+    private static final Logger logger = LoggerFactory.getLogger(AWSKMSSensitivePropertyProviderFactoryTest.class)
 
     private static final String KEY_HEX = "0123456789ABCDEFFEDCBA9876543210" * 2
 
     @BeforeClass
-    public static void setUpOnce() throws Exception {
+    static void setUpOnce() throws Exception {
         Security.addProvider(new BouncyCastleProvider())
 
         logger.metaClass.methodMissing = { String name, args ->
@@ -41,19 +50,19 @@ class AWSSensitivePropertyProviderFactoryTest extends GroovyTestCase {
     }
 
     @Before
-    public void setUp() throws Exception {
+    void setUp() throws Exception {
 
     }
 
     @After
-    public void tearDown() throws Exception {
+    void tearDown() throws Exception {
 
     }
 
     @Ignore("This is resolved in PR 1216")
     @Test
-    public void testShouldNotGetProviderWithoutKey() throws Exception {
-        throw new Exception("FM");
+    void testShouldNotGetProviderWithoutKey() throws Exception {
+        throw new Exception("FM")
         // Arrange
         SensitivePropertyProviderFactory factory = new AESSensitivePropertyProviderFactory()
 
@@ -68,7 +77,7 @@ class AWSSensitivePropertyProviderFactoryTest extends GroovyTestCase {
     }
 
     @Test
-    public void testShouldGetProviderWithKey() throws Exception {
+    void testShouldGetProviderWithKey() throws Exception {
         // Arrange
         SensitivePropertyProviderFactory factory = new AESSensitivePropertyProviderFactory(KEY_HEX)
 
@@ -83,7 +92,7 @@ class AWSSensitivePropertyProviderFactoryTest extends GroovyTestCase {
 
     @Ignore("This is resolved in PR 1216")
     @Test
-    public void testGetProviderShouldHandleEmptyKey() throws Exception {
+    void testGetProviderShouldHandleEmptyKey() throws Exception {
         // Arrange
         SensitivePropertyProviderFactory factory = new AESSensitivePropertyProviderFactory("")
 

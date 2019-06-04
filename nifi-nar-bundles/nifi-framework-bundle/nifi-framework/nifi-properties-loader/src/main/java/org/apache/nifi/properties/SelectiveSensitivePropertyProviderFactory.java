@@ -16,18 +16,15 @@
  */
 package org.apache.nifi.properties;
 
-import org.apache.commons.lang3.StringUtils;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
+import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
+import org.apache.nifi.properties.sensitive.SensitivePropertyProviderFactory;
+import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProvider;
+import org.apache.nifi.properties.sensitive.aws.kms.AWSKMSSensitivePropertyProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.crypto.NoSuchPaddingException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-
-import com.amazonaws.services.kms.AWSKMSClientBuilder;
-import java.lang.reflect.Method;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Constructor;
 
 
 
@@ -35,7 +32,7 @@ public class SelectiveSensitivePropertyProviderFactory implements SensitivePrope
     private static final Logger logger = LoggerFactory.getLogger(SelectiveSensitivePropertyProviderFactory.class);
 
     private enum ProviderType {
-        AWS(AWSSensitivePropertyProvider.class),   
+        AWS(AWSKMSSensitivePropertyProvider.class),
         AES(AESSensitivePropertyProvider.class);
 
         Class<?> type;
