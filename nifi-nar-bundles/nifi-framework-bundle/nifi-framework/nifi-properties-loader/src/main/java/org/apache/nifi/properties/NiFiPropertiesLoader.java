@@ -189,17 +189,27 @@ public class NiFiPropertiesLoader {
     private void initializeSensitivePropertyProviderFactory() {
         // TODO: Detect protection scheme from nifi.properties?
         // TODO: Overload method with String protectionScheme parameter
-        sensitivePropertyProviderFactory = new AESSensitivePropertyProviderFactory(keyHex);
+        // sensitivePropertyProviderFactory = new AESSensitivePropertyProviderFactory(keyHex);
+        PropertyMetadata propMeta = new PropertyMetadata()
+            .withPropertyValue(keyHex);
+        
+        sensitivePropertyProviderFactory = SensitivePropertyProviderFactorySelector.selectProviderFactory(propMeta);
     }
 
     private void initializeSensitivePropertyProviderFactory(String protectionScheme) {
-        sensitivePropertyProviderFactory = determineFactory(protectionScheme);
+        PropertyMetadata propMeta = new PropertyMetadata()
+            .withProtectionScheme(protectionScheme);
+        
+        sensitivePropertyProviderFactory = SensitivePropertyProviderFactorySelector.selectProviderFactory(propMeta);
     }
 
-    SensitivePropertyProviderFactory determineFactory(String protectionScheme) {
+    // SensitivePropertyProviderFactory determineFactory(String propertyValue, String protectionScheme) {
         // TODO: Implement
-        return new AESSensitivePropertyProviderFactory(keyHex);
-    }
+        // TO finish:  load props file w aws key + run nifi
+        // migrate to IT test, make keys during tests if necessary
+        // return new SensitiveProviderFactorySelector.select(protectionScheme);
+        // return new AESSensitivePropertyProviderFactory(keyHex);
+    //}
 
     private SensitivePropertyProvider getSensitivePropertyProvider() {
         initializeSensitivePropertyProviderFactory();
