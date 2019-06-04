@@ -16,9 +16,6 @@
  */
 package org.apache.nifi.properties.sensitive.aes;
 
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import javax.crypto.NoSuchPaddingException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
@@ -36,16 +33,10 @@ public class AESSensitivePropertyProviderFactory implements SensitivePropertyPro
     }
 
     public SensitivePropertyProvider getProvider() throws SensitivePropertyProtectionException {
-        try {
-            if (keyHex != null && !StringUtils.isBlank(keyHex)) {
-                return new AESSensitivePropertyProvider(keyHex);
-            } else {
-                throw new SensitivePropertyProtectionException("The provider factory cannot generate providers without a key");
-            }
-        } catch (NoSuchAlgorithmException | NoSuchProviderException | NoSuchPaddingException e) {
-            String msg = "Error creating AES Sensitive Property Provider";
-            logger.warn(msg, e);
-            throw new SensitivePropertyProtectionException(msg, e);
+        if (keyHex != null && !StringUtils.isBlank(keyHex)) {
+            return new AESSensitivePropertyProvider(keyHex);
+        } else {
+            throw new SensitivePropertyProtectionException("The provider factory cannot generate providers without a key");
         }
     }
 

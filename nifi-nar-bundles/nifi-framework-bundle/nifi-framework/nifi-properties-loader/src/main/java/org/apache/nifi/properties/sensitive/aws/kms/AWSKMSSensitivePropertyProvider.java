@@ -29,6 +29,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import javax.crypto.NoSuchPaddingException;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.nifi.properties.sensitive.SensitivePropertyMetadata;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
 import org.bouncycastle.util.encoders.Hex;
@@ -36,7 +37,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-// Rename to AWSKMS
 public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvider {
     private static final Logger logger = LoggerFactory.getLogger(AWSKMSSensitivePropertyProvider.class);
 
@@ -102,6 +102,20 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
     }
 
     /**
+     * Returns the "protected" form of this value. This is a form which can safely be persisted in the {@code nifi.properties} file without compromising the value.
+     * An encryption-based provider would return a cipher text, while a remote-lookup provider could return a unique ID to retrieve the secured value.
+     *
+     * @param unprotectedValue the sensitive value
+     * @param metadata         per-value metadata necessary to perform the protection
+     * @return the value to persist in the {@code nifi.properties} file
+     */
+    @Override
+    public String protect(String unprotectedValue, SensitivePropertyMetadata metadata) throws SensitivePropertyProtectionException {
+        // TODO: Implement
+        return null;
+    }
+
+    /**
      * Returns the decrypted plaintext.
      *
      * @param protectedValue the cipher text read from the {@code nifi.properties} file
@@ -117,6 +131,20 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
         return new String(response.getPlaintext().array());
     }
 
+    /**
+     * Returns the "unprotected" form of this value. This is the raw sensitive value which is used by the application logic.
+     * An encryption-based provider would decrypt a cipher text and return the plaintext, while a remote-lookup provider could retrieve the secured value.
+     *
+     * @param protectedValue the protected value read from the {@code nifi.properties} file
+     * @param metadata       per-value metadata necessary to perform the unprotection
+     * @return the raw value to be used by the application
+     */
+    @Override
+    public String unprotect(String protectedValue, SensitivePropertyMetadata metadata) throws SensitivePropertyProtectionException {
+        // TODO: Implement
+        return null;
+    }
+
     public String generateRandom(Integer size) {
         GenerateRandomRequest request = new GenerateRandomRequest()
             .withNumberOfBytes(size);
@@ -128,7 +156,8 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
     public boolean providesScheme(String protectionScheme) throws SensitivePropertyProtectionException {
         return protectionScheme != null && protectionScheme.startsWith(IMPLEMENTATION_KEY);        
     }
-    
+
+    // TODO: Remove as this is unused and duplicates providesScheme?
     public static boolean canHandleScheme(String protectionScheme) throws SensitivePropertyProtectionException {
         return protectionScheme != null && protectionScheme.startsWith(IMPLEMENTATION_KEY);        
     }
