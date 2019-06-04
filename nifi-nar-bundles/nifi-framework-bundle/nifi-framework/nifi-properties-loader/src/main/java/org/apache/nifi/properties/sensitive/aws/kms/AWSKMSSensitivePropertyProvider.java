@@ -93,11 +93,13 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
             throw new IllegalArgumentException("Cannot encrypt an empty value");
         }
 
+        // TODO: Standardize on explicit character encoding UTF-8
         EncryptRequest request = new EncryptRequest()
             .withKeyId(key)
             .withPlaintext(ByteBuffer.wrap(unprotectedValue.getBytes()));
 
         EncryptResult response = client.encrypt(request);
+        // TODO: Base64 will be more concise here
         return Hex.toHexString(response.getCiphertextBlob().array());
     }
 
@@ -124,6 +126,7 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
      */
     @Override
     public String unprotect(String protectedValue) throws SensitivePropertyProtectionException {
+        // TODO: Base64 is smaller than hex and should be consistent with the protected value
         DecryptRequest request = new DecryptRequest()
             .withCiphertextBlob(ByteBuffer.wrap(Hex.decode(protectedValue)));
                                 
@@ -157,7 +160,7 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
         return protectionScheme != null && protectionScheme.startsWith(IMPLEMENTATION_KEY);        
     }
 
-    // TODO: Remove as this is unused and duplicates providesScheme?
+    // TODO: Remove as this is unused and duplicates providesScheme? If required by SSPPF, invoke it from the #providesScheme method
     public static boolean canHandleScheme(String protectionScheme) throws SensitivePropertyProtectionException {
         return protectionScheme != null && protectionScheme.startsWith(IMPLEMENTATION_KEY);        
     }
