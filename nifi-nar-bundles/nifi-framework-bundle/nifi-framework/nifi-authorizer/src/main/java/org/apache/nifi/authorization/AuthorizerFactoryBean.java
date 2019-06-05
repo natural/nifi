@@ -53,9 +53,6 @@ import org.apache.nifi.properties.SensitivePropertyProviderFactorySelector;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProviderFactory;
-import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProviderFactory;
-import org.apache.nifi.properties.sensitive.aws.kms.AWSKMSSensitivePropertyProvider;
-import org.apache.nifi.properties.sensitive.aws.kms.AWSKMSSensitivePropertyProviderFactory;
 import org.apache.nifi.security.xml.XmlUtils;
 import org.apache.nifi.util.NiFiProperties;
 import org.apache.nifi.util.file.classloader.ClassLoaderUtils;
@@ -476,7 +473,7 @@ public class AuthorizerFactoryBean implements FactoryBean, DisposableBean, UserG
                 throw new SensitivePropertyProtectionException("Could not read master key from bootstrap.conf");
             }
             SENSITIVE_PROPERTY_PROVIDER_FACTORY = SensitivePropertyProviderFactorySelector.selectProviderFactory(key);
-            SENSITIVE_PROPERTY_PROVIDER = SENSITIVE_PROPERTY_PROVIDER_FACTORY.getProvider();                        
+            SENSITIVE_PROPERTY_PROVIDER = SENSITIVE_PROPERTY_PROVIDER_FACTORY.getProvider();
         }
     }
 
