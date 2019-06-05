@@ -14,29 +14,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.properties;
+package org.apache.nifi.properties.sensitive;
 
 
-public class PropertyMetadata {
+public class PropertyDescription {
     private String propertyName;
     private String propertyValue;
     private String protectionScheme;
 
-    public PropertyMetadata() {
+    public PropertyDescription() {
         propertyName = propertyValue = protectionScheme = "";
     }
 
-    public PropertyMetadata withPropertyName(String name) {
+    public PropertyDescription withPropertyName(String name) {
         propertyName = name;
         return this;
     }
 
-    public PropertyMetadata withPropertyValue(String value) {
+    public PropertyDescription withPropertyValue(String value) {
         propertyValue = value;
         return this;
     }
 
-    public PropertyMetadata withProtectionScheme(String scheme) {
+    public PropertyDescription withProtectionScheme(String scheme) {
         protectionScheme = scheme;
         return this;
     }

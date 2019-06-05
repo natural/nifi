@@ -29,7 +29,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.properties.NiFiPropertiesLoader;
-import org.apache.nifi.properties.PropertyMetadata;
 import org.apache.nifi.properties.StandardNiFiProperties;
 import org.apache.nifi.properties.SensitivePropertyProviderFactorySelector;
 import org.apache.nifi.util.NiFiProperties;
@@ -504,7 +503,7 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
         }
     }
 
-    private SensitivePropertyProvider getSensitivePropertyProvider(PropertyMetadata propertyDescription) {
+    private SensitivePropertyProvider getSensitivePropertyProvider(PropertyDescription propertyDescription) {
         return getSensitivePropertyProvider(propertyDescription.getProtectionScheme());
     }
 
@@ -530,7 +529,7 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
                 logger.warn("FML 1 No provider available for {} so passing the protected {} value back", protectionScheme, key);
 
                 try {
-                    final PropertyMetadata propertyDescription = new PropertyMetadata().withPropertyName(key).withPropertyValue(retrievedValue).withProtectionScheme(protectionScheme);
+                    final PropertyDescription propertyDescription = new PropertyDescription().withPropertyName(key).withPropertyValue(retrievedValue).withProtectionScheme(protectionScheme);
                     SensitivePropertyProvider sensitivePropertyProvider = getSensitivePropertyProvider(propertyDescription);
                     logger.warn("FML 2: " + sensitivePropertyProvider);
                     return sensitivePropertyProvider.unprotect(retrievedValue);
@@ -541,7 +540,7 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
                 return retrievedValue;
             }
             try {
-                final PropertyMetadata propertyDescription = new PropertyMetadata().withPropertyName(key).withPropertyValue(retrievedValue).withProtectionScheme(protectionScheme);
+                final PropertyDescription propertyDescription = new PropertyDescription().withPropertyName(key).withPropertyValue(retrievedValue).withProtectionScheme(protectionScheme);
                 SensitivePropertyProvider sensitivePropertyProvider = getSensitivePropertyProvider(propertyDescription);
                 return sensitivePropertyProvider.unprotect(retrievedValue);
             } catch (SensitivePropertyProtectionException e) {

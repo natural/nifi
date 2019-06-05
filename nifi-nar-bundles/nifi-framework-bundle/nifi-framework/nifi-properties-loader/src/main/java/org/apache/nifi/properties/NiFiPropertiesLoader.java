@@ -30,11 +30,11 @@ import java.util.Properties;
 import java.util.stream.Stream;
 import javax.crypto.Cipher;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.nifi.properties.sensitive.PropertyDescription;
 import org.apache.nifi.properties.sensitive.ProtectedNiFiProperties;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProviderFactory;
 import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProvider;
-import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProviderFactory;
 import org.apache.nifi.util.NiFiProperties;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
@@ -188,30 +188,12 @@ public class NiFiPropertiesLoader {
 
     private void initializeSensitivePropertyProviderFactory() {
         // TODO: Detect protection scheme from nifi.properties?
-        // TODO: Overload method with String protectionScheme parameter
-        // sensitivePropertyProviderFactory = new AESSensitivePropertyProviderFactory(keyHex);
-        PropertyMetadata propMeta = new PropertyMetadata()
+        PropertyDescription propMeta = new PropertyDescription()
             .withPropertyValue(keyHex)
             .withProtectionScheme(keyHex);
 
         sensitivePropertyProviderFactory = SensitivePropertyProviderFactorySelector.selectProviderFactory(propMeta);
     }
-
-    private void initializeSensitivePropertyProviderFactory(String protectionScheme) {
-        PropertyMetadata propMeta = new PropertyMetadata()
-            .withPropertyValue(keyHex)
-            .withProtectionScheme(protectionScheme);
-
-        sensitivePropertyProviderFactory = SensitivePropertyProviderFactorySelector.selectProviderFactory(propMeta);
-    }
-
-    // SensitivePropertyProviderFactory determineFactory(String propertyValue, String protectionScheme) {
-        // TODO: Implement
-        // TO finish:  load props file w aws key + run nifi
-        // migrate to IT test, make keys during tests if necessary
-        // return new SensitiveProviderFactorySelector.select(protectionScheme);
-        // return new AESSensitivePropertyProviderFactory(keyHex);
-    //}
 
     private SensitivePropertyProvider getSensitivePropertyProvider() {
         initializeSensitivePropertyProviderFactory();

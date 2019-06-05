@@ -33,7 +33,6 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.nifi.properties.PropertyMetadata;
 import org.apache.nifi.properties.sensitive.SensitivePropertyMetadata;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;

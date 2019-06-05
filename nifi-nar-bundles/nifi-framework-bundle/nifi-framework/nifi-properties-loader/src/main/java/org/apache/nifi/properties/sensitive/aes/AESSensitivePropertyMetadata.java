@@ -49,7 +49,8 @@ public class AESSensitivePropertyMetadata implements SensitivePropertyMetadata {
         if (VALID_KEY_LENGTHS.contains(keyLength)) {
             this.keyLength = keyLength;
         } else {
-            throw new SensitivePropertyProtectionException("Key length " + keyLength + " not valid [" + StringUtils.join(VALID_KEY_LENGTHS.stream().map(String::valueOf).collect(Collectors.toList()), ",") + "]");
+            throw new SensitivePropertyProtectionException("Key length " + keyLength + " not valid [" +
+                    StringUtils.join(VALID_KEY_LENGTHS.stream().map(String::valueOf).collect(Collectors.toList()), ",") + "]");
         }
     }
 
@@ -113,8 +114,7 @@ public class AESSensitivePropertyMetadata implements SensitivePropertyMetadata {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         AESSensitivePropertyMetadata that = (AESSensitivePropertyMetadata) o;
-        return keyLength == that.keyLength &&
-                Objects.equals(algorithmAndMode, that.algorithmAndMode);
+        return keyLength == that.keyLength && Objects.equals(algorithmAndMode, that.algorithmAndMode);
     }
 
     @Override

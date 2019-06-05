@@ -51,12 +51,11 @@ import org.apache.nifi.bundle.Bundle;
 import org.apache.nifi.nar.ExtensionManager;
 import org.apache.nifi.nar.NarCloseable;
 import org.apache.nifi.properties.NiFiPropertiesLoader;
-import org.apache.nifi.properties.PropertyMetadata;
+import org.apache.nifi.properties.sensitive.PropertyDescription;
 import org.apache.nifi.properties.SensitivePropertyProviderFactorySelector;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProviderFactory;
-import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProviderFactory;
 import org.apache.nifi.security.xml.XmlUtils;
 import org.apache.nifi.util.NiFiProperties;
 import org.slf4j.Logger;
@@ -228,7 +227,7 @@ public class LoginIdentityProviderFactoryBean implements FactoryBean, Disposable
     private static void initializeSensitivePropertyProvider(String encryptionScheme) throws SensitivePropertyProtectionException {
         if (SENSITIVE_PROPERTY_PROVIDER == null) {
             try {
-                final PropertyMetadata props = new PropertyMetadata().withProtectionScheme(encryptionScheme).withPropertyValue(getMasterKey());
+                final PropertyDescription props = new PropertyDescription().withProtectionScheme(encryptionScheme).withPropertyValue(getMasterKey());
                 SENSITIVE_PROPERTY_PROVIDER_FACTORY = SensitivePropertyProviderFactorySelector.selectProviderFactory(props);
                 SENSITIVE_PROPERTY_PROVIDER = SENSITIVE_PROPERTY_PROVIDER_FACTORY.getProvider();
             } catch (IOException e) {

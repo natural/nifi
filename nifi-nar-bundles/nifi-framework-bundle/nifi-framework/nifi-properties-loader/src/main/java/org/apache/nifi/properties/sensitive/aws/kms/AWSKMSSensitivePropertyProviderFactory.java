@@ -20,7 +20,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import javax.crypto.NoSuchPaddingException;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.nifi.properties.PropertyMetadata;
+import org.apache.nifi.properties.sensitive.PropertyDescription;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProviderFactory;
@@ -33,7 +33,7 @@ public class AWSKMSSensitivePropertyProviderFactory implements SensitiveProperty
 
     private String keyId;
 
-    public AWSKMSSensitivePropertyProviderFactory(PropertyMetadata props) {
+    public AWSKMSSensitivePropertyProviderFactory(PropertyDescription props) {
         keyId = props.getProtectionScheme().split("/")[2];
         logger.error("FML: " + keyId);
     }
@@ -56,8 +56,8 @@ public class AWSKMSSensitivePropertyProviderFactory implements SensitiveProperty
     public String toString() {
         return "SensitivePropertyProviderFactory for creating AWSSensitivePropertyProviders";
     }
-    
-    public static boolean accepts(PropertyMetadata propertyDescription) {
+
+    public static boolean accepts(PropertyDescription propertyDescription) {
         final String protectionScheme = propertyDescription == null ? "" : propertyDescription.getProtectionScheme();
         return protectionScheme != null && protectionScheme.startsWith(AWSKMSSensitivePropertyProvider.IMPLEMENTATION_KEY);
     }

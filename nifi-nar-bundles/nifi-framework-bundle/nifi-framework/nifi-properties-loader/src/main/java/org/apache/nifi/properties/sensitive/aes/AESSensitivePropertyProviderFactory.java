@@ -17,7 +17,7 @@
 package org.apache.nifi.properties.sensitive.aes;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.nifi.properties.PropertyMetadata;
+import org.apache.nifi.properties.sensitive.PropertyDescription;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProviderFactory;
@@ -32,8 +32,8 @@ public class AESSensitivePropertyProviderFactory implements SensitivePropertyPro
     public AESSensitivePropertyProviderFactory(String key) {
         this.keyHex = key;
     }
-    
-    public AESSensitivePropertyProviderFactory(PropertyMetadata prop) {
+
+    public AESSensitivePropertyProviderFactory(PropertyDescription prop) {
         this.keyHex = prop.getPropertyValue();
     }
 
@@ -49,8 +49,8 @@ public class AESSensitivePropertyProviderFactory implements SensitivePropertyPro
     public String toString() {
         return "SensitivePropertyProviderFactory for creating AESSensitivePropertyProviders";
     }
-    
-    public static boolean accepts(PropertyMetadata prop) {
+
+    public static boolean accepts(PropertyDescription prop) {
         return true;
     }
 }

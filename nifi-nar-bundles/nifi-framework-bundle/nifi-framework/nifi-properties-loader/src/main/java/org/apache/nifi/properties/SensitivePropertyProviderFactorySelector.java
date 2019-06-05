@@ -17,6 +17,7 @@
 package org.apache.nifi.properties;
 
 
+import org.apache.nifi.properties.sensitive.PropertyDescription;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProviderFactory;
 import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProviderFactory;
@@ -28,22 +29,22 @@ import org.slf4j.LoggerFactory;
 
 public class SensitivePropertyProviderFactorySelector {
     private static final Logger logger = LoggerFactory.getLogger(SensitivePropertyProviderFactorySelector.class);
-    
+
     public static SensitivePropertyProviderFactory selectProviderFactory(String value) throws SensitivePropertyProtectionException {
-        return selectProviderFactory(new PropertyMetadata().withPropertyValue(value).withProtectionScheme(value));
+        return selectProviderFactory(new PropertyDescription().withPropertyValue(value).withProtectionScheme(value));
     }
 
-    public static SensitivePropertyProviderFactory selectProviderFactory(PropertyMetadata prop) throws SensitivePropertyProtectionException {
+    public static SensitivePropertyProviderFactory selectProviderFactory(PropertyDescription prop) throws SensitivePropertyProtectionException {
         if (AWSKMSSensitivePropertyProviderFactory.accepts(prop)) {
             logger.info("Selected AWS KMS sensitive property provider factory.");
             return new AWSKMSSensitivePropertyProviderFactory(prop);
         }
 
         if (AESSensitivePropertyProviderFactory.accepts(prop)) {
-            logger.info("Selected AES sensitive property provider factory.");            
+            logger.info("Selected AES sensitive property provider factory.");
             return new AESSensitivePropertyProviderFactory(prop.getPropertyValue());
         }
-        
+
         throw new SensitivePropertyProtectionException("Unable to select SensitivePropertyProviderFactory.");
     }
 }
