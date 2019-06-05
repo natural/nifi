@@ -31,17 +31,17 @@ import org.slf4j.LoggerFactory;
 public class AWSKMSSensitivePropertyProviderFactory implements SensitivePropertyProviderFactory {
     private static final Logger logger = LoggerFactory.getLogger(AWSKMSSensitivePropertyProviderFactory.class);
 
-    PropertyMetadata property;
+    private String keyId;
 
     public AWSKMSSensitivePropertyProviderFactory(PropertyMetadata props) {
-        this.property = props;
+        keyId = props.getProtectionScheme().split("/")[2];
+        logger.error("FML: " + keyId);
     }
 
     public SensitivePropertyProvider getProvider() throws SensitivePropertyProtectionException {
-        final String selector = property.getPropertyValue();
         try {
-            if (selector != null && !StringUtils.isBlank(selector)) {
-                return new AWSKMSSensitivePropertyProvider(selector);
+            if (keyId != null && !StringUtils.isBlank(keyId)) {
+                return new AWSKMSSensitivePropertyProvider(keyId);
             } else {
                 throw new SensitivePropertyProtectionException("The provider factory cannot generate providers without a key");
             }
@@ -57,7 +57,8 @@ public class AWSKMSSensitivePropertyProviderFactory implements SensitiveProperty
         return "SensitivePropertyProviderFactory for creating AWSSensitivePropertyProviders";
     }
     
-    public static boolean accepts(PropertyMetadata prop) {
-        return false;
+    public static boolean accepts(PropertyMetadata propertyDescription) {
+        final String protectionScheme = propertyDescription == null ? "" : propertyDescription.getProtectionScheme();
+        return protectionScheme != null && protectionScheme.startsWith(AWSKMSSensitivePropertyProvider.IMPLEMENTATION_KEY);
     }
 }

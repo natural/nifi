@@ -34,7 +34,6 @@ public class AESSensitivePropertyProviderFactory implements SensitivePropertyPro
     }
     
     public AESSensitivePropertyProviderFactory(PropertyMetadata prop) {
-        logger.error("FAIL: " + prop.getPropertyValue());
         this.keyHex = prop.getPropertyValue();
     }
 

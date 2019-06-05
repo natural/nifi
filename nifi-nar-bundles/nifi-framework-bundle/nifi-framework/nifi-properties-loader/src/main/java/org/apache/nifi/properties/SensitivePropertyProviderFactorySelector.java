@@ -16,27 +16,22 @@
  */
 package org.apache.nifi.properties;
 
-import java.lang.reflect.InvocationTargetException;
-import org.apache.nifi.properties.PropertyMetadata;
+
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
-import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProviderFactory;
 import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProviderFactory;
 import org.apache.nifi.properties.sensitive.aws.kms.AWSKMSSensitivePropertyProviderFactory;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 
 public class SensitivePropertyProviderFactorySelector {
     private static final Logger logger = LoggerFactory.getLogger(SensitivePropertyProviderFactorySelector.class);
     
     public static SensitivePropertyProviderFactory selectProviderFactory(String value) throws SensitivePropertyProtectionException {
-        return selectProviderFactory(new PropertyMetadata().withPropertyValue(value));
+        return selectProviderFactory(new PropertyMetadata().withPropertyValue(value).withProtectionScheme(value));
     }
-        
 
     public static SensitivePropertyProviderFactory selectProviderFactory(PropertyMetadata prop) throws SensitivePropertyProtectionException {
         if (AWSKMSSensitivePropertyProviderFactory.accepts(prop)) {
@@ -46,7 +41,7 @@ public class SensitivePropertyProviderFactorySelector {
 
         if (AESSensitivePropertyProviderFactory.accepts(prop)) {
             logger.info("Selected AES sensitive property provider factory.");            
-            return new AESSensitivePropertyProviderFactory(prop);
+            return new AESSensitivePropertyProviderFactory(prop.getPropertyValue());
         }
         
         throw new SensitivePropertyProtectionException("Unable to select SensitivePropertyProviderFactory.");

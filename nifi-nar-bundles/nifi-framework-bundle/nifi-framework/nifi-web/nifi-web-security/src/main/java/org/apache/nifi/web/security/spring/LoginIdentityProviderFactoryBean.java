@@ -51,6 +51,8 @@ import org.apache.nifi.bundle.Bundle;
 import org.apache.nifi.nar.ExtensionManager;
 import org.apache.nifi.nar.NarCloseable;
 import org.apache.nifi.properties.NiFiPropertiesLoader;
+import org.apache.nifi.properties.PropertyMetadata;
+import org.apache.nifi.properties.SensitivePropertyProviderFactorySelector;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProviderFactory;
@@ -220,16 +222,14 @@ public class LoginIdentityProviderFactoryBean implements FactoryBean, Disposable
 
     private String decryptValue(String cipherText, String encryptionScheme) throws SensitivePropertyProtectionException {
         initializeSensitivePropertyProvider(encryptionScheme);
-        // MARK 2
-        logger.error("MARKER 2: " + cipherText + " scheme: " + encryptionScheme);                            
         return SENSITIVE_PROPERTY_PROVIDER.unprotect(cipherText);
     }
 
     private static void initializeSensitivePropertyProvider(String encryptionScheme) throws SensitivePropertyProtectionException {
-        if (SENSITIVE_PROPERTY_PROVIDER == null || !SENSITIVE_PROPERTY_PROVIDER.getIdentifierKey().equalsIgnoreCase(encryptionScheme)) {
+        if (SENSITIVE_PROPERTY_PROVIDER == null) {
             try {
-                String keyHex = getMasterKey();
-                SENSITIVE_PROPERTY_PROVIDER_FACTORY = new AESSensitivePropertyProviderFactory(keyHex);
+                final PropertyMetadata props = new PropertyMetadata().withProtectionScheme(encryptionScheme).withPropertyValue(getMasterKey());
+                SENSITIVE_PROPERTY_PROVIDER_FACTORY = SensitivePropertyProviderFactorySelector.selectProviderFactory(props);
                 SENSITIVE_PROPERTY_PROVIDER = SENSITIVE_PROPERTY_PROVIDER_FACTORY.getProvider();
             } catch (IOException e) {
                 logger.error("Error extracting master key from bootstrap.conf for login identity provider decryption", e);

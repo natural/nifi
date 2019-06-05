@@ -32,7 +32,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.properties.sensitive.SensitivePropertyMetadata;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
-import org.bouncycastle.util.encoders.Hex;
+import org.bouncycastle.util.encoders.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +41,7 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
     private static final Logger logger = LoggerFactory.getLogger(AWSKMSSensitivePropertyProvider.class);
 
     private static final String IMPLEMENTATION_NAME = "AWS KMS Sensitive Property Provider";
-    private static final String IMPLEMENTATION_KEY = "aws/kms/"; // .protected=aws/kms/some-key-id-goes-here // follow-on ticket for ConfigEncryption toolkit
+    protected static final String IMPLEMENTATION_KEY = "aws/kms/"; // .protected=aws/kms/some-key-id-goes-here // follow-on ticket for ConfigEncryption toolkit
 
     private AWSKMS client;
     private final String key;
@@ -78,7 +78,7 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
     public String getIdentifierKey() {
         return IMPLEMENTATION_KEY + key; // getIdentifierKey() has to include the kms key id/alias/arn
     }
-    
+
 
     /**
      * Returns the encrypted cipher text.
@@ -99,8 +99,7 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
             .withPlaintext(ByteBuffer.wrap(unprotectedValue.getBytes()));
 
         EncryptResult response = client.encrypt(request);
-        // TODO: Base64 will be more concise here
-        return Hex.toHexString(response.getCiphertextBlob().array());
+        return Base64.toBase64String(response.getCiphertextBlob().array());
     }
 
     /**
@@ -126,10 +125,11 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
      */
     @Override
     public String unprotect(String protectedValue) throws SensitivePropertyProtectionException {
-        // TODO: Base64 is smaller than hex and should be consistent with the protected value
+        logger.error("FML 444:" +  protectedValue);
+
         DecryptRequest request = new DecryptRequest()
-            .withCiphertextBlob(ByteBuffer.wrap(Hex.decode(protectedValue)));
-                                
+            .withCiphertextBlob(ByteBuffer.wrap(Base64.decode(protectedValue)));
+
         DecryptResult response = client.decrypt(request);
         return new String(response.getPlaintext().array());
     }
@@ -151,8 +151,8 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
     public String generateRandom(Integer size) {
         GenerateRandomRequest request = new GenerateRandomRequest()
             .withNumberOfBytes(size);
-        
+
         GenerateRandomResult response = client.generateRandom(request);
-        return Hex.toHexString(response.getPlaintext().array());
+        return Base64.toBase64String(response.getPlaintext().array());
     }
 }

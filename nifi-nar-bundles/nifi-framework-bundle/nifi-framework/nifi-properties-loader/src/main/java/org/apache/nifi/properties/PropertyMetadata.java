@@ -16,13 +16,8 @@
  */
 package org.apache.nifi.properties;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 
 public class PropertyMetadata {
-    private static final Logger logger = LoggerFactory.getLogger(PropertyMetadata.class);
-
     private String propertyName;
     private String propertyValue;
     private String protectionScheme;

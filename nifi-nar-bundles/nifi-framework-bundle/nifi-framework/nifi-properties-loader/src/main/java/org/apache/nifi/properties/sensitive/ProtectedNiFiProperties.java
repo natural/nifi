@@ -29,10 +29,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.properties.NiFiPropertiesLoader;
+import org.apache.nifi.properties.PropertyMetadata;
 import org.apache.nifi.properties.StandardNiFiProperties;
 import org.apache.nifi.properties.SensitivePropertyProviderFactorySelector;
-import org.apache.nifi.properties.sensitive.aws.kms.AWSKMSSensitivePropertyProvider;
-import org.apache.nifi.properties.sensitive.aws.kms.AWSKMSSensitivePropertyProviderFactory;
 import org.apache.nifi.util.NiFiProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -497,12 +496,16 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
     private SensitivePropertyProvider getSensitivePropertyProvider(String protectionScheme) {
         if (isProviderAvailable(protectionScheme)) {
             return getSensitivePropertyProviders().get(protectionScheme);
-        } 
+        }
         try {
             return SensitivePropertyProviderFactorySelector.selectProviderFactory(protectionScheme).getProvider();
         } catch (final Exception ex) {
             throw new SensitivePropertyProtectionException(ex);
         }
+    }
+
+    private SensitivePropertyProvider getSensitivePropertyProvider(PropertyMetadata propertyDescription) {
+        return getSensitivePropertyProvider(propertyDescription.getProtectionScheme());
     }
 
     private boolean isProviderAvailable(String protectionScheme) {
@@ -520,14 +523,26 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
         // Checks if the key is sensitive and marked as protected
         if (isPropertyProtected(key)) {
             final String protectionScheme = getProperty(getProtectionKey(key));
+            logger.warn("FML 0: " + key + " : " + retrievedValue + " HELLO : " + protectionScheme);
 
             // No provider registered for this scheme, so just return the value
             if (!isProviderAvailable(protectionScheme)) {
-                logger.warn("No provider available for {} so passing the protected {} value back", protectionScheme, key);
+                logger.warn("FML 1 No provider available for {} so passing the protected {} value back", protectionScheme, key);
+
+                try {
+                    final PropertyMetadata propertyDescription = new PropertyMetadata().withPropertyName(key).withPropertyValue(retrievedValue).withProtectionScheme(protectionScheme);
+                    SensitivePropertyProvider sensitivePropertyProvider = getSensitivePropertyProvider(propertyDescription);
+                    logger.warn("FML 2: " + sensitivePropertyProvider);
+                    return sensitivePropertyProvider.unprotect(retrievedValue);
+                } catch (SensitivePropertyProtectionException e) {
+                    logger.warn("FML 3: " + e);
+                }
+
                 return retrievedValue;
             }
             try {
-                SensitivePropertyProvider sensitivePropertyProvider = getSensitivePropertyProvider(protectionScheme);
+                final PropertyMetadata propertyDescription = new PropertyMetadata().withPropertyName(key).withPropertyValue(retrievedValue).withProtectionScheme(protectionScheme);
+                SensitivePropertyProvider sensitivePropertyProvider = getSensitivePropertyProvider(propertyDescription);
                 return sensitivePropertyProvider.unprotect(retrievedValue);
             } catch (SensitivePropertyProtectionException e) {
                 throw new SensitivePropertyProtectionException("Error unprotecting value for " + key, e.getCause());

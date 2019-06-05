@@ -191,15 +191,17 @@ public class NiFiPropertiesLoader {
         // TODO: Overload method with String protectionScheme parameter
         // sensitivePropertyProviderFactory = new AESSensitivePropertyProviderFactory(keyHex);
         PropertyMetadata propMeta = new PropertyMetadata()
-            .withPropertyValue(keyHex);
-        
+            .withPropertyValue(keyHex)
+            .withProtectionScheme(keyHex);
+
         sensitivePropertyProviderFactory = SensitivePropertyProviderFactorySelector.selectProviderFactory(propMeta);
     }
 
     private void initializeSensitivePropertyProviderFactory(String protectionScheme) {
         PropertyMetadata propMeta = new PropertyMetadata()
+            .withPropertyValue(keyHex)
             .withProtectionScheme(protectionScheme);
-        
+
         sensitivePropertyProviderFactory = SensitivePropertyProviderFactorySelector.selectProviderFactory(propMeta);
     }
 
