@@ -34,8 +34,8 @@ import org.slf4j.LoggerFactory
 import java.nio.file.Files
 import java.security.Security
 
-import static org.apache.nifi.toolkit.encryptconfig.TestUtil.getKEY_HEX
-import static org.apache.nifi.toolkit.encryptconfig.TestUtil.getPASSWORD
+import static org.apache.nifi.toolkit.encryptconfig.TestUtil.KEY_HEX
+import static org.apache.nifi.toolkit.encryptconfig.TestUtil.PASSWORD
 import static org.apache.nifi.toolkit.encryptconfig.TestUtil.setupTmpDir
 
 @RunWith(JUnit4.class)
