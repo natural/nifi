@@ -520,33 +520,26 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
      */
     private String unprotectValue(String key, String retrievedValue) {
         // Checks if the key is sensitive and marked as protected
-        if (isPropertyProtected(key)) {
-            final String protectionScheme = getProperty(getProtectionKey(key));
-            logger.warn("FML 0: " + key + " : " + retrievedValue + " HELLO : " + protectionScheme);
+        if (!isPropertyProtected(key)) {
+            return retrievedValue;
+        }
+        final String protectionScheme = getProperty(getProtectionKey(key));
+        final SensitivePropertyValueDescriptor propertyDescription = SensitivePropertyValueDescriptor.fromValueAndScheme(retrievedValue, protectionScheme);
 
-            // No provider registered for this scheme, so just return the value
-            if (!isProviderAvailable(protectionScheme)) {
-                logger.warn("FML 1 No provider available for {} so passing the protected {} value back", protectionScheme, key);
-
-                try {
-                    final SensitivePropertyValueDescriptor propertyDescription = SensitivePropertyValueDescriptor.fromValueAndScheme(retrievedValue, protectionScheme);
-                    SensitivePropertyProvider sensitivePropertyProvider = getSensitivePropertyProvider(propertyDescription);
-                    logger.warn("FML 2: " + sensitivePropertyProvider);
-                    return sensitivePropertyProvider.unprotect(retrievedValue);
-                } catch (SensitivePropertyProtectionException e) {
-                    logger.warn("FML 3: " + e);
-                }
-
+        // No provider registered for this scheme, so ...
+        if (!isProviderAvailable(protectionScheme)) {
+            // try and make one to unprotect, and if that fails...
+            try {
+                return getSensitivePropertyProvider(propertyDescription).unprotect(retrievedValue);
+            } catch (SensitivePropertyProtectionException e) {
+                // just return the value
                 return retrievedValue;
             }
-            try {
-                final SensitivePropertyValueDescriptor propertyDescription = SensitivePropertyValueDescriptor.fromValueAndScheme(retrievedValue, protectionScheme);
-                SensitivePropertyProvider sensitivePropertyProvider = getSensitivePropertyProvider(propertyDescription);
-                return sensitivePropertyProvider.unprotect(retrievedValue);
-            } catch (SensitivePropertyProtectionException e) {
-                throw new SensitivePropertyProtectionException("Error unprotecting value for " + key, e.getCause());
-            }
         }
-        return retrievedValue;
+        try {
+            return getSensitivePropertyProvider(propertyDescription).unprotect(retrievedValue);
+        } catch (SensitivePropertyProtectionException e) {
+            throw new SensitivePropertyProtectionException("Error unprotecting value for " + key, e.getCause());
+        }
     }
 }

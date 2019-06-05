@@ -34,8 +34,8 @@ public class AWSKMSSensitivePropertyProviderFactory implements SensitiveProperty
     private String keyId;
 
     public AWSKMSSensitivePropertyProviderFactory(SensitivePropertyValueDescriptor props) {
+        // TODO:  fix me during unittests + move some to getProvider();
         keyId = props.getProtectionScheme().split("/")[2];
-        logger.error("FML: " + keyId);
     }
 
     public SensitivePropertyProvider getProvider() throws SensitivePropertyProtectionException {

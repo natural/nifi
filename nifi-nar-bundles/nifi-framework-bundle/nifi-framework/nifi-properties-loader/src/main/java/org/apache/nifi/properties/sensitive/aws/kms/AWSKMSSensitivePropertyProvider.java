@@ -125,8 +125,6 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
      */
     @Override
     public String unprotect(String protectedValue) throws SensitivePropertyProtectionException {
-        logger.error("FML 444:" +  protectedValue);
-
         DecryptRequest request = new DecryptRequest()
             .withCiphertextBlob(ByteBuffer.wrap(Base64.decode(protectedValue)));
 
