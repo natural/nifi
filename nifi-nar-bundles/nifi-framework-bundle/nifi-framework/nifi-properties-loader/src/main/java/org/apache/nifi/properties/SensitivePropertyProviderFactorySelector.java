@@ -17,7 +17,7 @@
 package org.apache.nifi.properties;
 
 
-import org.apache.nifi.properties.sensitive.PropertyDescription;
+import org.apache.nifi.properties.sensitive.SensitivePropertyValueDescriptor;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProviderFactory;
 import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProviderFactory;
@@ -31,10 +31,10 @@ public class SensitivePropertyProviderFactorySelector {
     private static final Logger logger = LoggerFactory.getLogger(SensitivePropertyProviderFactorySelector.class);
 
     public static SensitivePropertyProviderFactory selectProviderFactory(String value) throws SensitivePropertyProtectionException {
-        return selectProviderFactory(new PropertyDescription().withPropertyValue(value).withProtectionScheme(value));
+        return selectProviderFactory(SensitivePropertyValueDescriptor.fromValue(value));
     }
 
-    public static SensitivePropertyProviderFactory selectProviderFactory(PropertyDescription prop) throws SensitivePropertyProtectionException {
+    public static SensitivePropertyProviderFactory selectProviderFactory(SensitivePropertyValueDescriptor prop) throws SensitivePropertyProtectionException {
         if (AWSKMSSensitivePropertyProviderFactory.accepts(prop)) {
             logger.info("Selected AWS KMS sensitive property provider factory.");
             return new AWSKMSSensitivePropertyProviderFactory(prop);

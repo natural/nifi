@@ -430,8 +430,11 @@ class NiFiPropertiesLoaderGroovyTest extends GroovyTestCase {
             [(it): passwordProperties.getProperty(it)]
         }
 
-        logger.warn("FAIL: " + readPropertiesAndValues);
-        logger.warn("FAIL: " + readPasswordPropertiesAndValues);
-        // assert readPropertiesAndValues == readPasswordPropertiesAndValues
+        readPasswordPropertiesAndValues.keySet().each { String key ->
+            if (!readPropertiesAndValues.get(key).equals(readPasswordPropertiesAndValues.get(key))) {
+                logger.info("Failed to match values. key=" + key + " read val: " + readPropertiesAndValues.get(key) + " and pass val: " + readPasswordPropertiesAndValues.get(key));
+            }
+        }
+        assert readPropertiesAndValues == readPasswordPropertiesAndValues
     }
 }

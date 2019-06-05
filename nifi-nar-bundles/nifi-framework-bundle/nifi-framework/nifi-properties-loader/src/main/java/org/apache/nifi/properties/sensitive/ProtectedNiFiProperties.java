@@ -503,7 +503,7 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
         }
     }
 
-    private SensitivePropertyProvider getSensitivePropertyProvider(PropertyDescription propertyDescription) {
+    private SensitivePropertyProvider getSensitivePropertyProvider(SensitivePropertyValueDescriptor propertyDescription) {
         return getSensitivePropertyProvider(propertyDescription.getProtectionScheme());
     }
 
@@ -529,7 +529,7 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
                 logger.warn("FML 1 No provider available for {} so passing the protected {} value back", protectionScheme, key);
 
                 try {
-                    final PropertyDescription propertyDescription = new PropertyDescription().withPropertyName(key).withPropertyValue(retrievedValue).withProtectionScheme(protectionScheme);
+                    final SensitivePropertyValueDescriptor propertyDescription = SensitivePropertyValueDescriptor.fromValueAndScheme(retrievedValue, protectionScheme);
                     SensitivePropertyProvider sensitivePropertyProvider = getSensitivePropertyProvider(propertyDescription);
                     logger.warn("FML 2: " + sensitivePropertyProvider);
                     return sensitivePropertyProvider.unprotect(retrievedValue);
@@ -540,7 +540,7 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
                 return retrievedValue;
             }
             try {
-                final PropertyDescription propertyDescription = new PropertyDescription().withPropertyName(key).withPropertyValue(retrievedValue).withProtectionScheme(protectionScheme);
+                final SensitivePropertyValueDescriptor propertyDescription = SensitivePropertyValueDescriptor.fromValueAndScheme(retrievedValue, protectionScheme);
                 SensitivePropertyProvider sensitivePropertyProvider = getSensitivePropertyProvider(propertyDescription);
                 return sensitivePropertyProvider.unprotect(retrievedValue);
             } catch (SensitivePropertyProtectionException e) {

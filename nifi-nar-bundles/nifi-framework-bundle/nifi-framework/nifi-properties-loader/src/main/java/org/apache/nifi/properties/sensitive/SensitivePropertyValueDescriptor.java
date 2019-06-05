@@ -17,32 +17,21 @@
 package org.apache.nifi.properties.sensitive;
 
 
-public class PropertyDescription {
-    private String propertyName;
+public class SensitivePropertyValueDescriptor {
     private String propertyValue;
     private String protectionScheme;
 
-    public PropertyDescription() {
-        propertyName = propertyValue = protectionScheme = "";
+    public static SensitivePropertyValueDescriptor fromValue(String propertyValue) {
+        return new SensitivePropertyValueDescriptor(propertyValue, propertyValue);
     }
 
-    public PropertyDescription withPropertyName(String name) {
-        propertyName = name;
-        return this;
+    public static SensitivePropertyValueDescriptor fromValueAndScheme(String propertyValue, String protectionScheme) {
+        return new SensitivePropertyValueDescriptor(propertyValue, protectionScheme);
     }
 
-    public PropertyDescription withPropertyValue(String value) {
-        propertyValue = value;
-        return this;
-    }
-
-    public PropertyDescription withProtectionScheme(String scheme) {
-        protectionScheme = scheme;
-        return this;
-    }
-
-    public String getPropertyName() {
-        return propertyName;
+    public SensitivePropertyValueDescriptor(String propertyValue, String protectionScheme) {
+        this.propertyValue = propertyValue;
+        this.protectionScheme = protectionScheme;
     }
 
     public String getPropertyValue() {
@@ -52,5 +41,5 @@ public class PropertyDescription {
     public String getProtectionScheme() {
         return protectionScheme;
     }
-}
 
+}

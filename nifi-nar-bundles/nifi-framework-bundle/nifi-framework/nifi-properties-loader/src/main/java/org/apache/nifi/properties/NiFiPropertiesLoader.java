@@ -30,7 +30,7 @@ import java.util.Properties;
 import java.util.stream.Stream;
 import javax.crypto.Cipher;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.nifi.properties.sensitive.PropertyDescription;
+import org.apache.nifi.properties.sensitive.SensitivePropertyValueDescriptor;
 import org.apache.nifi.properties.sensitive.ProtectedNiFiProperties;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProviderFactory;
@@ -188,11 +188,8 @@ public class NiFiPropertiesLoader {
 
     private void initializeSensitivePropertyProviderFactory() {
         // TODO: Detect protection scheme from nifi.properties?
-        PropertyDescription propMeta = new PropertyDescription()
-            .withPropertyValue(keyHex)
-            .withProtectionScheme(keyHex);
-
-        sensitivePropertyProviderFactory = SensitivePropertyProviderFactorySelector.selectProviderFactory(propMeta);
+        SensitivePropertyValueDescriptor description = SensitivePropertyValueDescriptor.fromValue(keyHex);
+        sensitivePropertyProviderFactory = SensitivePropertyProviderFactorySelector.selectProviderFactory(description);
     }
 
     private SensitivePropertyProvider getSensitivePropertyProvider() {
