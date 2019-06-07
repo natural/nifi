@@ -14,8 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.properties.sensitive
+package org.apache.nifi.properties.sensitive.aws.kms
 
+import com.amazonaws.auth.PropertiesCredentials
 import com.amazonaws.services.kms.AWSKMSClient
 import com.amazonaws.services.kms.AWSKMSClientBuilder
 import com.amazonaws.services.kms.model.CreateAliasRequest
@@ -26,7 +27,8 @@ import com.amazonaws.services.kms.model.DescribeKeyResult
 import com.amazonaws.services.kms.model.GenerateDataKeyRequest
 import com.amazonaws.services.kms.model.GenerateDataKeyResult
 import com.amazonaws.services.kms.model.ScheduleKeyDeletionRequest
-import org.apache.nifi.properties.sensitive.aws.kms.AWSKMSSensitivePropertyProvider
+import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException
+import org.apache.nifi.properties.sensitive.SensitivePropertyProvider
 import org.junit.After
 import org.junit.AfterClass
 import org.junit.Before
@@ -41,9 +43,9 @@ import java.security.SecureRandom
 
 
 @RunWith(JUnit4.class)
-class ProtectedNiFiPropertiesIT extends GroovyTestCase {
-    private static final Logger logger = LoggerFactory.getLogger(ProtectedNiFiPropertiesIT.class)
-
+class AWSKMSSensitivePropertyProviderIT extends GroovyTestCase {
+    private static final Logger logger = LoggerFactory.getLogger(AWSKMSSensitivePropertyProviderIT.class)
+    protected final static String CREDENTIALS_FILE = System.getProperty("user.home") + "/aws-credentials.properties";
     private static String[] knownGoodKeys = []
     private static AWSKMSClient client
 
@@ -54,6 +56,20 @@ class ProtectedNiFiPropertiesIT extends GroovyTestCase {
      */
     @BeforeClass
     static void setUpOnce() throws Exception {
+        final FileInputStream fis
+        try {
+            fis = new FileInputStream(CREDENTIALS_FILE)
+        } catch (FileNotFoundException e1) {
+            fail("Could not open credentials file " + CREDENTIALS_FILE + ": " + e1.getLocalizedMessage());
+            return
+        }
+        final PropertiesCredentials credentials = new PropertiesCredentials(fis)
+
+        // We're copying the properties directly so the standard builder works.
+        System.setProperty("aws.accessKeyId", credentials.AWSAccessKeyId)
+        System.setProperty("aws.secretKey", credentials.AWSSecretKey)
+        System.setProperty("aws.region", "us-east-2")
+
         client = AWSKMSClientBuilder.standard().build() as AWSKMSClient
 
         // generate a cmk

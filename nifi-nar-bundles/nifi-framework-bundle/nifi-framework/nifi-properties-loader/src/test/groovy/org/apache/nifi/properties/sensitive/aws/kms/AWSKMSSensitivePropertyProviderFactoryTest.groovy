@@ -69,17 +69,4 @@ class AWSKMSSensitivePropertyProviderFactoryTest extends GroovyTestCase {
         expectException.expectMessage("Invalid AWS KMS key")
         factory.getProvider()
     }
-
-    @Test
-    void testShouldGetProviderWithKey() throws Exception {
-        // Arrange
-        SensitivePropertyValueDescriptor prop = SensitivePropertyValueDescriptor.fromValueAndScheme("", "aws/kms/example")
-        SensitivePropertyProviderFactory factory = new AWSKMSSensitivePropertyProviderFactory(prop)
-
-        // Act
-        SensitivePropertyProvider provider = factory.getProvider()
-
-        // Assert
-        assert provider instanceof AWSKMSSensitivePropertyProvider
-    }
 }
