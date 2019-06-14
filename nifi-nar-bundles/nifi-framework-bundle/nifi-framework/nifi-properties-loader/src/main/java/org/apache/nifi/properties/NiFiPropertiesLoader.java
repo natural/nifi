@@ -215,7 +215,7 @@ public class NiFiPropertiesLoader {
             rawProperties.load(inStream);
             logger.info("Loaded {} properties from {}", rawProperties.size(), file.getAbsolutePath());
 
-            ProtectedNiFiProperties protectedNiFiProperties = new ProtectedNiFiProperties(rawProperties);
+            ProtectedNiFiProperties protectedNiFiProperties = new ProtectedNiFiProperties(rawProperties, keyHex);
             return protectedNiFiProperties;
         } catch (final Exception ex) {
             logger.error("Cannot load properties file due to " + ex.getLocalizedMessage());

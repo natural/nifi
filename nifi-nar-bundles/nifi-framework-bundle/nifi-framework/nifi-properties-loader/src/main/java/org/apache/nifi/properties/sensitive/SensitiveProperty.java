@@ -22,9 +22,9 @@ public class SensitiveProperty implements SensitivePropertyProvider {
     private static final Logger logger = LoggerFactory.getLogger(SensitiveProperty.class);
     private final static Integer machine = 3;
 
-    public static SensitivePropertyProvider fromKeyAndScheme(byte [] decoded, String scheme) throws NoSuchPaddingException, NoSuchAlgorithmException, NoSuchProviderException {
-        logger.info("SensitiveProperty from key: " + decoded + " scheme: " + scheme);
-        return new SensitiveProperty(new AESSensitivePropertyProvider(decoded));
+    public static SensitivePropertyProvider fromKeyAndScheme(String key, String scheme)  {
+        logger.info("SensitiveProperty from key: " + key + " scheme: " + scheme);
+        return new SensitiveProperty(new AESSensitivePropertyProvider(key));
     }
 
     // when we don't know what it is:

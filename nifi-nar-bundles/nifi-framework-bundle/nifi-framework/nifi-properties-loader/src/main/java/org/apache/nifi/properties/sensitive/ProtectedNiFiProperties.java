@@ -64,16 +64,19 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
             SECURITY_KEYSTORE_PASSWD, SECURITY_TRUSTSTORE_PASSWD, SENSITIVE_PROPS_KEY, PROVENANCE_REPO_ENCRYPTION_KEY));
 
     public ProtectedNiFiProperties() {
-        this(new StandardNiFiProperties());
+        this(new StandardNiFiProperties(), "");
     }
+
+    private static String keyHex;
 
     /**
      * Creates an instance containing the provided {@link NiFiProperties}.
      *
      * @param props the NiFiProperties to contain
      */
-    public ProtectedNiFiProperties(NiFiProperties props) {
+    public ProtectedNiFiProperties(NiFiProperties props, String defaultKeyHex) {
         this.niFiProperties = props;
+        this.keyHex = defaultKeyHex;
         logger.debug("Loaded {} properties (including {} protection schemes) into ProtectedNiFiProperties", getPropertyKeysIncludingProtectionSchemes().size(), getProtectedPropertyKeys().size());
     }
 
@@ -82,8 +85,8 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
      *
      * @param rawProps the Properties to contain
      */
-    public ProtectedNiFiProperties(Properties rawProps) {
-        this(new StandardNiFiProperties(rawProps));
+    public ProtectedNiFiProperties(Properties rawProps, String defaultKeyHex) {
+        this(new StandardNiFiProperties(rawProps), defaultKeyHex);
     }
 
     /**
@@ -349,8 +352,9 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
                 if (key.endsWith(".protected")) {
                     // Do nothing
                 } else if (isPropertyProtected(key)) {
+                    String value = getProperty(key);
                     try {
-                        rawProperties.setProperty(key, unprotectValue(key, getProperty(key)));
+                        rawProperties.setProperty(key, unprotectValue(key, value));
                     } catch (SensitivePropertyProtectionException e) {
                         logger.warn("Failed to unprotect '{}'", key, e);
                         failedKeys.add(key);
@@ -460,7 +464,7 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
      * @return the number of protected properties
      */
     public static int countProtectedProperties(NiFiProperties plainProperties) {
-        return new ProtectedNiFiProperties(plainProperties).getProtectedPropertyKeys().size();
+        return new ProtectedNiFiProperties(plainProperties, keyHex).getProtectedPropertyKeys().size();
     }
 
     /**
@@ -470,7 +474,7 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
      * @return the number of sensitive properties
      */
     public static int countSensitiveProperties(NiFiProperties plainProperties) {
-        return new ProtectedNiFiProperties(plainProperties).getSensitivePropertyKeys().size();
+        return new ProtectedNiFiProperties(plainProperties, keyHex).getSensitivePropertyKeys().size();
     }
 
     @Override
@@ -513,20 +517,18 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
         }
         final String protectionScheme = getProperty(getProtectionKey(key));
 
-        byte[] decoded;
-        try {
-            decoded = Base64.decode(getProperty(key));
-        } catch (final DecoderException e) {
-            throw new SensitivePropertyProtectionException("placeholder");
+        if (protectionScheme.equals("unknown")) {
+            return retrievedValue;
         }
 
-
+        logger.warn("HERE: " + protectionScheme);
         // try and make one to unprotect, and if that fails...
         try {
-            return SensitiveProperty.fromKeyAndScheme(decoded, protectionScheme).unprotect(retrievedValue);
-        } catch (final SensitivePropertyProtectionException | NoSuchPaddingException | NoSuchAlgorithmException | NoSuchProviderException e) {
+            return SensitiveProperty.fromKeyAndScheme(keyHex, protectionScheme).unprotect(retrievedValue);
+        } catch (final SensitivePropertyProtectionException e) {
             // just return the value
-            return retrievedValue;
+            // return retrievedValue;
+            throw new SensitivePropertyProtectionException(e);
         }
     }
 
