@@ -347,7 +347,7 @@ class ProtectedNiFiPropertiesGroovyTest extends GroovyTestCase {
         logger.info("The property is ${isSensitive ? "sensitive" : "not sensitive"} and ${isProtected ? "protected" : "not protected"}")
 
         // Act
-        NiFiProperties unprotectedProperties = properties.getUnprotectedProperties()
+        NiFiProperties unprotectedProperties = properties.getUnprotectedProperties()w
         String retrievedKeystorePassword = unprotectedProperties.getProperty(KEYSTORE_PASSWORD_KEY)
         logger.info("${KEYSTORE_PASSWORD_KEY}: ${retrievedKeystorePassword}")
 

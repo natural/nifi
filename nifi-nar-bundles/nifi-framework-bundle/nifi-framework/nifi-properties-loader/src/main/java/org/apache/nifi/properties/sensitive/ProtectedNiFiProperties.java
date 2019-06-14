@@ -16,8 +16,18 @@
  */
 package org.apache.nifi.properties.sensitive;
 
-import static java.util.Arrays.asList;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.nifi.properties.NiFiPropertiesLoader;
+import org.apache.nifi.properties.StandardNiFiProperties;
+import org.apache.nifi.util.NiFiProperties;
+import org.bouncycastle.util.encoders.Base64;
+import org.bouncycastle.util.encoders.DecoderException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import javax.crypto.NoSuchPaddingException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -27,13 +37,10 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.nifi.properties.NiFiPropertiesLoader;
-import org.apache.nifi.properties.StandardNiFiProperties;
-import org.apache.nifi.properties.SensitivePropertyProviderFactorySelector;
-import org.apache.nifi.util.NiFiProperties;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import static java.util.Arrays.asList;
+
+
 
 /**
  * Decorator class for intermediate phase when {@link NiFiPropertiesLoader} loads the
@@ -421,7 +428,7 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
      * @return the protected properties in a {@link StandardNiFiProperties} object
      */
     NiFiProperties protectPlainProperties(String protectionScheme) {
-        SensitivePropertyProvider spp = getSensitivePropertyProvider(protectionScheme);
+        SensitivePropertyProvider spp = SensitiveProperty.fromAnyValue(protectionScheme);
 
         // Make a new holder (settable)
         Properties protectedProperties = new Properties();
@@ -492,25 +499,6 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
         return localProviderCache;
     }
 
-    private SensitivePropertyProvider getSensitivePropertyProvider(String protectionScheme) {
-        if (isProviderAvailable(protectionScheme)) {
-            return getSensitivePropertyProviders().get(protectionScheme);
-        }
-        try {
-            return SensitivePropertyProviderFactorySelector.selectProviderFactory(protectionScheme).getProvider();
-        } catch (final Exception ex) {
-            throw new SensitivePropertyProtectionException(ex);
-        }
-    }
-
-    private SensitivePropertyProvider getSensitivePropertyProvider(SensitivePropertyValueDescriptor propertyDescription) {
-        return getSensitivePropertyProvider(propertyDescription.getProtectionScheme());
-    }
-
-    private boolean isProviderAvailable(String protectionScheme) {
-        return getSensitivePropertyProviders().containsKey(protectionScheme);
-    }
-
     /**
      * If the value is protected, unprotects it and returns it. If not, returns the original value.
      *
@@ -524,22 +512,22 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
             return retrievedValue;
         }
         final String protectionScheme = getProperty(getProtectionKey(key));
-        final SensitivePropertyValueDescriptor propertyDescription = SensitivePropertyValueDescriptor.fromValueAndScheme(retrievedValue, protectionScheme);
 
-        // No provider registered for this scheme, so ...
-        if (!isProviderAvailable(protectionScheme)) {
-            // try and make one to unprotect, and if that fails...
-            try {
-                return getSensitivePropertyProvider(propertyDescription).unprotect(retrievedValue);
-            } catch (SensitivePropertyProtectionException e) {
-                // just return the value
-                return retrievedValue;
-            }
-        }
+        byte[] decoded;
         try {
-            return getSensitivePropertyProvider(propertyDescription).unprotect(retrievedValue);
-        } catch (SensitivePropertyProtectionException e) {
-            throw new SensitivePropertyProtectionException("Error unprotecting value for " + key, e.getCause());
+            decoded = Base64.decode(getProperty(key));
+        } catch (final DecoderException e) {
+            throw new SensitivePropertyProtectionException("placeholder");
+        }
+
+
+        // try and make one to unprotect, and if that fails...
+        try {
+            return SensitiveProperty.fromKeyAndScheme(decoded, protectionScheme).unprotect(retrievedValue);
+        } catch (final SensitivePropertyProtectionException | NoSuchPaddingException | NoSuchAlgorithmException | NoSuchProviderException e) {
+            // just return the value
+            return retrievedValue;
         }
     }
+
 }

@@ -29,11 +29,11 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.Stream;
 import javax.crypto.Cipher;
+
 import org.apache.commons.lang3.StringUtils;
-import org.apache.nifi.properties.sensitive.SensitivePropertyValueDescriptor;
+import org.apache.nifi.properties.sensitive.SensitiveProperty;
 import org.apache.nifi.properties.sensitive.ProtectedNiFiProperties;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
-import org.apache.nifi.properties.sensitive.SensitivePropertyProviderFactory;
 import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProvider;
 import org.apache.nifi.util.NiFiProperties;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -52,7 +52,7 @@ public class NiFiPropertiesLoader {
     private String keyHex;
 
     // Future enhancement: allow for external registration of new providers
-    private static SensitivePropertyProviderFactory sensitivePropertyProviderFactory;
+    private static SensitivePropertyProvider sensitivePropertyProvider;
 
     public NiFiPropertiesLoader() {
     }
@@ -186,16 +186,10 @@ public class NiFiPropertiesLoader {
         }
     }
 
-    private void initializeSensitivePropertyProviderFactory() {
-        // TODO: Detect protection scheme from nifi.properties?
-        SensitivePropertyValueDescriptor description = SensitivePropertyValueDescriptor.fromValue(keyHex);
-        sensitivePropertyProviderFactory = SensitivePropertyProviderFactorySelector.selectProviderFactory(description);
-    }
-
-    private SensitivePropertyProvider getSensitivePropertyProvider() {
-        initializeSensitivePropertyProviderFactory();
-        return sensitivePropertyProviderFactory.getProvider();
-    }
+    //private SensitivePropertyProvider getSensitivePropertyProvider() {
+        //sensitivePropertyProvider =
+        //return sensitivePropertyProvider;
+    //}
 
     /**
      * Returns a {@link ProtectedNiFiProperties} instance loaded from the
@@ -253,7 +247,7 @@ public class NiFiPropertiesLoader {
         ProtectedNiFiProperties protectedNiFiProperties = readProtectedPropertiesFromDisk(file);
         if (protectedNiFiProperties.hasProtectedKeys()) {
             Security.addProvider(new BouncyCastleProvider());
-            protectedNiFiProperties.addSensitivePropertyProvider(getSensitivePropertyProvider());
+            // protectedNiFiProperties.addSensitivePropertyProvider(getSensitivePropertyProvider());
         }
 
         return protectedNiFiProperties.getUnprotectedProperties();

@@ -24,11 +24,14 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import javax.crypto.NoSuchPaddingException;
 import javax.xml.XMLConstants;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
@@ -49,10 +52,9 @@ import org.apache.nifi.authorization.generated.Property;
 import org.apache.nifi.bundle.Bundle;
 import org.apache.nifi.nar.ExtensionManager;
 import org.apache.nifi.properties.NiFiPropertiesLoader;
-import org.apache.nifi.properties.SensitivePropertyProviderFactorySelector;
+import org.apache.nifi.properties.sensitive.SensitiveProperty;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
-import org.apache.nifi.properties.sensitive.SensitivePropertyProviderFactory;
 import org.apache.nifi.security.xml.XmlUtils;
 import org.apache.nifi.util.NiFiProperties;
 import org.apache.nifi.util.file.classloader.ClassLoaderUtils;
@@ -72,7 +74,6 @@ public class AuthorizerFactoryBean implements FactoryBean, DisposableBean, UserG
     private static final String JAXB_GENERATED_PATH = "org.apache.nifi.authorization.generated";
     private static final JAXBContext JAXB_CONTEXT = initializeJaxbContext();
 
-    private static SensitivePropertyProviderFactory SENSITIVE_PROPERTY_PROVIDER_FACTORY;
     private static SensitivePropertyProvider SENSITIVE_PROPERTY_PROVIDER;
 
     /**
@@ -472,8 +473,11 @@ public class AuthorizerFactoryBean implements FactoryBean, DisposableBean, UserG
                 logger.error("Error extracting master key from bootstrap.conf for login identity provider decryption", e);
                 throw new SensitivePropertyProtectionException("Could not read master key from bootstrap.conf");
             }
-            SENSITIVE_PROPERTY_PROVIDER_FACTORY = SensitivePropertyProviderFactorySelector.selectProviderFactory(key);
-            SENSITIVE_PROPERTY_PROVIDER = SENSITIVE_PROPERTY_PROVIDER_FACTORY.getProvider();
+            try {
+                SENSITIVE_PROPERTY_PROVIDER = SensitiveProperty.fromHex(key);
+            } catch (NoSuchPaddingException | NoSuchAlgorithmException | NoSuchProviderException e) {
+                throw new SensitivePropertyProtectionException("Could not create sensitive property provider from key in bootstrap.conf");
+            }
         }
     }
 

@@ -18,6 +18,7 @@ package org.apache.nifi.properties.sensitive;
 
 public interface SensitivePropertyProvider {
 
+
     /**
      * Returns the name of the underlying implementation.
      *

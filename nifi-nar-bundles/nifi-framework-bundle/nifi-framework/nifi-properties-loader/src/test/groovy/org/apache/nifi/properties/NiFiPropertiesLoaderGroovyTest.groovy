@@ -86,7 +86,7 @@ class NiFiPropertiesLoaderGroovyTest extends GroovyTestCase {
 //        if (ProtectedNiFiProperties.@localProviderCache) {
 //            ProtectedNiFiProperties.@localProviderCache = [:]
 //        }
-        NiFiPropertiesLoader.@sensitivePropertyProviderFactory = null
+        // NiFiPropertiesLoader.@sensitivePropertyProviderFactory = null
     }
 
     @AfterClass
@@ -131,18 +131,6 @@ class NiFiPropertiesLoaderGroovyTest extends GroovyTestCase {
         logger.info("Default key: ${defaultKey}")
         // Assert
         assert defaultKey == EXPECTED_PROVIDER_KEY
-    }
-
-    @Test
-    void testShouldInitializeSensitivePropertyProviderFactory() throws Exception {
-        // Arrange
-        NiFiPropertiesLoader niFiPropertiesLoader = new NiFiPropertiesLoader()
-
-        // Act
-        niFiPropertiesLoader.initializeSensitivePropertyProviderFactory()
-
-        // Assert
-        assert niFiPropertiesLoader.@sensitivePropertyProviderFactory
     }
 
     @Test
