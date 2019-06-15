@@ -1071,7 +1071,6 @@ class ConfigEncryptionTool {
 
         // TODO: Same as in LIP decryption method
         AESSensitivePropertyProvider spp = new AESSensitivePropertyProvider(keyHex)
-        protectedWrapper.addSensitivePropertyProvider(spp)
 
         List<String> keysToSkip = []
 

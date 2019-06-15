@@ -23,18 +23,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.security.NoSuchAlgorithmException;
 import java.security.Security;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.Stream;
-import javax.crypto.Cipher;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.nifi.properties.sensitive.SensitiveProperty;
 import org.apache.nifi.properties.sensitive.ProtectedNiFiProperties;
+import org.apache.nifi.properties.sensitive.SensitiveProperty;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
-import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProvider;
 import org.apache.nifi.util.NiFiProperties;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
@@ -50,9 +47,6 @@ public class NiFiPropertiesLoader {
 
     private NiFiProperties instance;
     private String keyHex;
-
-    // Future enhancement: allow for external registration of new providers
-    private static SensitivePropertyProvider sensitivePropertyProvider;
 
     public NiFiPropertiesLoader() {
     }
@@ -75,7 +69,7 @@ public class NiFiPropertiesLoader {
 
     /**
      * Sets the hexadecimal key used to unprotect properties encrypted with
-     * {@link AESSensitivePropertyProvider}. If the key has already been set,
+     * {@link SensitiveProperty}. If the key has already been set,
      * calling this method will throw a {@link RuntimeException}.
      *
      * @param keyHex the key in hexadecimal format
@@ -178,19 +172,6 @@ public class NiFiPropertiesLoader {
         return load(getDefaultFilePath());
     }
 
-    private static String getDefaultProviderKey() {
-        try {
-            return "aes/gcm/" + (Cipher.getMaxAllowedKeyLength("AES") > 128 ? "256" : "128");
-        } catch (NoSuchAlgorithmException e) {
-            return "aes/gcm/128";
-        }
-    }
-
-    //private SensitivePropertyProvider getSensitivePropertyProvider() {
-        //sensitivePropertyProvider =
-        //return sensitivePropertyProvider;
-    //}
-
     /**
      * Returns a {@link ProtectedNiFiProperties} instance loaded from the
      * serialized form in the file. Responsible for actually reading from disk
@@ -247,7 +228,6 @@ public class NiFiPropertiesLoader {
         ProtectedNiFiProperties protectedNiFiProperties = readProtectedPropertiesFromDisk(file);
         if (protectedNiFiProperties.hasProtectedKeys()) {
             Security.addProvider(new BouncyCastleProvider());
-            // protectedNiFiProperties.addSensitivePropertyProvider(getSensitivePropertyProvider());
         }
 
         return protectedNiFiProperties.getUnprotectedProperties();

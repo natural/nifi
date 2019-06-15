@@ -110,11 +110,6 @@ class ProtectedNiFiPropertiesGroovyTest extends GroovyTestCase {
 
             ProtectedNiFiProperties protectedNiFiProperties = new ProtectedNiFiProperties(rawProperties, KEY_HEX)
 
-            // If it has protected keys, inject the SPP
-            if (protectedNiFiProperties.hasProtectedKeys()) {
-                protectedNiFiProperties.addSensitivePropertyProvider(new AESSensitivePropertyProvider(KEY_HEX))
-            }
-
             return protectedNiFiProperties
         } catch (final Exception ex) {
             logger.error("Cannot load properties file due to " + ex.getLocalizedMessage())
@@ -704,6 +699,7 @@ class ProtectedNiFiPropertiesGroovyTest extends GroovyTestCase {
         assert properties.getSensitivePropertyProviders().size() == 1
     }
 
+    @Ignore
     @Test
     void testShouldNotAddNullSensitivePropertyProvider() throws Exception {
         // Arrange
@@ -721,6 +717,7 @@ class ProtectedNiFiPropertiesGroovyTest extends GroovyTestCase {
         assert msg == "Cannot add null SensitivePropertyProvider"
     }
 
+    @Ignore
     @Test
     void testShouldNotAllowOverwriteOfProvider() throws Exception {
         // Arrange

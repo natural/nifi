@@ -82,11 +82,6 @@ class NiFiPropertiesLoaderGroovyTest extends GroovyTestCase {
 
     @After
     void tearDown() throws Exception {
-        // Clear the sensitive property providers between runs
-//        if (ProtectedNiFiProperties.@localProviderCache) {
-//            ProtectedNiFiProperties.@localProviderCache = [:]
-//        }
-        // NiFiPropertiesLoader.@sensitivePropertyProviderFactory = null
     }
 
     @AfterClass
@@ -120,6 +115,7 @@ class NiFiPropertiesLoaderGroovyTest extends GroovyTestCase {
         assert niFiPropertiesLoader.@keyHex == KEY_HEX
     }
 
+    @Ignore // functionality / test should move to SensitiveProperty class
     @Test
     void testShouldGetDefaultProviderKey() throws Exception {
         // Arrange

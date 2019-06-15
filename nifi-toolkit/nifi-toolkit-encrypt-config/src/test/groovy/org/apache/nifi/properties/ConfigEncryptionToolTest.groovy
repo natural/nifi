@@ -145,7 +145,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
 
     private static void printProperties(NiFiProperties properties) {
         if (!(properties instanceof ProtectedNiFiProperties)) {
-            properties = new ProtectedNiFiProperties(properties)
+            properties = new ProtectedNiFiProperties(properties, KEY_HEX)
         }
 
         (properties as ProtectedNiFiProperties).getPropertyKeysIncludingProtectionSchemes().sort().each { String key ->
@@ -880,7 +880,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         tool.keyHex = KEY_HEX
 
         NiFiProperties plainNiFiProperties = tool.loadNiFiProperties()
-        ProtectedNiFiProperties protectedWrapper = new ProtectedNiFiProperties(plainNiFiProperties)
+        ProtectedNiFiProperties protectedWrapper = new ProtectedNiFiProperties(plainNiFiProperties, KEY_HEX)
         assert !protectedWrapper.hasProtectedKeys()
 
         // Act
@@ -888,7 +888,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         logger.info("Encrypted sensitive properties")
 
         // Assert
-        ProtectedNiFiProperties protectedWrapperAroundEncrypted = new ProtectedNiFiProperties(encryptedProperties)
+        ProtectedNiFiProperties protectedWrapperAroundEncrypted = new ProtectedNiFiProperties(encryptedProperties, KEY_HEX)
         assert protectedWrapperAroundEncrypted.hasProtectedKeys()
 
         // Ensure that all non-empty sensitive properties are marked as protected
@@ -1092,7 +1092,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         NiFiProperties plainProperties = NiFiPropertiesLoader.withKey(KEY_HEX).load(originalNiFiPropertiesPath)
         logger.info("Loaded NiFiProperties from ${originalNiFiPropertiesPath}")
 
-        ProtectedNiFiProperties protectedWrapper = new ProtectedNiFiProperties(plainProperties)
+        ProtectedNiFiProperties protectedWrapper = new ProtectedNiFiProperties(plainProperties, KEY_HEX)
         logger.info("Loaded ${plainProperties.size()} properties")
         logger.info("There are ${protectedWrapper.getSensitivePropertyKeys().size()} sensitive properties")
 
@@ -1107,7 +1107,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         NiFiProperties encryptedProperties = tool.encryptSensitiveProperties(plainProperties)
 
         // Assert
-        ProtectedNiFiProperties encryptedWrapper = new ProtectedNiFiProperties(encryptedProperties)
+        ProtectedNiFiProperties encryptedWrapper = new ProtectedNiFiProperties(encryptedProperties, KEY_HEX)
         encryptedWrapper.getProtectedPropertyKeys().every { String key, String protectionScheme ->
             logger.info("${key} is protected by ${protectionScheme}")
             assert protectionScheme == spp.identifierKey
@@ -1188,11 +1188,11 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         NiFiProperties plainProperties = NiFiPropertiesLoader.withKey(KEY_HEX).load(originalNiFiPropertiesPath)
         logger.info("Loaded NiFiProperties from ${originalNiFiPropertiesPath}")
 
-        ProtectedNiFiProperties protectedWrapper = new ProtectedNiFiProperties(plainProperties)
+        ProtectedNiFiProperties protectedWrapper = new ProtectedNiFiProperties(plainProperties, KEY_HEX)
         logger.info("Loaded ${plainProperties.size()} properties")
         logger.info("There are ${protectedWrapper.getSensitivePropertyKeys().size()} sensitive properties")
 
-        protectedWrapper.addSensitivePropertyProvider(new AESSensitivePropertyProvider(KEY_HEX))
+        // protectedWrapper.addSensitivePropertyProvider(new AESSensitivePropertyProvider(KEY_HEX))
         NiFiProperties protectedProperties = protectedWrapper.protectPlainProperties()
         int protectedPropertyCount = ProtectedNiFiProperties.countProtectedProperties(protectedProperties)
         logger.info("Counted ${protectedPropertyCount} protected keys")
@@ -1235,7 +1235,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         logger.info("There are ${protectedProperties.getProtectedPropertyKeys().size()} protected properties")
         int originalProtectedPropertyCount = protectedProperties.getProtectedPropertyKeys().size()
 
-        protectedProperties.addSensitivePropertyProvider(new AESSensitivePropertyProvider(KEY_HEX))
+        // protectedProperties.addSensitivePropertyProvider(new AESSensitivePropertyProvider(KEY_HEX))
         NiFiProperties encryptedProperties = protectedProperties.protectPlainProperties()
         int protectedPropertyCount = ProtectedNiFiProperties.countProtectedProperties(encryptedProperties)
         logger.info("Counted ${protectedPropertyCount} protected keys")
@@ -1276,7 +1276,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         NiFiProperties plainProperties = NiFiPropertiesLoader.withKey(KEY_HEX).load(originalNiFiPropertiesPath)
         logger.info("Loaded NiFiProperties from ${originalNiFiPropertiesPath}")
 
-        ProtectedNiFiProperties protectedWrapper = new ProtectedNiFiProperties(plainProperties)
+        ProtectedNiFiProperties protectedWrapper = new ProtectedNiFiProperties(plainProperties, KEY_HEX)
         logger.info("Loaded ${plainProperties.size()} properties")
         logger.info("There are ${protectedWrapper.getSensitivePropertyKeys().size()} sensitive properties")
 
@@ -1285,7 +1285,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         // Groovy access to avoid duplicating entire object to add one value
         (plainProperties as StandardNiFiProperties).@rawProperties.setProperty(NiFiProperties.SECURITY_TRUSTSTORE_PASSWD, "thisIsABadTruststorePassword")
 
-        protectedWrapper.addSensitivePropertyProvider(new AESSensitivePropertyProvider(KEY_HEX))
+        // protectedWrapper.addSensitivePropertyProvider(new AESSensitivePropertyProvider(KEY_HEX))
         NiFiProperties protectedProperties = protectedWrapper.protectPlainProperties()
         int protectedPropertyCount = ProtectedNiFiProperties.countProtectedProperties(protectedProperties)
         logger.info("Counted ${protectedPropertyCount} protected keys")
@@ -1531,7 +1531,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
 
         NiFiProperties inputProperties = new NiFiPropertiesLoader().load(inputPropertiesFile)
         logger.info("Loaded ${inputProperties.size()} properties from input file")
-        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties)
+        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties, KEY_HEX)
         def originalSensitiveValues = protectedInputProperties.getSensitivePropertyKeys().collectEntries { String key -> [(key): protectedInputProperties.getProperty(key)] }
         logger.info("Original sensitive values: ${originalSensitiveValues}")
 
@@ -1613,7 +1613,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
 
         NiFiProperties inputProperties = new NiFiPropertiesLoader().load(inputPropertiesFile)
         logger.info("Loaded ${inputProperties.size()} properties from input file")
-        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties)
+        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties, KEY_HEX)
         def originalSensitiveValues = protectedInputProperties.getSensitivePropertyKeys().collectEntries { String key -> [(key): protectedInputProperties.getProperty(key)] }
         logger.info("Original sensitive values: ${originalSensitiveValues}")
 
@@ -1695,7 +1695,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
 
         NiFiProperties inputProperties = new NiFiPropertiesLoader().load(inputPropertiesFile)
         logger.info("Loaded ${inputProperties.size()} properties from input file")
-        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties)
+        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties, PASSWORD_KEY_HEX)
         def originalSensitiveValues = protectedInputProperties.getSensitivePropertyKeys().collectEntries { String key -> [(key): protectedInputProperties.getProperty(key)] }
         logger.info("Original sensitive values: ${originalSensitiveValues}")
 
@@ -1816,7 +1816,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         // Log original sensitive properties (encrypted with first key)
         NiFiProperties inputProperties = NiFiPropertiesLoader.withKey(oldKeyHex).load(inputPropertiesFile)
         logger.info("Loaded ${inputProperties.size()} properties from input file")
-        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties)
+        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties, KEY_HEX)
         def originalSensitiveValues = protectedInputProperties.getSensitivePropertyKeys().collectEntries { String key -> [(key): protectedInputProperties.getProperty(key)] }
         logger.info("Original sensitive values: ${originalSensitiveValues}")
 
@@ -3532,7 +3532,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
 
         NiFiProperties inputProperties = new NiFiPropertiesLoader().load(inputPropertiesFile)
         logger.info("Loaded ${inputProperties.size()} properties from input file")
-        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties)
+        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties, KEY_HEX)
         def originalSensitiveValues = protectedInputProperties.getSensitivePropertyKeys().collectEntries { String key -> [(key): protectedInputProperties.getProperty(key)] }
         logger.info("Original sensitive values: ${originalSensitiveValues}")
 
@@ -3765,7 +3765,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
 
         NiFiProperties inputProperties = new NiFiPropertiesLoader().load(workingNiFiPropertiesFile)
         logger.info("Loaded ${inputProperties.size()} properties from input file")
-        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties)
+        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties, KEY_HEX)
         def originalSensitiveValues = protectedInputProperties.getSensitivePropertyKeys().collectEntries { String key -> [(key): protectedInputProperties.getProperty(key)] }
         logger.info("Original sensitive values: ${originalSensitiveValues}")
 
@@ -3871,9 +3871,9 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         def originalFlowCipherTexts = ORIGINAL_FLOW_XML_CONTENT.findAll(WFXCTR)
         final int CIPHER_TEXT_COUNT = originalFlowCipherTexts.size()
 
-        NiFiProperties inputProperties = new NiFiPropertiesLoader().load(workingNiFiPropertiesFile)
+        NiFiProperties inputProperties = new NiFiPropertiesLoader().withKey(DEFAULT_LEGACY_SENSITIVE_PROPS_KEY).load(workingNiFiPropertiesFile)
         logger.info("Loaded ${inputProperties.size()} properties from input file")
-        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties)
+        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties, DEFAULT_LEGACY_SENSITIVE_PROPS_KEY)
         def originalSensitiveValues = protectedInputProperties.getSensitivePropertyKeys().collectEntries { String key -> [(key): protectedInputProperties.getProperty(key)] }
         logger.info("Original sensitive values: ${originalSensitiveValues}")
 
@@ -3980,7 +3980,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         NiFiPropertiesLoader niFiPropertiesLoader = NiFiPropertiesLoader.withKey(PASSWORD_KEY_HEX_128)
         NiFiProperties inputProperties = niFiPropertiesLoader.load(workingNiFiPropertiesFile)
         logger.info("Loaded ${inputProperties.size()} properties from input file")
-        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties)
+        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties, KEY_HEX)
         def originalSensitiveValues = protectedInputProperties.getSensitivePropertyKeys().collectEntries { String key -> [(key): protectedInputProperties.getProperty(key)] }
         logger.info("Original sensitive values: ${originalSensitiveValues}")
 
@@ -4121,7 +4121,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         NiFiPropertiesLoader niFiPropertiesLoader = NiFiPropertiesLoader.withKey(PASSWORD_KEY_HEX_128)
         NiFiProperties inputProperties = niFiPropertiesLoader.load(workingNiFiPropertiesFile)
         logger.info("Loaded ${inputProperties.size()} properties from input file")
-        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties)
+        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties, PASSWORD_KEY_HEX_128)
         def originalSensitiveValues = protectedInputProperties.getSensitivePropertyKeys().collectEntries { String key -> [(key): protectedInputProperties.getProperty(key)] }
         logger.info("Original sensitive values: ${originalSensitiveValues}")
 
@@ -4163,7 +4163,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
                 logger.info("Updated key line: ${updatedSensitiveKeyLine}")
 
                 // Check that the output values for everything are the same except the sensitive props key
-                NiFiProperties updatedProperties = new NiFiPropertiesLoader().readProtectedPropertiesFromDisk(workingNiFiPropertiesFile)
+                NiFiProperties updatedProperties = new NiFiPropertiesLoader().withKey(PASSWORD_KEY_HEX_128).readProtectedPropertiesFromDisk(workingNiFiPropertiesFile)
                 assert updatedProperties.size() == inputProperties.size()
                 String newSensitivePropertyKey = updatedProperties.getProperty(NiFiProperties.SENSITIVE_PROPS_KEY)
 
@@ -4683,7 +4683,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
 
         NiFiProperties inputProperties = new NiFiPropertiesLoader().load(inputPropertiesFile)
         logger.info("Loaded ${inputProperties.size()} properties from input file")
-        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties)
+        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties, KEY_HEX)
         def originalSensitiveValues = protectedInputProperties.getSensitivePropertyKeys().collectEntries { String key -> [(key): protectedInputProperties.getProperty(key)] }
         logger.info("Original sensitive values: ${originalSensitiveValues}")
 
@@ -4750,7 +4750,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
 
         NiFiProperties inputProperties = new NiFiPropertiesLoader().load(inputPropertiesFile)
         logger.info("Loaded ${inputProperties.size()} properties from input file")
-        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties)
+        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties, KEY_HEX)
         def originalSensitiveValues = protectedInputProperties.getSensitivePropertyKeys().collectEntries { String key -> [(key): protectedInputProperties.getProperty(key)] }
         logger.info("Original sensitive values: ${originalSensitiveValues}")
 
@@ -4824,7 +4824,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
 
         NiFiProperties inputProperties = NiFiPropertiesLoader.withKey(KEY_HEX).load(inputPropertiesFile)
         logger.info("Loaded ${inputProperties.size()} properties from input file")
-        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties)
+        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties, KEY_HEX)
         def originalSensitiveValues = protectedInputProperties.getSensitivePropertyKeys().collectEntries { String key -> [(key): protectedInputProperties.getProperty(key)] }
         logger.info("Original sensitive values: ${originalSensitiveValues}")
 
@@ -4898,7 +4898,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
 
         NiFiProperties inputProperties = NiFiPropertiesLoader.withKey(KEY_HEX).load(inputPropertiesFile)
         logger.info("Loaded ${inputProperties.size()} properties from input file")
-        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties)
+        ProtectedNiFiProperties protectedInputProperties = new ProtectedNiFiProperties(inputProperties, KEY_HEX)
         def originalSensitiveValues = protectedInputProperties.getSensitivePropertyKeys().collectEntries { String key -> [(key): protectedInputProperties.getProperty(key)] }
         logger.info("Original sensitive values: ${originalSensitiveValues}")
 
