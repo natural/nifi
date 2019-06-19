@@ -24,14 +24,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import javax.crypto.NoSuchPaddingException;
 import javax.xml.XMLConstants;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
@@ -473,11 +470,8 @@ public class AuthorizerFactoryBean implements FactoryBean, DisposableBean, UserG
                 logger.error("Error extracting master key from bootstrap.conf for login identity provider decryption", e);
                 throw new SensitivePropertyProtectionException("Could not read master key from bootstrap.conf");
             }
-            try {
-                SENSITIVE_PROPERTY_PROVIDER = SensitiveProperty.fromHex(key);
-            } catch (NoSuchPaddingException | NoSuchAlgorithmException | NoSuchProviderException e) {
-                throw new SensitivePropertyProtectionException("Could not create sensitive property provider from key in bootstrap.conf");
-            }
+
+            SENSITIVE_PROPERTY_PROVIDER = SensitiveProperty.fromHex(key);
         }
     }
 

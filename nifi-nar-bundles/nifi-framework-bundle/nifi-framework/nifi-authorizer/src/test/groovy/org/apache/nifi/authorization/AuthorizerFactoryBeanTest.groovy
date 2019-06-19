@@ -73,7 +73,6 @@ class AuthorizerFactoryBeanTest extends GroovyTestCase {
     @After
     void tearDown() throws Exception {
         AuthorizerFactoryBean.SENSITIVE_PROPERTY_PROVIDER = null
-        AuthorizerFactoryBean.SENSITIVE_PROPERTY_PROVIDER_FACTORY = null
     }
 
     private static boolean isUnlimitedStrengthCryptoAvailable() {

@@ -63,7 +63,6 @@ class NiFiGroovyTest extends GroovyTestCase {
 
     @After
     void tearDown() throws Exception {
-        NiFiPropertiesLoader.@sensitivePropertyProviderFactory = null
         TestAppender.reset()
         System.setIn(System.in)
     }

@@ -75,7 +75,6 @@ class LoginIdentityProviderFactoryBeanTest extends GroovyTestCase {
     @After
     void tearDown() throws Exception {
         LoginIdentityProviderFactoryBean.SENSITIVE_PROPERTY_PROVIDER = null
-        LoginIdentityProviderFactoryBean.SENSITIVE_PROPERTY_PROVIDER_FACTORY = null
     }
 
     private static boolean isUnlimitedStrengthCryptoAvailable() {

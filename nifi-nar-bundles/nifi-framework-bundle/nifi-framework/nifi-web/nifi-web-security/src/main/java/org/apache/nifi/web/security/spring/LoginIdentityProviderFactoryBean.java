@@ -22,12 +22,9 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import javax.crypto.NoSuchPaddingException;
 import javax.xml.XMLConstants;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
@@ -228,7 +225,7 @@ public class LoginIdentityProviderFactoryBean implements FactoryBean, Disposable
         if (SENSITIVE_PROPERTY_PROVIDER == null) {
             try {
                 SENSITIVE_PROPERTY_PROVIDER = SensitiveProperty.fromKeyAndScheme(getMasterKey(), encryptionScheme);
-            } catch (IOException | NoSuchPaddingException | NoSuchAlgorithmException | NoSuchProviderException e) {
+            } catch (IOException e) {
                 logger.error("Error extracting master key from bootstrap.conf for login identity provider decryption", e);
                 throw new SensitivePropertyProtectionException("Could not read master key from bootstrap.conf");
             }

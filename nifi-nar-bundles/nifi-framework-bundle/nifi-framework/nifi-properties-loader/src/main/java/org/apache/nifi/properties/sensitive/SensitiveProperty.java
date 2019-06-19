@@ -39,13 +39,6 @@ public class SensitiveProperty implements SensitivePropertyProvider {
         return new SensitiveProperty(new AESSensitivePropertyProvider(key));
     }
 
-    // when we don't know what it is:
-    public static SensitivePropertyProvider fromAnyValue(String any) throws SensitivePropertyProtectionException {
-        // this is where the switching goes
-        logger.info("SensitiveProperty from any value: " + any);
-        return new SensitiveProperty(new AESSensitivePropertyProvider(any));
-    }
-
     // when we know it's hex:
     public static SensitivePropertyProvider fromHex(String hex) {
         logger.info("SensitiveProperty from hex: " + hex);

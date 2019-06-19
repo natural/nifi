@@ -1053,12 +1053,12 @@ class ConfigEncryptionTool {
      * @param plainProperties the NiFiProperties instance containing the raw values
      * @return the NiFiProperties containing protected values
      */
-    private NiFiProperties encryptSensitiveProperties(NiFiProperties plainProperties) {
+    private NiFiProperties encryptSensitiveProperties(NiFiProperties plainProperties, String keyHex) {
         if (!plainProperties) {
             throw new IllegalArgumentException("Cannot encrypt empty NiFiProperties")
         }
 
-        ProtectedNiFiProperties protectedWrapper = new ProtectedNiFiProperties(plainProperties)
+        ProtectedNiFiProperties protectedWrapper = new ProtectedNiFiProperties(plainProperties, keyHex)
 
         List<String> sensitivePropertyKeys = protectedWrapper.getSensitivePropertyKeys()
         if (sensitivePropertyKeys.isEmpty()) {
@@ -1282,7 +1282,7 @@ class ConfigEncryptionTool {
     static List<String> serializeNiFiPropertiesAndPreserveFormat(NiFiProperties niFiProperties, File originalPropertiesFile) {
         List<String> lines = originalPropertiesFile.readLines()
 
-        ProtectedNiFiProperties protectedNiFiProperties = new ProtectedNiFiProperties(niFiProperties)
+        ProtectedNiFiProperties protectedNiFiProperties = new ProtectedNiFiProperties(niFiProperties, "");
         // Only need to replace the keys that have been protected AND nifi.sensitive.props.key
         Map<String, String> protectedKeys = protectedNiFiProperties.getProtectedPropertyKeys()
         if (!protectedKeys.containsKey(NiFiProperties.SENSITIVE_PROPS_KEY)) {
@@ -1594,7 +1594,7 @@ class ConfigEncryptionTool {
                 }
 
                 if (tool.handlingNiFiProperties) {
-                    tool.niFiProperties = tool.encryptSensitiveProperties(tool.niFiProperties)
+                    tool.niFiProperties = tool.encryptSensitiveProperties(tool.niFiProperties, tool.keyHex)
                 }
             } catch (CommandLineParseException e) {
                 if (e.exitCode == ExitCode.HELP) {

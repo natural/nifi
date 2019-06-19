@@ -71,7 +71,7 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
      */
     public ProtectedNiFiProperties(NiFiProperties props, String defaultKeyHex) {
         this.niFiProperties = props;
-        this.keyHex = defaultKeyHex;
+        keyHex = defaultKeyHex;
         logger.debug("Loaded {} properties (including {} protection schemes) into ProtectedNiFiProperties", getPropertyKeysIncludingProtectionSchemes().size(), getProtectedPropertyKeys().size());
     }
 
@@ -248,15 +248,6 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
     }
 
     /**
-     * Returns the unique set of all protection schemes currently in use for this instance.
-     *
-     * @return the set of protection schemes
-     */
-    public Set<String> getProtectionSchemes() {
-        return new HashSet<>(getProtectedPropertyKeys().values());
-    }
-
-    /**
      * Returns a percentage of the total number of populated properties marked as sensitive that are currently protected.
      *
      * @return the percent of sensitive properties marked as protected
@@ -395,29 +386,7 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
     }
 
     private String getDefaultProtectionScheme() {
-        if (!getSensitivePropertyProviders().isEmpty()) {
-            List<String> schemes = new ArrayList<>(getSensitivePropertyProviders().keySet());
-            Collections.sort(schemes);
-            return schemes.get(0);
-        } else {
-            throw new IllegalStateException("No registered protection schemes");
-        }
-    }
-
-    /**
-     * Returns a new instance of {@link NiFiProperties} with all populated sensitive values protected by the default protection scheme. Plain non-sensitive values are copied directly.
-     *
-     * @return the protected properties in a {@link StandardNiFiProperties} object
-     * @throws IllegalStateException if no protection schemes are registered
-     */
-    NiFiProperties protectPlainProperties() {
-        try {
-            return protectPlainProperties(getDefaultProtectionScheme());
-        } catch (IllegalStateException e) {
-            final String msg = "Cannot protect properties with default scheme if no protection schemes are registered";
-            logger.warn(msg);
-            throw new IllegalStateException(msg, e);
-        }
+        return "aes/gcm/256"; // this needs to defer to a method on the SensitiveProperty class.
     }
 
     /**
@@ -427,7 +396,7 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
      * @return the protected properties in a {@link StandardNiFiProperties} object
      */
     NiFiProperties protectPlainProperties(String protectionScheme) {
-        SensitivePropertyProvider spp = SensitiveProperty.fromAnyValue(protectionScheme);
+        SensitivePropertyProvider spp = SensitiveProperty.fromKeyAndScheme(keyHex, protectionScheme);
 
         // Make a new holder (settable)
         Properties protectedProperties = new Properties();
