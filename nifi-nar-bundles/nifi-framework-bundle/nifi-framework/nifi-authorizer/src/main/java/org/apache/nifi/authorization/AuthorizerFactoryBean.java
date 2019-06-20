@@ -464,7 +464,7 @@ public class AuthorizerFactoryBean implements FactoryBean, DisposableBean, UserG
     private static void initializeSensitivePropertyProvider(String encryptionScheme) throws SensitivePropertyProtectionException {
         if (SENSITIVE_PROPERTY_PROVIDER == null) {
             try {
-                SENSITIVE_PROPERTY_PROVIDER = StandardSensitivePropertyProvider.fromHex(getMasterKey());
+                SENSITIVE_PROPERTY_PROVIDER = StandardSensitivePropertyProvider.fromKey(getMasterKey());
             } catch (IOException e) {
                 logger.error("Error extracting master key from bootstrap.conf for login identity provider decryption", e);
                 throw new SensitivePropertyProtectionException("Could not read master key from bootstrap.conf");

@@ -23,6 +23,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.crypto.BadPaddingException;
@@ -68,6 +69,10 @@ public class AESSensitivePropertyProvider implements SensitivePropertyProvider {
             logger.error("Encountered an error initializing the {}: {}", IMPLEMENTATION_NAME, e.getMessage());
             throw new SensitivePropertyProtectionException("Error initializing the protection cipher", e);
         }
+    }
+
+    public static boolean isProviderFor(String value, String... values) {
+        return true;
     }
 
     private byte[] validateKey(String keyHex) {
@@ -122,6 +127,14 @@ public class AESSensitivePropertyProvider implements SensitivePropertyProvider {
         }
 
         return validLengths;
+    }
+
+    private static int getMaxValidKeyLength() {
+        return Collections.max(getValidKeyLengths());
+    }
+
+    public static String defaultProtectionScheme() {
+        return IMPLEMENTATION_KEY + getMaxValidKeyLength();
     }
 
     /**

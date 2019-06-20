@@ -186,7 +186,7 @@ class EncryptConfigMainTest extends GroovyTestCase {
                 "-k", KEY_HEX,
                 "-v"]
 
-        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromHex(KEY_HEX)
+        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(KEY_HEX)
 
         exit.checkAssertionAfterwards(new Assertion() {
             void checkAssertion() {

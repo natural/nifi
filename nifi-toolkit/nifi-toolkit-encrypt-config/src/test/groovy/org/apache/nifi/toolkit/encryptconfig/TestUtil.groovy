@@ -299,7 +299,7 @@ class TestUtil {
 
         assert populatedSensitiveProperties.size() == protectedSensitiveProperties.size()
 
-        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromHex(expectedKey)
+        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(expectedKey)
 
         protectedSensitiveProperties.each {
             String value = it.text()

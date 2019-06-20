@@ -109,7 +109,7 @@ class NiFiRegistryDecryptMode extends DecryptMode {
                 }
             }
 
-            config.decryptionProvider = StandardSensitivePropertyProvider.fromHex(config.key)
+            config.decryptionProvider = StandardSensitivePropertyProvider.fromKey(config.key)
 
             run(config)
 

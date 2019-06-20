@@ -211,7 +211,7 @@ class NiFiGroovyTest extends GroovyTestCase {
     }
 
     private static NiFiProperties decrypt(NiFiProperties encryptedProperties, String keyHex) {
-        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromHex(keyHex)
+        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(keyHex)
         def map = encryptedProperties.getPropertyKeys().collectEntries { String key ->
             if (encryptedProperties.getProperty(key + ".protected") == spp.getIdentifierKey()) {
                 [(key): spp.unprotect(encryptedProperties.getProperty(key))]

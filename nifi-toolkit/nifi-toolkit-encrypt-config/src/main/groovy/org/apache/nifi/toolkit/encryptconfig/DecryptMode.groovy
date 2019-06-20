@@ -230,7 +230,7 @@ class DecryptMode implements ToolMode {
             if (!key) {
                 throw new RuntimeException("Failed to configure tool, could not determine key.")
             }
-            decryptionProvider = StandardSensitivePropertyProvider.fromHex(key)
+            decryptionProvider = StandardSensitivePropertyProvider.fromKey(key)
 
             if (rawOptions.t) {
                 fileType = FileType.valueOf(rawOptions.t)

@@ -19,7 +19,6 @@ package org.apache.nifi.properties.sensitive;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.properties.NiFiPropertiesLoader;
 import org.apache.nifi.properties.StandardNiFiProperties;
-import org.apache.nifi.properties.sensitive.StandardSensitivePropertyProvider;
 import org.apache.nifi.util.NiFiProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -395,7 +394,7 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
      * @return the protected properties in a {@link StandardNiFiProperties} object
      */
     NiFiProperties protectPlainProperties(String protectionScheme) {
-        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKeyAndScheme(defaultKeyHex, protectionScheme);
+        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(defaultKeyHex, protectionScheme);
 
         // Make a new holder (settable)
         Properties protectedProperties = new Properties();
@@ -463,7 +462,7 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
         logger.warn("HERE: " + protectionScheme);
         // try and make one to unprotect, and if that fails...
         try {
-            return StandardSensitivePropertyProvider.fromKeyAndScheme(defaultKeyHex, protectionScheme).unprotect(retrievedValue);
+            return StandardSensitivePropertyProvider.fromKey(defaultKeyHex, protectionScheme).unprotect(retrievedValue);
         } catch (final SensitivePropertyProtectionException e) {
             // just return the value
             // return retrievedValue;

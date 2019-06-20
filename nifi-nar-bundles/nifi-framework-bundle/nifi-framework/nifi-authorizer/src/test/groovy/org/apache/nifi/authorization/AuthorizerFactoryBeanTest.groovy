@@ -67,7 +67,7 @@ class AuthorizerFactoryBeanTest extends GroovyTestCase {
 
     @Before
     void setUp() throws Exception {
-        AuthorizerFactoryBean.SENSITIVE_PROPERTY_PROVIDER = StandardSensitivePropertyProvider.fromHex(KEY_HEX)
+        AuthorizerFactoryBean.SENSITIVE_PROPERTY_PROVIDER = StandardSensitivePropertyProvider.fromKey(KEY_HEX)
     }
 
     @After

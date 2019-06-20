@@ -877,7 +877,7 @@ class ConfigEncryptionTool {
     }
 
     String decryptLoginIdentityProviders(String encryptedXml, String existingKeyHex = keyHex) {
-        SensitivePropertyProvider sensitivePropertyProvider = StandardSensitivePropertyProvider.fromHex(existingKeyHex)
+        SensitivePropertyProvider sensitivePropertyProvider = StandardSensitivePropertyProvider.fromKey(existingKeyHex)
 
         try {
             def doc = getXmlSlurper().parseText(encryptedXml)
@@ -915,7 +915,7 @@ class ConfigEncryptionTool {
     }
 
     String decryptAuthorizers(String encryptedXml, String existingKeyHex = keyHex) {
-        SensitivePropertyProvider sensitivePropertyProvider = StandardSensitivePropertyProvider.fromHex(existingKeyHex)
+        SensitivePropertyProvider sensitivePropertyProvider = StandardSensitivePropertyProvider.fromKey(existingKeyHex)
 
         try {
             def filename = "authorizers.xml"
@@ -958,7 +958,7 @@ class ConfigEncryptionTool {
     }
 
     String encryptLoginIdentityProviders(String plainXml, String newKeyHex = keyHex) {
-        SensitivePropertyProvider sensitivePropertyProvider = StandardSensitivePropertyProvider.fromHex(newKeyHex)
+        SensitivePropertyProvider sensitivePropertyProvider = StandardSensitivePropertyProvider.fromKey(newKeyHex)
 
         // TODO: Switch to XmlParser & XmlNodePrinter to maintain "empty" element structure
         try {
@@ -1000,7 +1000,7 @@ class ConfigEncryptionTool {
     }
 
     String encryptAuthorizers(String plainXml, String newKeyHex = keyHex) {
-        SensitivePropertyProvider sensitivePropertyProvider = StandardSensitivePropertyProvider.fromHex(newKeyHex)
+        SensitivePropertyProvider sensitivePropertyProvider = StandardSensitivePropertyProvider.fromKey(newKeyHex)
 
         // TODO: Switch to XmlParser & XmlNodePrinter to maintain "empty" element structure
         try {
@@ -1065,7 +1065,7 @@ class ConfigEncryptionTool {
 
         // Holder for encrypted properties and protection schemes
         Properties encryptedProperties = new Properties()
-        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromHex(keyHex)
+        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(keyHex)
         List<String> keysToSkip = []
 
         // Iterate over each -- encrypt and add .protected if populated
@@ -1572,7 +1572,7 @@ class ConfigEncryptionTool {
 
                         // If the tool is not going to encrypt NiFiProperties and the existing file is already encrypted, encrypt and update the new sensitive props key
                         if (!tool.handlingNiFiProperties && existingNiFiPropertiesAreEncrypted) {
-                            SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromHex(tool.keyHex)
+                            SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(tool.keyHex)
                             String encryptedSPK = spp.protect(newFlowPassword)
                             rawProperties.put(NiFiProperties.SENSITIVE_PROPS_KEY, encryptedSPK)
                             // Manually update the protection scheme or it will be lost

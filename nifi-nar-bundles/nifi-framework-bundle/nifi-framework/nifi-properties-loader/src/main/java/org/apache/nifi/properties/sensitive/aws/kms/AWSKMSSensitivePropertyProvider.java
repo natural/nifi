@@ -48,9 +48,13 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
     private AWSKMS client;
     private final String key;
 
-    public AWSKMSSensitivePropertyProvider(String keyId) throws NoSuchPaddingException, NoSuchAlgorithmException, NoSuchProviderException {
+    public AWSKMSSensitivePropertyProvider(String keyId) {
         this.key = validateKey(keyId);
         this.client = AWSKMSClientBuilder.standard().build();
+    }
+
+    public static boolean isProviderFor(String value, String... values) {
+        return false;
     }
 
     private String validateKey(String keyId) {

@@ -18,6 +18,7 @@ package org.apache.nifi.properties.sensitive;
 
 import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProvider;
 
+import org.apache.nifi.properties.sensitive.aws.kms.AWSKMSSensitivePropertyProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,26 +30,25 @@ public class StandardSensitivePropertyProvider implements SensitivePropertyProvi
     private static final Logger logger = LoggerFactory.getLogger(StandardSensitivePropertyProvider.class);
 
     /**
-     * Creates a {@link SensitivePropertyProvider} suitable for a given key and scheme.
-     * @param key provider encoding or encryption key.
-     * @param scheme provider encoding or encryption scheme.
-     * @return SensitivePropertyProvider instance.
-     */
-    public static SensitivePropertyProvider fromKeyAndScheme(String key, String scheme)  {
-        logger.debug("StandardSensitivePropertyProvider from key: " + key + " scheme: " + scheme);
-        return new StandardSensitivePropertyProvider(new AESSensitivePropertyProvider(key));
-    }
-
-    /**
      * Creates a {@link SensitivePropertyProvider} suitable for a given key.  The current implementation
      * defaults to returning an {@link AESSensitivePropertyProvider}.
      *
      * @param hex provider encryption key.
      * @return SensitivePropertyProvider instance.
      */
-    public static SensitivePropertyProvider fromHex(String hex) {
-        logger.debug("StandardSensitivePropertyProvider from hex: " + hex);
-        return new StandardSensitivePropertyProvider(new AESSensitivePropertyProvider(hex));
+    public static SensitivePropertyProvider fromKey(String hex, String... options) {
+        if (AWSKMSSensitivePropertyProvider.isProviderFor(hex)) {
+            logger.debug("StandardSensitivePropertyProvider selected AWS KMS for key: " + hex + " options: " + options.length);
+            return new AWSKMSSensitivePropertyProvider(hex);
+
+        } else if (AESSensitivePropertyProvider.isProviderFor(hex)) {
+            logger.debug("StandardSensitivePropertyProvider selected AES for key: " + hex + " options: " + options.length);
+            return new AESSensitivePropertyProvider(hex);
+
+        } else {
+            logger.debug("StandardSensitivePropertyProvider selected default for key: " + hex + " options: " + options.length);
+            return new StandardSensitivePropertyProvider(new AESSensitivePropertyProvider(hex));
+        }
     }
 
     private SensitivePropertyProvider provider;
@@ -58,7 +58,7 @@ public class StandardSensitivePropertyProvider implements SensitivePropertyProvi
     }
 
     public static String getDefaultProtectionScheme() {
-        return "aes/gcm/256";
+        return AESSensitivePropertyProvider.defaultProtectionScheme();
     }
     /**
      * Returns the name of the underlying implementation.

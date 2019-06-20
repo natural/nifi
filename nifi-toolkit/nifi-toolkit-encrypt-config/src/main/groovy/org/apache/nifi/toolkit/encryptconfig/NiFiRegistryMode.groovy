@@ -288,7 +288,7 @@ class NiFiRegistryMode implements ToolMode {
             if (!encryptionKey) {
                 throw new RuntimeException("Failed to configure tool, could not determine encryption key. Must provide -p, -k, or -b. If using -b, bootstrap.conf argument must already contain master key.")
             }
-            encryptionProvider = StandardSensitivePropertyProvider.fromHex(encryptionKey)
+            encryptionProvider = StandardSensitivePropertyProvider.fromKey(encryptionKey)
 
             // Determine key for decryption (if migrating)
             determineDecryptionKey()

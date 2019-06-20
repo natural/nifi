@@ -69,7 +69,7 @@ class LoginIdentityProviderFactoryBeanTest extends GroovyTestCase {
 
     @Before
     void setUp() throws Exception {
-        LoginIdentityProviderFactoryBean.SENSITIVE_PROPERTY_PROVIDER = StandardSensitivePropertyProvider.fromHex(KEY_HEX)
+        LoginIdentityProviderFactoryBean.SENSITIVE_PROPERTY_PROVIDER = StandardSensitivePropertyProvider.fromKey(KEY_HEX)
     }
 
     @After
