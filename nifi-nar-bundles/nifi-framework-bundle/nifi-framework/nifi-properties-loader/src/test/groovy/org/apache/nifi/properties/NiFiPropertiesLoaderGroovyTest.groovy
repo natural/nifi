@@ -115,7 +115,7 @@ class NiFiPropertiesLoaderGroovyTest extends GroovyTestCase {
         assert niFiPropertiesLoader.@keyHex == KEY_HEX
     }
 
-    @Ignore // functionality / test should move to SensitiveProperty class
+    @Ignore // functionality / test should move to StandardSensitivePropertyProvider class
     @Test
     void testShouldGetDefaultProviderKey() throws Exception {
         // Arrange

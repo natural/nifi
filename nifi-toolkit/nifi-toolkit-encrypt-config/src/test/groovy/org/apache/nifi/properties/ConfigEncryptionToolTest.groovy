@@ -1198,7 +1198,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         logger.info("Counted ${protectedPropertyCount} protected keys")
 
         // Act
-        List<String> lines = ConfigEncryptionTool.serializeNiFiPropertiesAndPreserveFormat(protectedProperties, originalFile)
+        List<String> lines = ConfigEncryptionTool.serializeNiFiPropertiesAndPreserveFormat(protectedProperties, originalFile, KEY_HEX)
         logger.info("Serialized NiFiProperties to ${lines.size()} lines")
         lines.eachWithIndex { String entry, int i ->
             logger.debug("${(i + 1).toString().padLeft(3)}: ${entry}")
@@ -1243,7 +1243,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         logger.info("Expected line count change: ${protectedCountChange}")
 
         // Act
-        List<String> lines = ConfigEncryptionTool.serializeNiFiPropertiesAndPreserveFormat(protectedProperties, originalFile)
+        List<String> lines = ConfigEncryptionTool.serializeNiFiPropertiesAndPreserveFormat(protectedProperties, originalFile, KEY_HEX)
         logger.info("Serialized NiFiProperties to ${lines.size()} lines")
         lines.eachWithIndex { String entry, int i ->
             logger.debug("${(i + 1).toString().padLeft(3)}: ${entry}")
@@ -1284,13 +1284,12 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         // Groovy access to avoid duplicating entire object to add one value
         (plainProperties as StandardNiFiProperties).@rawProperties.setProperty(NiFiProperties.SECURITY_TRUSTSTORE_PASSWD, "thisIsABadTruststorePassword")
 
-        // protectedWrapper.addSensitivePropertyProvider(new AESSensitivePropertyProvider(KEY_HEX))
         NiFiProperties protectedProperties = protectedWrapper.protectPlainProperties("aes/gcm/256")
         int protectedPropertyCount = ProtectedNiFiProperties.countProtectedProperties(protectedProperties)
         logger.info("Counted ${protectedPropertyCount} protected keys")
 
         // Act
-        List<String> lines = ConfigEncryptionTool.serializeNiFiPropertiesAndPreserveFormat(protectedProperties, originalFile)
+        List<String> lines = ConfigEncryptionTool.serializeNiFiPropertiesAndPreserveFormat(protectedProperties, originalFile, KEY_HEX)
         logger.info("Serialized NiFiProperties to ${lines.size()} lines")
         lines.eachWithIndex { String entry, int i ->
             logger.debug("${(i + 1).toString().padLeft(3)}: ${entry}")

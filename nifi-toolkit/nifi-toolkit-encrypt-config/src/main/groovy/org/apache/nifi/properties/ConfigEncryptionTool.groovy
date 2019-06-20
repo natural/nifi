@@ -28,8 +28,10 @@ import org.apache.commons.cli.Options
 import org.apache.commons.cli.ParseException
 import org.apache.commons.codec.binary.Hex
 import org.apache.commons.io.IOUtils
+import org.apache.nifi.properties.sensitive.DefaultSensitivePropertyProvider
 import org.apache.nifi.properties.sensitive.ProtectedNiFiProperties
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException
+import org.apache.nifi.properties.sensitive.SensitivePropertyProvider
 import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProvider
 import org.apache.nifi.toolkit.tls.commandLine.CommandLineParseException
 import org.apache.nifi.toolkit.tls.commandLine.ExitCode
@@ -876,8 +878,7 @@ class ConfigEncryptionTool {
     }
 
     String decryptLoginIdentityProviders(String encryptedXml, String existingKeyHex = keyHex) {
-        // TODO: Use factory to determine which property provider to use here and instantiate
-        AESSensitivePropertyProvider sensitivePropertyProvider = new AESSensitivePropertyProvider(existingKeyHex)
+        SensitivePropertyProvider sensitivePropertyProvider = DefaultSensitivePropertyProvider.fromHex(existingKeyHex)
 
         try {
             def doc = getXmlSlurper().parseText(encryptedXml)
@@ -915,8 +916,7 @@ class ConfigEncryptionTool {
     }
 
     String decryptAuthorizers(String encryptedXml, String existingKeyHex = keyHex) {
-        // TODO: Same as in LIP decryption method
-        AESSensitivePropertyProvider sensitivePropertyProvider = new AESSensitivePropertyProvider(existingKeyHex)
+        SensitivePropertyProvider sensitivePropertyProvider = DefaultSensitivePropertyProvider.fromHex(existingKeyHex)
 
         try {
             def filename = "authorizers.xml"
@@ -959,8 +959,7 @@ class ConfigEncryptionTool {
     }
 
     String encryptLoginIdentityProviders(String plainXml, String newKeyHex = keyHex) {
-        // TODO: Same as in LIP decryption method
-        AESSensitivePropertyProvider sensitivePropertyProvider = new AESSensitivePropertyProvider(newKeyHex)
+        SensitivePropertyProvider sensitivePropertyProvider = DefaultSensitivePropertyProvider.fromHex(newKeyHex)
 
         // TODO: Switch to XmlParser & XmlNodePrinter to maintain "empty" element structure
         try {
@@ -1002,8 +1001,7 @@ class ConfigEncryptionTool {
     }
 
     String encryptAuthorizers(String plainXml, String newKeyHex = keyHex) {
-        // TODO: Same as in LIP decryption method
-        AESSensitivePropertyProvider sensitivePropertyProvider = new AESSensitivePropertyProvider(newKeyHex)
+        SensitivePropertyProvider sensitivePropertyProvider = DefaultSensitivePropertyProvider.fromHex(newKeyHex)
 
         // TODO: Switch to XmlParser & XmlNodePrinter to maintain "empty" element structure
         try {
@@ -1068,10 +1066,7 @@ class ConfigEncryptionTool {
 
         // Holder for encrypted properties and protection schemes
         Properties encryptedProperties = new Properties()
-
-        // TODO: Same as in LIP decryption method
-        AESSensitivePropertyProvider spp = new AESSensitivePropertyProvider(keyHex)
-
+        SensitivePropertyProvider spp = DefaultSensitivePropertyProvider.fromHex(keyHex)
         List<String> keysToSkip = []
 
         // Iterate over each -- encrypt and add .protected if populated
@@ -1261,7 +1256,7 @@ class ConfigEncryptionTool {
                 File niFiPropertiesFile = new File(niFiPropertiesPath)
                 if (niFiPropertiesFile.exists() && niFiPropertiesFile.canRead()) {
                     // Instead of just writing the NiFiProperties instance to a properties file, this method attempts to maintain the structure of the original file and preserves comments
-                    linesToPersist = serializeNiFiPropertiesAndPreserveFormat(niFiProperties, niFiPropertiesFile)
+                    linesToPersist = serializeNiFiPropertiesAndPreserveFormat(niFiProperties, niFiPropertiesFile, keyHex)
                 } else {
                     linesToPersist = serializeNiFiProperties(niFiProperties)
                 }
@@ -1279,10 +1274,10 @@ class ConfigEncryptionTool {
     }
 
     private
-    static List<String> serializeNiFiPropertiesAndPreserveFormat(NiFiProperties niFiProperties, File originalPropertiesFile) {
+    static List<String> serializeNiFiPropertiesAndPreserveFormat(NiFiProperties niFiProperties, File originalPropertiesFile, String keyHex) {
         List<String> lines = originalPropertiesFile.readLines()
 
-        ProtectedNiFiProperties protectedNiFiProperties = new ProtectedNiFiProperties(niFiProperties, "");
+        ProtectedNiFiProperties protectedNiFiProperties = new ProtectedNiFiProperties(niFiProperties, keyHex) // BOOM WHAT
         // Only need to replace the keys that have been protected AND nifi.sensitive.props.key
         Map<String, String> protectedKeys = protectedNiFiProperties.getProtectedPropertyKeys()
         if (!protectedKeys.containsKey(NiFiProperties.SENSITIVE_PROPS_KEY)) {

@@ -29,8 +29,8 @@ import java.util.Properties;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.nifi.properties.sensitive.StandardSensitivePropertyProvider;
 import org.apache.nifi.properties.sensitive.ProtectedNiFiProperties;
-import org.apache.nifi.properties.sensitive.SensitiveProperty;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
 import org.apache.nifi.util.NiFiProperties;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -69,7 +69,7 @@ public class NiFiPropertiesLoader {
 
     /**
      * Sets the hexadecimal key used to unprotect properties encrypted with
-     * {@link SensitiveProperty}. If the key has already been set,
+     * {@link StandardSensitivePropertyProvider}. If the key has already been set,
      * calling this method will throw a {@link RuntimeException}.
      *
      * @param keyHex the key in hexadecimal format
@@ -196,8 +196,7 @@ public class NiFiPropertiesLoader {
             rawProperties.load(inStream);
             logger.info("Loaded {} properties from {}", rawProperties.size(), file.getAbsolutePath());
 
-            ProtectedNiFiProperties protectedNiFiProperties = new ProtectedNiFiProperties(rawProperties, keyHex);
-            return protectedNiFiProperties;
+            return new ProtectedNiFiProperties(rawProperties, keyHex);
         } catch (final Exception ex) {
             logger.error("Cannot load properties file due to " + ex.getLocalizedMessage());
             throw new RuntimeException("Cannot load properties file due to "

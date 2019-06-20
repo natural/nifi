@@ -16,7 +16,7 @@
  */
 package org.apache.nifi.properties
 
-import org.apache.nifi.properties.sensitive.SensitiveProperty
+
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.junit.After
 import org.junit.AfterClass
@@ -31,8 +31,8 @@ import org.junit.runners.JUnit4
 import java.security.Security
 
 @RunWith(JUnit4.class)
-class SensitivePropertyTest extends GroovyTestCase {
-    private static final Logger logger = LoggerFactory.getLogger(SensitivePropertyTest.class)
+class StandardSensitivePropertyProviderTest extends GroovyTestCase {
+    private static final Logger logger = LoggerFactory.getLogger(StandardSensitivePropertyProviderTest.class)
 
     @BeforeClass
     static void setUpOnce() throws Exception {
@@ -62,7 +62,7 @@ class SensitivePropertyTest extends GroovyTestCase {
 
     @Test
     void testSomethingBasicWorksLikeYouLike() throws Exception {
-        // SensitiveProperty sp = SensitiveProperty.fromAnyValue("any old value will do")
+        // StandardSensitivePropertyProvider sp = StandardSensitivePropertyProvider.fromAnyValue("any old value will do")
         // assert sp.getName() == "AES Sensitive Property Provider"
 
         assert 1 == 1

@@ -17,43 +17,43 @@
 package org.apache.nifi.properties.sensitive;
 
 import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProvider;
-import org.apache.nifi.properties.sensitive.aws.kms.AWSKMSSensitivePropertyProvider;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.crypto.NoSuchPaddingException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-
 
 /**
  * This class is all that's needed by SP clients.
  *
  */
-public class SensitiveProperty implements SensitivePropertyProvider {
-    private static final Logger logger = LoggerFactory.getLogger(SensitiveProperty.class);
+public class StandardSensitivePropertyProvider implements SensitivePropertyProvider {
+    private static final Logger logger = LoggerFactory.getLogger(StandardSensitivePropertyProvider.class);
 
+    /**
+     * Creates a {@link SensitivePropertyProvider} suitable for a given key and scheme.
+     * @param key provider encoding or encryption key.
+     * @param scheme provider encoding or encryption scheme.
+     * @return SensitivePropertyProvider instance.
+     */
     public static SensitivePropertyProvider fromKeyAndScheme(String key, String scheme)  {
-        logger.info("SensitiveProperty from key: " + key + " scheme: " + scheme);
-        return new SensitiveProperty(new AESSensitivePropertyProvider(key));
+        logger.debug("StandardSensitivePropertyProvider from key: " + key + " scheme: " + scheme);
+        return new StandardSensitivePropertyProvider(new AESSensitivePropertyProvider(key));
     }
 
-    // when we know it's hex:
+    /**
+     * Creates a {@link SensitivePropertyProvider} suitable for a given key.  The current implementation
+     * defaults to returning an {@link AESSensitivePropertyProvider}.
+     *
+     * @param hex provider encryption key.
+     * @return SensitivePropertyProvider instance.
+     */
     public static SensitivePropertyProvider fromHex(String hex) {
-        logger.info("SensitiveProperty from hex: " + hex);
-        return new SensitiveProperty(new AESSensitivePropertyProvider(hex));
-    }
-
-    // when we know it's aws/kms/ or aes/gcm/ etc..
-    public static SensitivePropertyProvider fromId(String id) throws NoSuchPaddingException, NoSuchAlgorithmException, NoSuchProviderException {
-        logger.info("SensitiveProperty from key id: " + id);
-        return new SensitiveProperty(new AWSKMSSensitivePropertyProvider(id));
+        logger.debug("StandardSensitivePropertyProvider from hex: " + hex);
+        return new StandardSensitivePropertyProvider(new AESSensitivePropertyProvider(hex));
     }
 
     private SensitivePropertyProvider provider;
 
-    private SensitiveProperty(SensitivePropertyProvider provider) {
+    private StandardSensitivePropertyProvider(SensitivePropertyProvider provider) {
         this.provider = provider;
     }
 

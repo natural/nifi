@@ -49,7 +49,7 @@ import org.apache.nifi.authorization.generated.Property;
 import org.apache.nifi.bundle.Bundle;
 import org.apache.nifi.nar.ExtensionManager;
 import org.apache.nifi.properties.NiFiPropertiesLoader;
-import org.apache.nifi.properties.sensitive.SensitiveProperty;
+import org.apache.nifi.properties.sensitive.StandardSensitivePropertyProvider;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
 import org.apache.nifi.security.xml.XmlUtils;
@@ -463,15 +463,12 @@ public class AuthorizerFactoryBean implements FactoryBean, DisposableBean, UserG
 
     private static void initializeSensitivePropertyProvider(String encryptionScheme) throws SensitivePropertyProtectionException {
         if (SENSITIVE_PROPERTY_PROVIDER == null) {
-            String key;
             try {
-                key = getMasterKey();
+                SENSITIVE_PROPERTY_PROVIDER = StandardSensitivePropertyProvider.fromHex(getMasterKey());
             } catch (IOException e) {
                 logger.error("Error extracting master key from bootstrap.conf for login identity provider decryption", e);
                 throw new SensitivePropertyProtectionException("Could not read master key from bootstrap.conf");
             }
-
-            SENSITIVE_PROPERTY_PROVIDER = SensitiveProperty.fromHex(key);
         }
     }
 
