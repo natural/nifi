@@ -17,7 +17,7 @@
 package org.apache.nifi.authorization
 
 import org.apache.nifi.authorization.generated.Property
-import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProvider
+import org.apache.nifi.properties.sensitive.StandardSensitivePropertyProvider
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.junit.After
 import org.junit.AfterClass
@@ -67,7 +67,7 @@ class AuthorizerFactoryBeanTest extends GroovyTestCase {
 
     @Before
     void setUp() throws Exception {
-        AuthorizerFactoryBean.SENSITIVE_PROPERTY_PROVIDER = new AESSensitivePropertyProvider(KEY_HEX)
+        AuthorizerFactoryBean.SENSITIVE_PROPERTY_PROVIDER = StandardSensitivePropertyProvider.fromHex(KEY_HEX)
     }
 
     @After

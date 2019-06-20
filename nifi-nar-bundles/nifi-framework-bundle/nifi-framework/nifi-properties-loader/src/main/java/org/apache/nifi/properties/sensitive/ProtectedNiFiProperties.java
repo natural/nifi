@@ -19,6 +19,7 @@ package org.apache.nifi.properties.sensitive;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.properties.NiFiPropertiesLoader;
 import org.apache.nifi.properties.StandardNiFiProperties;
+import org.apache.nifi.properties.sensitive.StandardSensitivePropertyProvider;
 import org.apache.nifi.util.NiFiProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -370,6 +371,76 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
                 .append(" protected)")
                 .toString();
     }
+
+    /**
+     * Returns a new instance of {@link NiFiProperties} with all populated sensitive values protected by the default protection scheme. Plain non-sensitive values are copied directly.
+     *
+     * @return the protected properties in a {@link StandardNiFiProperties} object
+     * @throws IllegalStateException if no protection schemes are registered
+     */
+    NiFiProperties protectPlainProperties() {
+        try {
+            return protectPlainProperties(StandardSensitivePropertyProvider.getDefaultProtectionScheme());
+        } catch (IllegalStateException e) {
+            final String msg = "Cannot protect properties with default scheme if no protection schemes are registered";
+            logger.warn(msg);
+            throw new IllegalStateException(msg, e);
+        }
+    }
+
+    /**
+     * Returns a new instance of {@link NiFiProperties} with all populated sensitive values protected by the provided protection scheme. Plain non-sensitive values are copied directly.
+     *
+     * @param protectionScheme the identifier key of the {@link SensitivePropertyProvider} to use
+     * @return the protected properties in a {@link StandardNiFiProperties} object
+     */
+    NiFiProperties protectPlainProperties(String protectionScheme) {
+        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKeyAndScheme(defaultKeyHex, protectionScheme);
+
+        // Make a new holder (settable)
+        Properties protectedProperties = new Properties();
+
+        // Copy over the plain keys
+        Set<String> plainKeys = getPropertyKeys();
+        plainKeys.removeAll(getSensitivePropertyKeys());
+        for (String key : plainKeys) {
+            protectedProperties.setProperty(key, getInternalNiFiProperties().getProperty(key));
+        }
+
+        // Add the protected keys and the protection schemes
+        for (String key : getSensitivePropertyKeys()) {
+            final String plainValue = getInternalNiFiProperties().getProperty(key);
+            if (plainValue != null && !plainValue.trim().isEmpty()) {
+                final String protectedValue = spp.protect(plainValue);
+                protectedProperties.setProperty(key, protectedValue);
+                protectedProperties.setProperty(getProtectionKey(key), protectionScheme);
+            }
+        }
+
+        return new StandardNiFiProperties(protectedProperties);
+    }
+
+    /**
+     * Returns the number of properties that are marked as protected in the provided {@link NiFiProperties} instance without requiring external creation of a {@link ProtectedNiFiProperties} instance.
+     *
+     * @param plainProperties the instance to count protected properties
+     * @return the number of protected properties
+     */
+    public static int countProtectedProperties(NiFiProperties plainProperties, String hexKey) {
+        return new ProtectedNiFiProperties(plainProperties, hexKey).getProtectedPropertyKeys().size();
+    }
+
+    /**
+     * Returns the number of properties that are marked as sensitive in the provided {@link NiFiProperties} instance without requiring external creation of a {@link ProtectedNiFiProperties} instance.
+     *
+     * @param plainProperties the instance to count sensitive properties
+     * @return the number of sensitive properties
+     */
+    public static int countSensitiveProperties(NiFiProperties plainProperties, String hexKey) {
+        return new ProtectedNiFiProperties(plainProperties, hexKey).getSensitivePropertyKeys().size();
+    }
+
+
 
     /**
      * If the value is protected, unprotects it and returns it. If not, returns the original value.

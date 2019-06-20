@@ -57,6 +57,9 @@ public class StandardSensitivePropertyProvider implements SensitivePropertyProvi
         this.provider = provider;
     }
 
+    public static String getDefaultProtectionScheme() {
+        return "aes/gcm/256";
+    }
     /**
      * Returns the name of the underlying implementation.
      *

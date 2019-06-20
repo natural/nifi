@@ -20,7 +20,6 @@ import org.apache.nifi.properties.sensitive.MultipleSensitivePropertyProtectionE
 import org.apache.nifi.properties.sensitive.ProtectedNiFiProperties
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider
-import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProvider
 import org.apache.nifi.util.NiFiProperties
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.junit.After
@@ -437,7 +436,7 @@ class ProtectedNiFiPropertiesGroovyTest extends GroovyTestCase {
         ProtectedNiFiProperties properties = loadFromFile("/conf/nifi_with_sensitive_properties_protected_aes_multiple_malformed.properties", KEY_HEX)
 
         // Iterate over the protected keys and track the ones that fail to decrypt
-        SensitivePropertyProvider spp = new AESSensitivePropertyProvider(KEY_HEX)
+        SensitivePropertyProvider spp = StandardSensitivePropertyProvider(KEY_HEX)
         Set<String> malformedKeys = properties.getProtectedPropertyKeys()
                 .findAll { String key, String scheme -> scheme == spp.identifierKey }
                 .keySet().collect { String key ->

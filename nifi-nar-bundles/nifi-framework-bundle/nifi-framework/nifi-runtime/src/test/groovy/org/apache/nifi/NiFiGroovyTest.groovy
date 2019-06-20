@@ -20,7 +20,8 @@ import ch.qos.logback.classic.spi.LoggingEvent
 import ch.qos.logback.core.AppenderBase
 import org.apache.nifi.properties.NiFiPropertiesLoader
 import org.apache.nifi.properties.StandardNiFiProperties
-import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProvider
+import org.apache.nifi.properties.sensitive.SensitivePropertyProvider
+import org.apache.nifi.properties.sensitive.StandardSensitivePropertyProvider
 import org.apache.nifi.util.NiFiProperties
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.junit.After
@@ -210,7 +211,7 @@ class NiFiGroovyTest extends GroovyTestCase {
     }
 
     private static NiFiProperties decrypt(NiFiProperties encryptedProperties, String keyHex) {
-        AESSensitivePropertyProvider spp = new AESSensitivePropertyProvider(keyHex)
+        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromHex(keyHex)
         def map = encryptedProperties.getPropertyKeys().collectEntries { String key ->
             if (encryptedProperties.getProperty(key + ".protected") == spp.getIdentifierKey()) {
                 [(key): spp.unprotect(encryptedProperties.getProperty(key))]

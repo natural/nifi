@@ -18,7 +18,7 @@ package org.apache.nifi.web.security.spring
 
 import org.apache.nifi.authentication.generated.Property
 import org.apache.nifi.authentication.generated.Provider
-import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProvider
+import org.apache.nifi.properties.sensitive.StandardSensitivePropertyProvider
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.junit.After
 import org.junit.AfterClass
@@ -69,7 +69,7 @@ class LoginIdentityProviderFactoryBeanTest extends GroovyTestCase {
 
     @Before
     void setUp() throws Exception {
-        LoginIdentityProviderFactoryBean.SENSITIVE_PROPERTY_PROVIDER = new AESSensitivePropertyProvider(KEY_HEX)
+        LoginIdentityProviderFactoryBean.SENSITIVE_PROPERTY_PROVIDER = StandardSensitivePropertyProvider.fromHex(KEY_HEX)
     }
 
     @After
