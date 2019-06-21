@@ -54,6 +54,9 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
         if (keyId == null || StringUtils.isBlank(keyId)) {
             throw new SensitivePropertyProtectionException("The key cannot be empty");
         }
+        if (keyId.startsWith(IMPLEMENTATION_KEY)) {
+            keyId = keyId.substring(IMPLEMENTATION_KEY.length());
+        }
         return keyId;
     }
 

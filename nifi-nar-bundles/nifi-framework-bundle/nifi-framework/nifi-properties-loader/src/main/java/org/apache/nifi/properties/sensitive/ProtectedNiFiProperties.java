@@ -459,7 +459,7 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
 
         // try and make one to unprotect, and if that fails...
         try {
-            return StandardSensitivePropertyProvider.fromKey(defaultKeyHex, protectionScheme).unprotect(retrievedValue);
+            return StandardSensitivePropertyProvider.fromKey(defaultKeyHex).unprotect(retrievedValue);
         } catch (final SensitivePropertyProtectionException e) {
             throw new SensitivePropertyProtectionException(e);
         }

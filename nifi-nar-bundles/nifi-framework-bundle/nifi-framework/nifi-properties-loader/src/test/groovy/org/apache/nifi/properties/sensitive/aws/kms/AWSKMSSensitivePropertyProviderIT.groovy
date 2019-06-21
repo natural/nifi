@@ -27,8 +27,11 @@ import com.amazonaws.services.kms.model.DescribeKeyResult
 import com.amazonaws.services.kms.model.GenerateDataKeyRequest
 import com.amazonaws.services.kms.model.GenerateDataKeyResult
 import com.amazonaws.services.kms.model.ScheduleKeyDeletionRequest
+import org.apache.nifi.properties.StandardNiFiProperties
+import org.apache.nifi.properties.sensitive.ProtectedNiFiProperties
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider
+import org.apache.nifi.util.NiFiProperties
 import org.junit.After
 import org.junit.AfterClass
 import org.junit.Before
@@ -208,6 +211,43 @@ class AWSKMSSensitivePropertyProviderIT extends GroovyTestCase {
                 propProvider.unprotect("")
             }
             assert msg != null
+        }
+    }
+
+    /**
+     * These tests show we can use an AWS KMS key to encrypt/decrypt property values.
+     */
+    @Test
+    void testShouldProtectAndUnprotectProperties() throws Exception {
+        Properties rawProps
+        NiFiProperties standardProps
+        ProtectedNiFiProperties protectedProps
+        NiFiProperties encryptedProps
+        SensitivePropertyProvider propProvider
+        String propKey = NiFiProperties.SENSITIVE_PROPS_KEY
+
+        byte[] randBytes = new byte[128]
+        new SecureRandom().nextBytes(randBytes)
+        String clearText = "clear + random: " + randBytes.encodeHex()
+
+        knownGoodKeys.each { awsKmsKey ->
+            rawProps = new Properties()
+
+            // set an unprotected value along with the specific key
+            rawProps.setProperty(propKey, clearText)
+            rawProps.setProperty(propKey + ".protected", "aws/kms/" + awsKmsKey)
+            standardProps = new StandardNiFiProperties(rawProps)
+            protectedProps = new ProtectedNiFiProperties(standardProps, "aws/kms/" + awsKmsKey)
+
+            logger.info("protectedProps has ${protectedProps.size()} properties: ${protectedProps.getPropertyKeys()}")
+
+            // check to see if the property was encrypted
+            encryptedProps = protectedProps.protectPlainProperties()
+            assert encryptedProps.getProperty(propKey) != clearText
+
+            // decrypt the encrypted value manually and compare
+            propProvider = new AWSKMSSensitivePropertyProvider(awsKmsKey)
+            assert propProvider.unprotect(encryptedProps.getProperty(propKey)) == clearText
         }
     }
 }
