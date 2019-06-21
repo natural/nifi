@@ -57,6 +57,9 @@ class StandardSensitivePropertyProviderIT extends GroovyTestCase {
     static void tearDownOnce() throws Exception {
     }
 
+    /**
+     * This method builds random test values
+     */
     @Before
     void setUp() throws Exception {
         def random = new SecureRandom()
@@ -73,24 +76,36 @@ class StandardSensitivePropertyProviderIT extends GroovyTestCase {
     void tearDown() throws Exception {
     }
 
+    /**
+     * This test shows that the SSPP creates an AES provider with 128 bits hex.
+     */
     @Test
     void testKnownAES128KeyProducesAESProvider() throws Exception {
         def spp = StandardSensitivePropertyProvider.fromKey(AES_128_KEY)
         assert spp.getName() == new AESSensitivePropertyProvider(AES_128_KEY).getName()
     }
 
+    /**
+     * This test shows that the SSPP creates an AES provider with 256 bits hex.
+     */
     @Test
     void testKnownAES256KeyProducesAESProvider() throws Exception {
         def spp = StandardSensitivePropertyProvider.fromKey(AES_256_KEY)
         assert spp.getName() == new AESSensitivePropertyProvider(AES_256_KEY).getName()
     }
 
+    /**
+     * This test shows that the SSPP creates an AWS SPP from an AWS key.
+     */
     @Test
     void testKnownAWSKMSKeyProducesAWSKMSProvider() throws Exception {
         def spp = StandardSensitivePropertyProvider.fromKey(AWS_KMS_KEY)
         assert spp.getName() == new AWSKMSSensitivePropertyProvider(AWS_KMS_KEY).getName()
     }
 
+    /**
+     * This test shows that the SSPP default protection scheme is the AES default protection scheme.
+     */
     @Test
     void testDefaultProtectionSchemeMatches() throws Exception {
         def scheme = StandardSensitivePropertyProvider.getDefaultProtectionScheme()

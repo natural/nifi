@@ -535,40 +535,6 @@ class ProtectedNiFiPropertiesGroovyTest extends GroovyTestCase {
 
     // TODO: Test getProtected with multiple providers
 
-    /**
-     * In the protection enabled scenario, a call to retrieve a sensitive property should handle if the internal cache of providers is empty.
-     * @throws Exception
-     */
-    @Ignore // ignoring because unsure how to continue; providers are not cached but instead now built on the fly.  this means they always work if they can work at all.
-    @Test
-    void testGetValueOfSensitivePropertyShouldHandleInvalidatedInternalCache() throws Exception {
-        // Arrange
-        final String KEYSTORE_PASSWORD_KEY = "nifi.security.keystorePasswd"
-        final String EXPECTED_KEYSTORE_PASSWORD = "thisIsABadKeystorePassword"
-
-        ProtectedNiFiProperties properties = loadFromFile("/conf/nifi_with_sensitive_properties_protected_aes.properties", KEY_HEX)
-
-        final String RAW_PASSWORD = properties.getProperty(KEYSTORE_PASSWORD_KEY)
-        logger.info("Read raw value from properties: ${RAW_PASSWORD}")
-
-        // Overwrite the internal cache
-        properties.localProviderCache = [:]
-
-        boolean isSensitive = properties.isPropertySensitive(KEYSTORE_PASSWORD_KEY)
-        boolean isProtected = properties.isPropertyProtected(KEYSTORE_PASSWORD_KEY)
-        logger.info("The property is ${isSensitive ? "sensitive" : "not sensitive"} and ${isProtected ? "protected" : "not protected"}")
-
-        // Act
-        NiFiProperties unprotectedProperties = properties.getUnprotectedProperties()
-        String retrievedKeystorePassword = unprotectedProperties.getProperty(KEYSTORE_PASSWORD_KEY)
-        logger.info("${KEYSTORE_PASSWORD_KEY}: ${retrievedKeystorePassword}")
-
-        // Assert
-        assert retrievedKeystorePassword == RAW_PASSWORD
-        assert isSensitive
-        assert isProtected
-    }
-
     @Test
     void testShouldDetectIfPropertyIsProtected() throws Exception {
         // Arrange
