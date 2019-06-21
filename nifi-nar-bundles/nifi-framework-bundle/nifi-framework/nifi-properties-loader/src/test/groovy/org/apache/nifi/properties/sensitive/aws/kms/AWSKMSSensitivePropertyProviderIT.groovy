@@ -81,7 +81,7 @@ class AWSKMSSensitivePropertyProviderIT extends GroovyTestCase {
         GenerateDataKeyResult dekResult = client.generateDataKey(dekRequest)
 
         // add an alias to the dek
-        final String aliasName = "alias/hello-aws-kms-unit-tests-" + UUID.randomUUID().toString()
+        final String aliasName = "alias/aws-kms-spp-integration-test-" + UUID.randomUUID().toString()
         CreateAliasRequest aliasReq = new CreateAliasRequest().withAliasName(aliasName).withTargetKeyId(dekResult.getKeyId())
         client.createAlias(aliasReq)
 
@@ -115,6 +115,10 @@ class AWSKMSSensitivePropertyProviderIT extends GroovyTestCase {
         }
     }
 
+
+    /**
+     * This test shows that bad keys lead to exceptions, not invalid instances.
+     */
     @Test
     void testShouldThrowExceptionsWithBadKeys() throws Exception {
         SensitivePropertyProvider propProvider
@@ -123,22 +127,21 @@ class AWSKMSSensitivePropertyProviderIT extends GroovyTestCase {
         msg = shouldFail(SensitivePropertyProtectionException) {
             propProvider = new AWSKMSSensitivePropertyProvider("")
         }
-
         assert msg =~ "The key cannot be empty"
+
+
         assert propProvider == null
 
-        def badKeyExceptions = [com.amazonaws.SdkClientException,
-                                com.amazonaws.services.kms.model.NotFoundException]
-
-        badKeyExceptions.each { exc ->
-            msg = shouldFail(exc) {
-                propProvider = new AWSKMSSensitivePropertyProvider("bad key")
-                propProvider.protect("value")
-            }
-            assert msg =~ "Invalid keyId"
+        msg = shouldFail(com.amazonaws.services.kms.model.NotFoundException) {
+            propProvider = new AWSKMSSensitivePropertyProvider("bad key")
+            propProvider.protect("value")
         }
+        assert msg =~ "Invalid keyId"
     }
 
+    /**
+     * These tests show that the provider with known keys can round-trip protect + unprotect random, generated text.
+     */
     @Test
     void testShouldProtectAndUnprotectValues() throws Exception {
         SensitivePropertyProvider propProvider
@@ -159,6 +162,9 @@ class AWSKMSSensitivePropertyProviderIT extends GroovyTestCase {
         }
     }
 
+    /**
+     * These tests show that the provider cannot encrypt empty values.
+     */
     @Test
     void testShouldHandleProtectEmptyValue() throws Exception {
         SensitivePropertyProvider propProvider
@@ -177,6 +183,9 @@ class AWSKMSSensitivePropertyProviderIT extends GroovyTestCase {
         }
     }
 
+    /**
+     * These tests show that the provider cannot decrypt invalid ciphertext.
+     */
     @Test
     void testShouldUnprotectValue() throws Exception {
         SensitivePropertyProvider propProvider
@@ -186,29 +195,19 @@ class AWSKMSSensitivePropertyProviderIT extends GroovyTestCase {
             propProvider = new AWSKMSSensitivePropertyProvider(k)
             assert propProvider != null
 
+            // text that cannot be decoded values throw a bouncy castle exception:
             BAD_CIPHERTEXTS.each { String emptyPlaintext ->
                 def msg = shouldFail(org.bouncycastle.util.encoders.DecoderException) {
                     propProvider.unprotect(emptyPlaintext)
                 }
                 assert msg != null
             }
-        }
-    }
 
-    @Test
-    void testConstructorShouldCreateNewInstance() throws Exception {
-        // Arrange
-        def values = ["thisIsABadPassword", "thisIsABadSensitiveKeyPassword", "thisIsABadKeystorePassword", "thisIsABadKeyPassword", "thisIsABadTruststorePassword", "This is an encrypted banner message", "nififtw!"]
-
-        knownGoodKeys.each { k ->
-            SensitivePropertyProvider propProvider = new AWSKMSSensitivePropertyProvider(k)
-            assert propProvider != null
-
-            // Act
-            def encryptedValues = values.collect { String v ->
-                propProvider.protect(v)
+            // Empty string throws a different exception:
+            def msg = shouldFail(com.amazonaws.services.kms.model.AWSKMSException) {
+                propProvider.unprotect("")
             }
-            assert values == encryptedValues.collect { propProvider.unprotect(it) }
+            assert msg != null
         }
     }
 }

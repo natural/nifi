@@ -71,10 +71,6 @@ public class AESSensitivePropertyProvider implements SensitivePropertyProvider {
         }
     }
 
-    public static boolean isProviderFor(String value, String... values) {
-        return true;
-    }
-
     private byte[] validateKey(String keyHex) {
         if (keyHex == null || StringUtils.isBlank(keyHex)) {
             throw new SensitivePropertyProtectionException("The key cannot be empty");
@@ -127,14 +123,6 @@ public class AESSensitivePropertyProvider implements SensitivePropertyProvider {
         }
 
         return validLengths;
-    }
-
-    private static int getMaxValidKeyLength() {
-        return Collections.max(getValidKeyLengths());
-    }
-
-    public static String defaultProtectionScheme() {
-        return IMPLEMENTATION_KEY + getMaxValidKeyLength();
     }
 
     /**
@@ -310,4 +298,36 @@ public class AESSensitivePropertyProvider implements SensitivePropertyProvider {
     public static String getDelimiter() {
         return DELIMITER;
     }
+
+    private static int getMaxValidKeyLength() {
+        return Collections.max(getValidKeyLengths());
+    }
+
+    /**
+     * @return key type and max key length, e.g., "aes/gcm/128".
+     */
+    public static String getDefaultProtectionScheme() {
+        return IMPLEMENTATION_KEY + getMaxValidKeyLength();
+    }
+
+
+    /**
+     * True if this provider can handle the given combination of key and options.
+     *
+     * @param key Hex-encoded key
+     * @param options array of string options; currently unused
+     * @return true if the key looks like a suitable encryption key
+     */
+    public static boolean isProviderFor(String key, String... options) {
+        if (options.length == 0) {
+            return true; // existing behavior when no options are given, this provider should handle it.
+        }
+
+        if (options[0].startsWith(IMPLEMENTATION_KEY)) {
+            return true;
+        }
+
+        return false;
+    }
+
 }

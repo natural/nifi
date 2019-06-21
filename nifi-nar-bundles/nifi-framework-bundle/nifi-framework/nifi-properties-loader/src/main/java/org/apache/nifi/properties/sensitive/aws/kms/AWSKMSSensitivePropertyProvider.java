@@ -23,9 +23,6 @@ import com.amazonaws.services.kms.model.DecryptResult;
 import com.amazonaws.services.kms.model.EncryptRequest;
 import com.amazonaws.services.kms.model.EncryptResult;
 import java.nio.ByteBuffer;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import javax.crypto.NoSuchPaddingException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.properties.sensitive.SensitivePropertyMetadata;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
@@ -51,10 +48,6 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
     public AWSKMSSensitivePropertyProvider(String keyId) {
         this.key = validateKey(keyId);
         this.client = AWSKMSClientBuilder.standard().build();
-    }
-
-    public static boolean isProviderFor(String value, String... values) {
-        return false;
     }
 
     private String validateKey(String keyId) {
@@ -148,4 +141,17 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
     public String unprotect(String protectedValue, SensitivePropertyMetadata metadata) throws SensitivePropertyProtectionException {
         return unprotect(protectedValue);
     }
+
+
+    /**
+     * True when the client specifies a key like 'aws/kms/...'.
+     *
+     * @param key AWS KMS key, prefixed by our IMPLEMENTATION_KEY
+     * @param options array of string options; currently unsupported
+     * @return
+     */
+    public static boolean isProviderFor(String key, String... options) {
+        return key.startsWith(IMPLEMENTATION_KEY);
+    }
+
 }

@@ -439,8 +439,6 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
         return new ProtectedNiFiProperties(plainProperties, hexKey).getSensitivePropertyKeys().size();
     }
 
-
-
     /**
      * If the value is protected, unprotects it and returns it. If not, returns the original value.
      *
@@ -459,13 +457,10 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
             return retrievedValue;
         }
 
-        logger.warn("HERE: " + protectionScheme);
         // try and make one to unprotect, and if that fails...
         try {
             return StandardSensitivePropertyProvider.fromKey(defaultKeyHex, protectionScheme).unprotect(retrievedValue);
         } catch (final SensitivePropertyProtectionException e) {
-            // just return the value
-            // return retrievedValue;
             throw new SensitivePropertyProtectionException(e);
         }
     }
