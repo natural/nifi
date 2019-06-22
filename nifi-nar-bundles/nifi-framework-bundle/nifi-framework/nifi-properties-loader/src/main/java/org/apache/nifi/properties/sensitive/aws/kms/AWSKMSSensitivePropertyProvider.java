@@ -23,6 +23,8 @@ import com.amazonaws.services.kms.model.DecryptResult;
 import com.amazonaws.services.kms.model.EncryptRequest;
 import com.amazonaws.services.kms.model.EncryptResult;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
@@ -42,14 +44,19 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
     protected static final String IMPLEMENTATION_KEY = "aws/kms/";
 
     private AWSKMS client;
-    private final String key;
+    private final String keyId;
 
     public AWSKMSSensitivePropertyProvider(String keyId) {
-        this.key = validateKey(keyId);
+        this.keyId = normalizeKey(keyId);
         this.client = AWSKMSClientBuilder.standard().build();
     }
 
-    private String validateKey(String keyId) {
+    /**
+     * Ensures the key is usable, and ensures the key id is just the key id, no prefix.
+     * @param keyId AWS KMS key identifier, possibly prefixed.
+     * @return AWS KMS key identifier, bare.
+     */
+    private String normalizeKey(String keyId) {
         if (keyId == null || StringUtils.isBlank(keyId)) {
             throw new SensitivePropertyProtectionException("The key cannot be empty");
         }
@@ -77,7 +84,7 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
      */
     @Override
     public String getIdentifierKey() {
-        return IMPLEMENTATION_KEY + key; // getIdentifierKey() has to include the kms key id/alias/arn
+        return IMPLEMENTATION_KEY + keyId; // getIdentifierKey() has to include the kms key id/alias/arn
     }
 
 
@@ -90,16 +97,16 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
      */
     @Override
     public String protect(String unprotectedValue) throws SensitivePropertyProtectionException {
-        if (unprotectedValue == null || unprotectedValue.trim().length() == 0) {
+        if (unprotectedValue == null || StringUtils.isBlank(unprotectedValue)) {
             throw new IllegalArgumentException("Cannot encrypt an empty value");
         }
 
         EncryptRequest request = new EncryptRequest()
-            .withKeyId(key)
+            .withKeyId(keyId)
             .withPlaintext(ByteBuffer.wrap(unprotectedValue.getBytes()));
 
         EncryptResult response = client.encrypt(request);
-        return Base64.toBase64String(response.getCiphertextBlob().array());
+        return Base64.toBase64String(response.getCiphertextBlob().array()); // BC calls String(bytes)
     }
 
     /**
@@ -115,7 +122,7 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
             .withCiphertextBlob(ByteBuffer.wrap(Base64.decode(protectedValue)));
 
         DecryptResult response = client.decrypt(request);
-        return new String(response.getPlaintext().array());
+        return new String(response.getPlaintext().array(), Charset.defaultCharset());
     }
 
 

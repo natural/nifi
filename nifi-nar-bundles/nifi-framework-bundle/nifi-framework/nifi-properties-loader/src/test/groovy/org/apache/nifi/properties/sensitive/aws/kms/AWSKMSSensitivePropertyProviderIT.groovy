@@ -27,6 +27,7 @@ import com.amazonaws.services.kms.model.DescribeKeyResult
 import com.amazonaws.services.kms.model.GenerateDataKeyRequest
 import com.amazonaws.services.kms.model.GenerateDataKeyResult
 import com.amazonaws.services.kms.model.ScheduleKeyDeletionRequest
+import org.apache.commons.lang3.StringUtils
 import org.apache.nifi.properties.StandardNiFiProperties
 import org.apache.nifi.properties.sensitive.ProtectedNiFiProperties
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException
@@ -48,6 +49,10 @@ import java.security.SecureRandom
 @RunWith(JUnit4.class)
 class AWSKMSSensitivePropertyProviderIT extends GroovyTestCase {
     private static final Logger logger = LoggerFactory.getLogger(AWSKMSSensitivePropertyProviderIT.class)
+    private static final Map<String, String> credentialsBeforeTest = new HashMap<>()
+    private static final Map<String, String> credentialsDuringTest = new HashMap<>()
+
+
     protected final static String CREDENTIALS_FILE = System.getProperty("user.home") + "/aws-credentials.properties";
     private static String[] knownGoodKeys = []
     private static AWSKMSClient client
@@ -68,10 +73,22 @@ class AWSKMSSensitivePropertyProviderIT extends GroovyTestCase {
         }
         final PropertiesCredentials credentials = new PropertiesCredentials(fis)
 
-        // We're copying the properties directly so the standard builder works.
-        System.setProperty("aws.accessKeyId", credentials.AWSAccessKeyId)
-        System.setProperty("aws.secretKey", credentials.AWSSecretKey)
-        System.setProperty("aws.region", "us-east-2")
+        System.setProperty("aws.secretKey", "floop")
+
+        credentialsDuringTest.put("aws.accessKeyId", credentials.AWSAccessKeyId)
+        credentialsDuringTest.put("aws.secretKey", credentials.AWSSecretKey)
+        credentialsDuringTest.put("aws.region", "us-east-2")
+
+        credentialsDuringTest.keySet().forEach({ name ->
+            def value = System.getProperty(name)
+            credentialsBeforeTest.put(name, value)
+            if (value != null && StringUtils.isNotBlank(value)) {
+                logger.info("Overwriting credential system property: " + name)
+            }
+            // We're copying the properties directly so the standard builder works.
+            System.setProperty(name, credentialsDuringTest.get(name))
+        })
+
 
         client = AWSKMSClientBuilder.standard().build() as AWSKMSClient
 
@@ -115,6 +132,16 @@ class AWSKMSSensitivePropertyProviderIT extends GroovyTestCase {
         if (knownGoodKeys.size() > 0) {
             ScheduleKeyDeletionRequest req = new ScheduleKeyDeletionRequest().withKeyId(knownGoodKeys[0]).withPendingWindowInDays(7)
             client.scheduleKeyDeletion(req)
+        }
+
+        credentialsBeforeTest.keySet().forEach { name ->
+            def value = credentialsBeforeTest.get(name)
+            if (value == null) { value = ""}
+
+            if (StringUtils.isNotBlank(value)) {
+                logger.info("Restoring credential system property: " + name)
+            }
+            System.setProperty(name, value)
         }
     }
 

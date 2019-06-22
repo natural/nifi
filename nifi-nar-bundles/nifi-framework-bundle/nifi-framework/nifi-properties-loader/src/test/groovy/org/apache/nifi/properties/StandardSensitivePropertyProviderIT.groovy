@@ -16,6 +16,8 @@
  */
 package org.apache.nifi.properties
 
+import com.amazonaws.auth.PropertiesCredentials
+import org.apache.commons.lang3.StringUtils
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider
 import org.apache.nifi.properties.sensitive.StandardSensitivePropertyProvider
 import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProvider
@@ -39,6 +41,9 @@ import java.security.SecureRandom
 @RunWith(JUnit4.class)
 class StandardSensitivePropertyProviderIT extends GroovyTestCase {
     private static final Logger logger = LoggerFactory.getLogger(StandardSensitivePropertyProviderIT.class)
+    private static final Map<String, String> credentialsBeforeTest = new HashMap<>()
+    private static final Map<String, String> credentialsDuringTest = new HashMap<>()
+    protected final static String CREDENTIALS_FILE = System.getProperty("user.home") + "/aws-credentials.properties";
 
     private String AES_128_KEY
     private String AES_256_KEY
@@ -51,10 +56,43 @@ class StandardSensitivePropertyProviderIT extends GroovyTestCase {
         logger.metaClass.methodMissing = { String name, args ->
             logger.info("[${name?.toUpperCase()}] ${(args as List).join(" ")}")
         }
+
+        final FileInputStream fis
+        try {
+            fis = new FileInputStream(CREDENTIALS_FILE)
+        } catch (FileNotFoundException e1) {
+            fail("Could not open credentials file " + CREDENTIALS_FILE + ": " + e1.getLocalizedMessage());
+            return
+        }
+        final PropertiesCredentials credentials = new PropertiesCredentials(fis)
+
+        credentialsDuringTest.put("aws.accessKeyId", credentials.AWSAccessKeyId)
+        credentialsDuringTest.put("aws.secretKey", credentials.AWSSecretKey)
+        credentialsDuringTest.put("aws.region", "us-east-2")
+
+        credentialsDuringTest.keySet().forEach({ name ->
+            def value = System.getProperty(name)
+            credentialsBeforeTest.put(name, value)
+            if (value != null && StringUtils.isNotBlank(value)) {
+                logger.info("Overwriting credential system property: " + name)
+            }
+            // We're copying the properties directly so the standard builder works.
+            System.setProperty(name, credentialsDuringTest.get(name))
+        })
+
     }
 
     @AfterClass
     static void tearDownOnce() throws Exception {
+        credentialsBeforeTest.keySet().forEach { name ->
+            def value = credentialsBeforeTest.get(name)
+            if (value == null) { value = ""}
+
+            if (StringUtils.isNotBlank(value)) {
+                logger.info("Restoring credential system property: " + name)
+            }
+            System.setProperty(name, value)
+        }
     }
 
     /**
