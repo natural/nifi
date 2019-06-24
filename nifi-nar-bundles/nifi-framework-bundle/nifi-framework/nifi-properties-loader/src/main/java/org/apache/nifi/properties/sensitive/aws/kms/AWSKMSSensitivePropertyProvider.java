@@ -129,12 +129,15 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
     /**
      * True when the client specifies a key like 'aws/kms/...'.
      *
-     * @param key AWS KMS key, prefixed by our IMPLEMENTATION_KEY
+     * @param keyOrKeyId AWS KMS key, prefixed by our IMPLEMENTATION_KEY
      * @param options array of string options; currently unsupported
      * @return
      */
-    public static boolean isProviderFor(String key, String... options) {
-        return key.startsWith(IMPLEMENTATION_KEY);
+    public static boolean isProviderFor(String keyOrKeyId, String... options) {
+        if (StringUtils.isEmpty(keyOrKeyId)) {
+            return false;
+        }
+        return keyOrKeyId.startsWith(IMPLEMENTATION_KEY);
     }
 
 }

@@ -48,8 +48,6 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
 
     private NiFiProperties niFiProperties;
 
-    private Map<String, SensitivePropertyProvider> localProviderCache = new HashMap<>();
-
     // Additional "sensitive" property key
     public static final String ADDITIONAL_SENSITIVE_PROPERTIES_KEY = "nifi.sensitive.props.additional.keys";
 
@@ -58,16 +56,17 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
             SECURITY_KEYSTORE_PASSWD, SECURITY_TRUSTSTORE_PASSWD, SENSITIVE_PROPS_KEY, PROVENANCE_REPO_ENCRYPTION_KEY));
 
     // Default encryption key, hex encoded.
-    private String defaultKeyHex;
+    private SensitivePropertyProvider sensitivePropertyProvider;
 
     /**
      * Creates an instance containing the provided {@link NiFiProperties}.
      *
      * @param props the NiFiProperties to contain
+     * @param sensitivePropertyProvider default sensitive property provider for the instance
      */
-    public ProtectedNiFiProperties(NiFiProperties props, String defaultKeyHex) {
+    public ProtectedNiFiProperties(NiFiProperties props, SensitivePropertyProvider sensitivePropertyProvider) {
         this.niFiProperties = props;
-        this.defaultKeyHex = defaultKeyHex;
+        this.sensitivePropertyProvider = sensitivePropertyProvider;
         logger.debug("Loaded {} properties (including {} protection schemes) into ProtectedNiFiProperties", getPropertyKeysIncludingProtectionSchemes().size(), getProtectedPropertyKeys().size());
     }
 
@@ -76,8 +75,8 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
      *
      * @param rawProps the Properties to contain
      */
-    public ProtectedNiFiProperties(Properties rawProps, String defaultKeyHex) {
-        this(new StandardNiFiProperties(rawProps), defaultKeyHex);
+    public ProtectedNiFiProperties(Properties rawProps, SensitivePropertyProvider sensitivePropertyProvider) {
+        this(new StandardNiFiProperties(rawProps), sensitivePropertyProvider);
     }
 
     /**
@@ -394,7 +393,7 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
      * @return the protected properties in a {@link StandardNiFiProperties} object
      */
     NiFiProperties protectPlainProperties(String protectionScheme) {
-        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(defaultKeyHex, protectionScheme);
+        // SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(sensitivePropertyProvider, protectionScheme);
 
         // Make a new holder (settable)
         Properties protectedProperties = new Properties();
@@ -406,11 +405,15 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
             protectedProperties.setProperty(key, getInternalNiFiProperties().getProperty(key));
         }
 
+        if (sensitivePropertyProvider == null) {
+            return new StandardNiFiProperties(protectedProperties);
+        }
+
         // Add the protected keys and the protection schemes
         for (String key : getSensitivePropertyKeys()) {
             final String plainValue = getInternalNiFiProperties().getProperty(key);
             if (plainValue != null && !plainValue.trim().isEmpty()) {
-                final String protectedValue = spp.protect(plainValue);
+                final String protectedValue = sensitivePropertyProvider.protect(plainValue);
                 protectedProperties.setProperty(key, protectedValue);
                 protectedProperties.setProperty(getProtectionKey(key), protectionScheme);
             }
@@ -425,8 +428,9 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
      * @param plainProperties the instance to count protected properties
      * @return the number of protected properties
      */
-    public static int countProtectedProperties(NiFiProperties plainProperties, String hexKey) {
-        return new ProtectedNiFiProperties(plainProperties, hexKey).getProtectedPropertyKeys().size();
+    public static int countProtectedProperties(NiFiProperties plainProperties, String keyOrKeyId) {
+        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(keyOrKeyId);
+        return new ProtectedNiFiProperties(plainProperties, spp).getProtectedPropertyKeys().size();
     }
 
     /**
@@ -435,8 +439,9 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
      * @param plainProperties the instance to count sensitive properties
      * @return the number of sensitive properties
      */
-    public static int countSensitiveProperties(NiFiProperties plainProperties, String hexKey) {
-        return new ProtectedNiFiProperties(plainProperties, hexKey).getSensitivePropertyKeys().size();
+    public static int countSensitiveProperties(NiFiProperties plainProperties, String keyOrKeyId) {
+        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(keyOrKeyId);
+        return new ProtectedNiFiProperties(plainProperties, spp).getSensitivePropertyKeys().size();
     }
 
     /**
@@ -447,10 +452,15 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
      * @return the unprotected value
      */
     private String unprotectValue(String key, String retrievedValue) {
+        // if (sensitivePropertyProvider == null) {
+        //    return retrievedValue;
+        //}
+
         // Checks if the key is sensitive and marked as protected
         if (!isPropertyProtected(key)) {
             return retrievedValue;
         }
+
         final String protectionScheme = getProperty(getProtectionKey(key));
 
         if (protectionScheme.equals("unknown")) {
@@ -459,7 +469,7 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
 
         // try and make one to unprotect, and if that fails...
         try {
-            return StandardSensitivePropertyProvider.fromKey(defaultKeyHex).unprotect(retrievedValue);
+            return sensitivePropertyProvider.unprotect(retrievedValue);
         } catch (final SensitivePropertyProtectionException e) {
             throw new SensitivePropertyProtectionException(e);
         }

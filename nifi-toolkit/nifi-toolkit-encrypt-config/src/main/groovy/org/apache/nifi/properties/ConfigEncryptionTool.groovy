@@ -28,6 +28,7 @@ import org.apache.commons.cli.Options
 import org.apache.commons.cli.ParseException
 import org.apache.commons.codec.binary.Hex
 import org.apache.commons.io.IOUtils
+import org.apache.commons.lang3.StringUtils
 import org.apache.nifi.properties.sensitive.StandardSensitivePropertyProvider
 import org.apache.nifi.properties.sensitive.ProtectedNiFiProperties
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException
@@ -1050,12 +1051,13 @@ class ConfigEncryptionTool {
      * @param plainProperties the NiFiProperties instance containing the raw values
      * @return the NiFiProperties containing protected values
      */
-    private NiFiProperties encryptSensitiveProperties(NiFiProperties plainProperties, String keyHex) {
+    private NiFiProperties encryptSensitiveProperties(NiFiProperties plainProperties, String keyOrKeyId) {
         if (!plainProperties) {
             throw new IllegalArgumentException("Cannot encrypt empty NiFiProperties")
         }
 
-        ProtectedNiFiProperties protectedWrapper = new ProtectedNiFiProperties(plainProperties, keyHex)
+        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(keyOrKeyId)
+        ProtectedNiFiProperties protectedWrapper = new ProtectedNiFiProperties(plainProperties, spp)
 
         List<String> sensitivePropertyKeys = protectedWrapper.getSensitivePropertyKeys()
         if (sensitivePropertyKeys.isEmpty()) {
@@ -1065,7 +1067,7 @@ class ConfigEncryptionTool {
 
         // Holder for encrypted properties and protection schemes
         Properties encryptedProperties = new Properties()
-        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(keyHex)
+        spp = StandardSensitivePropertyProvider.fromKey(keyOrKeyId)
         List<String> keysToSkip = []
 
         // Iterate over each -- encrypt and add .protected if populated
@@ -1095,7 +1097,7 @@ class ConfigEncryptionTool {
             encryptedProperties.setProperty(key, plainProperties.getProperty(key))
         }
         NiFiProperties mergedProperties = new StandardNiFiProperties(encryptedProperties)
-        logger.info("Final result: ${mergedProperties.size()} keys including ${ProtectedNiFiProperties.countProtectedProperties(mergedProperties, keyHex)} protected keys")
+        logger.info("Final result: ${mergedProperties.size()} keys including ${ProtectedNiFiProperties.countProtectedProperties(mergedProperties, keyOrKeyId)} protected keys")
 
         mergedProperties
     }
@@ -1273,10 +1275,16 @@ class ConfigEncryptionTool {
     }
 
     private
-    static List<String> serializeNiFiPropertiesAndPreserveFormat(NiFiProperties niFiProperties, File originalPropertiesFile, String keyHex) {
+    static List<String> serializeNiFiPropertiesAndPreserveFormat(NiFiProperties niFiProperties, File originalPropertiesFile, String keyOrKeyId) {
         List<String> lines = originalPropertiesFile.readLines()
 
-        ProtectedNiFiProperties protectedNiFiProperties = new ProtectedNiFiProperties(niFiProperties, keyHex) // BOOM WHAT
+
+        SensitivePropertyProvider spp = null // = StandardSensitivePropertyProvider.fromKey(keyOrKeyId);
+        if (!StringUtils.isEmpty(keyOrKeyId)) {
+            spp = StandardSensitivePropertyProvider.fromKey(keyOrKeyId)
+        }
+
+        ProtectedNiFiProperties protectedNiFiProperties = new ProtectedNiFiProperties(niFiProperties, spp)
         // Only need to replace the keys that have been protected AND nifi.sensitive.props.key
         Map<String, String> protectedKeys = protectedNiFiProperties.getProtectedPropertyKeys()
         if (!protectedKeys.containsKey(NiFiProperties.SENSITIVE_PROPS_KEY)) {

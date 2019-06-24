@@ -32,6 +32,7 @@ import org.apache.nifi.properties.StandardNiFiProperties
 import org.apache.nifi.properties.sensitive.ProtectedNiFiProperties
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider
+import org.apache.nifi.properties.sensitive.StandardSensitivePropertyProvider
 import org.apache.nifi.util.NiFiProperties
 import org.junit.After
 import org.junit.AfterClass
@@ -198,7 +199,7 @@ class AWSKMSSensitivePropertyProviderIT extends GroovyTestCase {
     @Test
     void testShouldHandleProtectEmptyValue() throws Exception {
         SensitivePropertyProvider propProvider
-        final List<String> EMPTY_PLAINTEXTS = ["", "    ", null]
+        final List<String> EMPTY_PLAINTEXTS = ["", "    ", "\n", "\n\n", "\t", "\t\t", "\t\n", "\n\t", null]
 
         knownGoodKeys.each { k ->
             propProvider = new AWSKMSSensitivePropertyProvider(k)
@@ -241,6 +242,30 @@ class AWSKMSSensitivePropertyProviderIT extends GroovyTestCase {
         }
     }
 
+    /** These tests show that the provider cannot decrypt text encoded but not encrypted.
+     */
+    @Test
+    void testShouldThrowExceptionWithValidBase64EncodedTextInvalidCipherText() throws Exception {
+        SensitivePropertyProvider propProvider
+
+
+        knownGoodKeys.each { k ->
+            propProvider = new AWSKMSSensitivePropertyProvider(k)
+            assert propProvider != null
+
+            def random = new SecureRandom()
+            byte[] bytes = new byte[80]
+            random.nextBytes(bytes)
+            def encodedText = bytes.encodeBase64()
+
+            def msg = shouldFail(com.amazonaws.services.kms.model.AWSKMSException) {
+                propProvider.unprotect(encodedText as String)
+            }
+
+            assert msg != null
+        }
+    }
+
     /**
      * These tests show we can use an AWS KMS key to encrypt/decrypt property values.
      */
@@ -264,7 +289,7 @@ class AWSKMSSensitivePropertyProviderIT extends GroovyTestCase {
             rawProps.setProperty(propKey, clearText)
             rawProps.setProperty(propKey + ".protected", "aws/kms/" + awsKmsKey)
             standardProps = new StandardNiFiProperties(rawProps)
-            protectedProps = new ProtectedNiFiProperties(standardProps, "aws/kms/" + awsKmsKey)
+            protectedProps = new ProtectedNiFiProperties(standardProps, StandardSensitivePropertyProvider.fromKey("aws/kms/" + awsKmsKey))
 
             logger.info("protectedProps has ${protectedProps.size()} properties: ${protectedProps.getPropertyKeys()}")
 

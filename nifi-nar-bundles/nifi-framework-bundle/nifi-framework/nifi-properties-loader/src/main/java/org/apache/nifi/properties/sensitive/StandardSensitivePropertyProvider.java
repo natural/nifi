@@ -39,6 +39,11 @@ public class StandardSensitivePropertyProvider {
      * @return concrete instance of SensitivePropertyProvider
      */
     public static SensitivePropertyProvider fromKey(String hex, String... options) {
+/*
+        if (false && StringUtils.isEmpty(hex)) {
+            throw new SensitivePropertyProtectionException("Key cannot be empty.");
+        }
+*/
 
         String scheme = "";
         if (options.length > 0) {
