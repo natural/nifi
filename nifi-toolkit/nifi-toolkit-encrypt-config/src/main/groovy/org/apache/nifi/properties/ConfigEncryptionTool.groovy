@@ -878,9 +878,8 @@ class ConfigEncryptionTool {
     }
 
     String decryptLoginIdentityProviders(String encryptedXml, String existingKeyHex = keyHex) {
-        SensitivePropertyProvider sensitivePropertyProvider = StandardSensitivePropertyProvider.fromKey(existingKeyHex)
-
         try {
+            def spp = StandardSensitivePropertyProvider.fromKey(existingKeyHex)
             def doc = getXmlSlurper().parseText(encryptedXml)
             // Find the provider element by class even if it has been renamed
             def passwords = doc.provider.find { it.'class' as String == LDAP_PROVIDER_CLASS }.property.findAll {
@@ -900,7 +899,7 @@ class ConfigEncryptionTool {
                 if (isVerbose) {
                     logger.info("Attempting to decrypt ${password.text()}")
                 }
-                String decryptedValue = sensitivePropertyProvider.unprotect(password.text().trim())
+                String decryptedValue = spp.unprotect(password.text().trim())
                 password.replaceNode {
                     property(name: password.@name, encryption: "none", decryptedValue)
                 }
@@ -916,9 +915,8 @@ class ConfigEncryptionTool {
     }
 
     String decryptAuthorizers(String encryptedXml, String existingKeyHex = keyHex) {
-        SensitivePropertyProvider sensitivePropertyProvider = StandardSensitivePropertyProvider.fromKey(existingKeyHex)
-
         try {
+            def spp = StandardSensitivePropertyProvider.fromKey(existingKeyHex)
             def filename = "authorizers.xml"
             def doc = getXmlSlurper().parseText(encryptedXml)
             // Find the provider element by class even if it has been renamed
@@ -941,7 +939,7 @@ class ConfigEncryptionTool {
                 if (isVerbose) {
                     logger.info("Attempting to decrypt ${password.text()}")
                 }
-                String decryptedValue = sensitivePropertyProvider.unprotect(password.text().trim())
+                String decryptedValue = spp.unprotect(password.text().trim())
                 password.replaceNode {
                     property(name: password.@name, encryption: "none", decryptedValue)
                 }
@@ -959,10 +957,9 @@ class ConfigEncryptionTool {
     }
 
     String encryptLoginIdentityProviders(String plainXml, String newKeyHex = keyHex) {
-        SensitivePropertyProvider sensitivePropertyProvider = StandardSensitivePropertyProvider.fromKey(newKeyHex)
-
         // TODO: Switch to XmlParser & XmlNodePrinter to maintain "empty" element structure
         try {
+            def spp = StandardSensitivePropertyProvider.fromKey(newKeyHex)
             def doc = getXmlSlurper().parseText(plainXml)
             // Find the provider element by class even if it has been renamed
             def passwords = doc.provider.find { it.'class' as String == LDAP_PROVIDER_CLASS }
@@ -982,9 +979,9 @@ class ConfigEncryptionTool {
                 if (isVerbose) {
                     logger.info("Attempting to encrypt ${password.name()}")
                 }
-                String encryptedValue = sensitivePropertyProvider.protect(password.text().trim())
+                String encryptedValue = spp.protect(password.text().trim())
                 password.replaceNode {
-                    property(name: password.@name, encryption: sensitivePropertyProvider.identifierKey, encryptedValue)
+                    property(name: password.@name, encryption: spp.identifierKey, encryptedValue)
                 }
             }
 
@@ -1001,10 +998,9 @@ class ConfigEncryptionTool {
     }
 
     String encryptAuthorizers(String plainXml, String newKeyHex = keyHex) {
-        SensitivePropertyProvider sensitivePropertyProvider = StandardSensitivePropertyProvider.fromKey(newKeyHex)
-
         // TODO: Switch to XmlParser & XmlNodePrinter to maintain "empty" element structure
         try {
+            def spp = StandardSensitivePropertyProvider.fromKey(newKeyHex)
             def filename = "authorizers.xml"
             def doc = getXmlSlurper().parseText(plainXml)
             // Find the provider element by class even if it has been renamed
@@ -1025,9 +1021,9 @@ class ConfigEncryptionTool {
                 if (isVerbose) {
                     logger.info("Attempting to encrypt ${password.name()}")
                 }
-                String encryptedValue = sensitivePropertyProvider.protect(password.text().trim())
+                String encryptedValue = spp.protect(password.text().trim())
                 password.replaceNode {
-                    property(name: password.@name, encryption: sensitivePropertyProvider.identifierKey, encryptedValue)
+                    property(name: password.@name, encryption: spp.identifierKey, encryptedValue)
                 }
             }
 
@@ -1067,7 +1063,6 @@ class ConfigEncryptionTool {
 
         // Holder for encrypted properties and protection schemes
         Properties encryptedProperties = new Properties()
-        spp = StandardSensitivePropertyProvider.fromKey(keyOrKeyId)
         List<String> keysToSkip = []
 
         // Iterate over each -- encrypt and add .protected if populated
@@ -1277,14 +1272,7 @@ class ConfigEncryptionTool {
     private
     static List<String> serializeNiFiPropertiesAndPreserveFormat(NiFiProperties niFiProperties, File originalPropertiesFile, String keyOrKeyId) {
         List<String> lines = originalPropertiesFile.readLines()
-
-
-        SensitivePropertyProvider spp = null // = StandardSensitivePropertyProvider.fromKey(keyOrKeyId);
-        if (!StringUtils.isEmpty(keyOrKeyId)) {
-            spp = StandardSensitivePropertyProvider.fromKey(keyOrKeyId)
-        }
-
-        ProtectedNiFiProperties protectedNiFiProperties = new ProtectedNiFiProperties(niFiProperties, spp)
+        ProtectedNiFiProperties protectedNiFiProperties = new ProtectedNiFiProperties(niFiProperties, StandardSensitivePropertyProvider.fromKey(keyOrKeyId))
         // Only need to replace the keys that have been protected AND nifi.sensitive.props.key
         Map<String, String> protectedKeys = protectedNiFiProperties.getProtectedPropertyKeys()
         if (!protectedKeys.containsKey(NiFiProperties.SENSITIVE_PROPS_KEY)) {

@@ -16,6 +16,7 @@
  */
 package org.apache.nifi.properties.sensitive;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProvider;
 import org.apache.nifi.properties.sensitive.aws.kms.AWSKMSSensitivePropertyProvider;
 import org.slf4j.Logger;
@@ -34,33 +35,31 @@ public class StandardSensitivePropertyProvider {
      * If no provider recognizes a key, this implementation still returns an {@link AESSensitivePropertyProvider} with
      * the supplied key.
      *
-     * @param hex provider encryption key
+     * @param keyOrKeyId provider encryption key
      * @param options array of string options
      * @return concrete instance of SensitivePropertyProvider
      */
-    public static SensitivePropertyProvider fromKey(String hex, String... options) {
-/*
-        if (false && StringUtils.isEmpty(hex)) {
-            throw new SensitivePropertyProtectionException("Key cannot be empty.");
+    public static SensitivePropertyProvider fromKey(String keyOrKeyId, String... options) {
+        if (StringUtils.isEmpty(keyOrKeyId)) {
+            return null;
         }
-*/
 
         String scheme = "";
         if (options.length > 0) {
             scheme = options[0];
         }
 
-        if (AWSKMSSensitivePropertyProvider.isProviderFor(hex, options)) {
-            logger.debug("StandardSensitivePropertyProvider selected specific AWS KMS for key: " + hex + " scheme: " + scheme);
-            return new AWSKMSSensitivePropertyProvider(hex);
+        if (AWSKMSSensitivePropertyProvider.isProviderFor(keyOrKeyId, options)) {
+            logger.debug("StandardSensitivePropertyProvider selected specific AWS KMS for key: " + keyOrKeyId + " scheme: " + scheme);
+            return new AWSKMSSensitivePropertyProvider(keyOrKeyId);
 
-        } else if (AESSensitivePropertyProvider.isProviderFor(hex, options)) {
-            logger.debug("StandardSensitivePropertyProvider selected specific AES provider for key: " + hex + " scheme: " + scheme);
-            return new AESSensitivePropertyProvider(hex);
+        } else if (AESSensitivePropertyProvider.isProviderFor(keyOrKeyId, options)) {
+            logger.debug("StandardSensitivePropertyProvider selected specific AES provider for key: " + keyOrKeyId + " scheme: " + scheme);
+            return new AESSensitivePropertyProvider(keyOrKeyId);
 
         } else {
-            logger.debug("StandardSensitivePropertyProvider selected default (AES) for key: " + hex + " scheme: " + scheme);
-            return new AESSensitivePropertyProvider(hex);
+            logger.debug("StandardSensitivePropertyProvider selected default (AES) for key: " + keyOrKeyId + " scheme: " + scheme);
+            return new AESSensitivePropertyProvider(keyOrKeyId);
         }
     }
 

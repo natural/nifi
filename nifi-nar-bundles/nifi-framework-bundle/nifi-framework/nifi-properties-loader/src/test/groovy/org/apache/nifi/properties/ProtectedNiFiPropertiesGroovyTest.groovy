@@ -170,8 +170,7 @@ class ProtectedNiFiPropertiesGroovyTest extends GroovyTestCase {
         assert niFiProperties.size() == 2
 
         // Act
-        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(KEY_HEX)
-        ProtectedNiFiProperties protectedNiFiProperties = new ProtectedNiFiProperties(niFiProperties, spp)
+        ProtectedNiFiProperties protectedNiFiProperties = new ProtectedNiFiProperties(niFiProperties, StandardSensitivePropertyProvider.fromKey(KEY_HEX))
         logger.info("protectedNiFiProperties has ${protectedNiFiProperties.size()} properties: ${protectedNiFiProperties.getPropertyKeys()}")
 
         // Assert
@@ -209,8 +208,7 @@ class ProtectedNiFiPropertiesGroovyTest extends GroovyTestCase {
         final String INSENSITIVE_PROPERTY_KEY = "nifi.ui.banner.text"
         final String SENSITIVE_PROPERTY_KEY = "nifi.security.keystorePasswd"
 
-        def spp = StandardSensitivePropertyProvider.fromKey(KEY_HEX)
-        ProtectedNiFiProperties properties = loadFromFile("/conf/nifi.properties", spp)
+        ProtectedNiFiProperties properties = loadFromFile("/conf/nifi.properties", StandardSensitivePropertyProvider.fromKey(KEY_HEX))
 
         // Act
         boolean bannerIsSensitive = properties.isPropertySensitive(INSENSITIVE_PROPERTY_KEY)
@@ -227,8 +225,7 @@ class ProtectedNiFiPropertiesGroovyTest extends GroovyTestCase {
     void testShouldGetDefaultSensitiveProperties() throws Exception {
         // Arrange
         logger.expected("${DEFAULT_SENSITIVE_PROPERTIES.size()} default sensitive properties: ${DEFAULT_SENSITIVE_PROPERTIES.join(", ")}")
-        def spp = StandardSensitivePropertyProvider.fromKey(KEY_HEX)
-        ProtectedNiFiProperties properties = loadFromFile("/conf/nifi.properties", spp)
+        ProtectedNiFiProperties properties = loadFromFile("/conf/nifi.properties", StandardSensitivePropertyProvider.fromKey(KEY_HEX))
 
         // Act
         List defaultSensitiveProperties = properties.getSensitivePropertyKeys()
@@ -244,8 +241,7 @@ class ProtectedNiFiPropertiesGroovyTest extends GroovyTestCase {
         // Arrange
         def completeSensitiveProperties = DEFAULT_SENSITIVE_PROPERTIES + ["nifi.ui.banner.text", "nifi.version"]
         logger.expected("${completeSensitiveProperties.size()} total sensitive properties: ${completeSensitiveProperties.join(", ")}")
-        def spp = StandardSensitivePropertyProvider.fromKey(KEY_HEX)
-        ProtectedNiFiProperties properties = loadFromFile("/conf/nifi_with_additional_sensitive_keys.properties", spp)
+        ProtectedNiFiProperties properties = loadFromFile("/conf/nifi_with_additional_sensitive_keys.properties", StandardSensitivePropertyProvider.fromKey(KEY_HEX))
 
         // Act
         List retrievedSensitiveProperties = properties.getSensitivePropertyKeys()
@@ -263,8 +259,7 @@ class ProtectedNiFiPropertiesGroovyTest extends GroovyTestCase {
         // Arrange
         def completeSensitiveProperties = DEFAULT_SENSITIVE_PROPERTIES + ["nifi.ui.banner.text", "nifi.version"]
         logger.expected("${completeSensitiveProperties.size()} total sensitive properties: ${completeSensitiveProperties.join(", ")}")
-        def spp = StandardSensitivePropertyProvider.fromKey(KEY_HEX)
-        ProtectedNiFiProperties properties = loadFromFile("/conf/nifi_with_additional_sensitive_keys.properties", spp)
+        ProtectedNiFiProperties properties = loadFromFile("/conf/nifi_with_additional_sensitive_keys.properties", StandardSensitivePropertyProvider.fromKey(KEY_HEX))
 
         // Act
         List retrievedSensitiveProperties = properties.getSensitivePropertyKeys()
@@ -311,7 +306,7 @@ class ProtectedNiFiPropertiesGroovyTest extends GroovyTestCase {
         // Arrange
         final String TRUSTSTORE_PASSWORD_KEY = "nifi.security.truststorePasswd"
         final String EXPECTED_TRUSTSTORE_PASSWORD = ""
-        def spp = StandardSensitivePropertyProvider.fromKey(KEY_HEX)
+        final SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(KEY_HEX)
 
         ProtectedNiFiProperties properties = loadFromFile("/conf/nifi_with_sensitive_properties_unprotected.properties", spp)
 
@@ -340,7 +335,7 @@ class ProtectedNiFiPropertiesGroovyTest extends GroovyTestCase {
         // Arrange
         final String KEYSTORE_PASSWORD_KEY = "nifi.security.keystorePasswd"
         final String EXPECTED_KEYSTORE_PASSWORD = "thisIsABadKeystorePassword"
-        def spp = StandardSensitivePropertyProvider.fromKey(KEY_HEX)
+        final SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(KEY_HEX)
 
         ProtectedNiFiProperties properties = loadFromFile("/conf/nifi_with_sensitive_properties_protected_aes.properties", spp)
 
@@ -611,7 +606,7 @@ class ProtectedNiFiPropertiesGroovyTest extends GroovyTestCase {
     @Test
     void testShouldGetPercentageOfSensitivePropertiesProtected_75() throws Exception {
         // Arrange
-        def spp = StandardSensitivePropertyProvider.fromKey(KEY_HEX)
+        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(KEY_HEX)
         ProtectedNiFiProperties properties = loadFromFile("/conf/nifi_with_sensitive_properties_protected_aes.properties", spp)
 
         logger.info("Sensitive property keys: ${properties.getSensitivePropertyKeys()}")
@@ -628,7 +623,7 @@ class ProtectedNiFiPropertiesGroovyTest extends GroovyTestCase {
     @Test
     void testShouldGetPercentageOfSensitivePropertiesProtected_100() throws Exception {
         // Arrange
-        def spp = StandardSensitivePropertyProvider.fromKey(KEY_HEX)
+        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(KEY_HEX)
         ProtectedNiFiProperties properties = loadFromFile("/conf/nifi_with_all_sensitive_properties_protected_aes.properties", spp)
 
         logger.info("Sensitive property keys: ${properties.getSensitivePropertyKeys()}")
@@ -646,8 +641,7 @@ class ProtectedNiFiPropertiesGroovyTest extends GroovyTestCase {
     void testGetUnprotectedPropertiesShouldReturnInternalInstanceWhenNoneProtected() {
         // Arrange
         String noProtectedPropertiesPath = "/conf/nifi.properties"
-        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(KEY_HEX)
-        ProtectedNiFiProperties protectedNiFiProperties = loadFromFile(noProtectedPropertiesPath, spp)
+        ProtectedNiFiProperties protectedNiFiProperties = loadFromFile(noProtectedPropertiesPath, StandardSensitivePropertyProvider.fromKey(KEY_HEX))
         logger.info("Loaded ${protectedNiFiProperties.size()} properties from ${noProtectedPropertiesPath}")
 
         int hashCode = protectedNiFiProperties.internalNiFiProperties.hashCode()
@@ -670,8 +664,7 @@ class ProtectedNiFiPropertiesGroovyTest extends GroovyTestCase {
     void testGetUnprotectedPropertiesShouldDecryptProtectedProperties() {
         // Arrange
         String noProtectedPropertiesPath = "/conf/nifi_with_sensitive_properties_protected_aes.properties"
-        def spp = StandardSensitivePropertyProvider.fromKey(KEY_HEX)
-        ProtectedNiFiProperties protectedNiFiProperties = loadFromFile(noProtectedPropertiesPath, spp)
+        ProtectedNiFiProperties protectedNiFiProperties = loadFromFile(noProtectedPropertiesPath, StandardSensitivePropertyProvider.fromKey(KEY_HEX))
         logger.info("Loaded ${protectedNiFiProperties.size()} properties from ${noProtectedPropertiesPath}")
 
         int protectedPropertyCount = protectedNiFiProperties.getProtectedPropertyKeys().size()
@@ -712,8 +705,7 @@ class ProtectedNiFiPropertiesGroovyTest extends GroovyTestCase {
     void testShouldCalculateSize() {
         // Arrange
         Properties rawProperties = [key: "protectedValue", "key.protected": "scheme", "key2": "value2"] as Properties
-        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(KEY_HEX)
-        ProtectedNiFiProperties protectedNiFiProperties = new ProtectedNiFiProperties(rawProperties, spp)
+        ProtectedNiFiProperties protectedNiFiProperties = new ProtectedNiFiProperties(rawProperties, StandardSensitivePropertyProvider.fromKey(KEY_HEX))
         logger.info("Raw properties (${rawProperties.size()}): ${rawProperties.keySet().join(", ")}")
 
         // Act
@@ -728,8 +720,7 @@ class ProtectedNiFiPropertiesGroovyTest extends GroovyTestCase {
     void testGetPropertyKeysShouldMatchSize() {
         // Arrange
         Properties rawProperties = [key: "protectedValue", "key.protected": "scheme", "key2": "value2"] as Properties
-        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(KEY_HEX)
-        ProtectedNiFiProperties protectedNiFiProperties = new ProtectedNiFiProperties(rawProperties, spp)
+        ProtectedNiFiProperties protectedNiFiProperties = new ProtectedNiFiProperties(rawProperties, StandardSensitivePropertyProvider.fromKey(KEY_HEX))
         logger.info("Raw properties (${rawProperties.size()}): ${rawProperties.keySet().join(", ")}")
 
         // Act
@@ -745,8 +736,7 @@ class ProtectedNiFiPropertiesGroovyTest extends GroovyTestCase {
     void testShouldGetPropertyKeysIncludingProtectionSchemes() {
         // Arrange
         Properties rawProperties = [key: "protectedValue", "key.protected": "scheme", "key2": "value2"] as Properties
-        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(KEY_HEX)
-        ProtectedNiFiProperties protectedNiFiProperties = new ProtectedNiFiProperties(rawProperties, spp)
+        ProtectedNiFiProperties protectedNiFiProperties = new ProtectedNiFiProperties(rawProperties, StandardSensitivePropertyProvider.fromKey(KEY_HEX))
         logger.info("Raw properties (${rawProperties.size()}): ${rawProperties.keySet().join(", ")}")
 
         // Act
