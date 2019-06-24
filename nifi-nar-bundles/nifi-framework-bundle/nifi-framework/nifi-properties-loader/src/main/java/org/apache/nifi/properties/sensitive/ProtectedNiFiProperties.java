@@ -55,7 +55,7 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
     public static final List<String> DEFAULT_SENSITIVE_PROPERTIES = new ArrayList<>(asList(SECURITY_KEY_PASSWD,
             SECURITY_KEYSTORE_PASSWD, SECURITY_TRUSTSTORE_PASSWD, SENSITIVE_PROPS_KEY, PROVENANCE_REPO_ENCRYPTION_KEY));
 
-    // Default encryption key, hex encoded.
+    // Default sensitive property provider
     private SensitivePropertyProvider sensitivePropertyProvider;
 
     /**
@@ -78,6 +78,15 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
     public ProtectedNiFiProperties(Properties rawProps, SensitivePropertyProvider sensitivePropertyProvider) {
         this(new StandardNiFiProperties(rawProps), sensitivePropertyProvider);
     }
+
+    public ProtectedNiFiProperties(NiFiProperties props, String keyOrKeyId) {
+        this(props, StandardSensitivePropertyProvider.fromKey(keyOrKeyId));
+    }
+
+    public ProtectedNiFiProperties(Properties rawProps, String keyOrKeyId) {
+        this(new StandardNiFiProperties(rawProps), keyOrKeyId);
+    }
+
 
     /**
      * Retrieves the property value for the given property key.
@@ -429,8 +438,7 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
      * @return the number of protected properties
      */
     public static int countProtectedProperties(NiFiProperties plainProperties, String keyOrKeyId) {
-        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(keyOrKeyId);
-        return new ProtectedNiFiProperties(plainProperties, spp).getProtectedPropertyKeys().size();
+        return new ProtectedNiFiProperties(plainProperties, keyOrKeyId).getProtectedPropertyKeys().size();
     }
 
     /**
@@ -440,8 +448,7 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
      * @return the number of sensitive properties
      */
     public static int countSensitiveProperties(NiFiProperties plainProperties, String keyOrKeyId) {
-        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(keyOrKeyId);
-        return new ProtectedNiFiProperties(plainProperties, spp).getSensitivePropertyKeys().size();
+        return new ProtectedNiFiProperties(plainProperties, keyOrKeyId).getSensitivePropertyKeys().size();
     }
 
     /**

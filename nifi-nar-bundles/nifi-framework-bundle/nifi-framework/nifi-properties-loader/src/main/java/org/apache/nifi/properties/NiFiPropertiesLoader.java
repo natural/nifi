@@ -195,7 +195,7 @@ public class NiFiPropertiesLoader {
             inStream = new BufferedInputStream(new FileInputStream(file));
             rawProperties.load(inStream);
             logger.info("Loaded {} properties from {}", rawProperties.size(), file.getAbsolutePath());
-            return new ProtectedNiFiProperties(rawProperties, StandardSensitivePropertyProvider.fromKey(keyHex));
+            return new ProtectedNiFiProperties(rawProperties, keyHex);
         } catch (final Exception ex) {
             logger.error("Cannot load properties file due to " + ex.getLocalizedMessage());
             throw new RuntimeException("Cannot load properties file due to "

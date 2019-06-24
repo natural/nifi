@@ -211,10 +211,10 @@ class NiFiGroovyTest extends GroovyTestCase {
     }
 
     private static NiFiProperties decrypt(NiFiProperties encryptedProperties, String keyOrKeyId) {
-        def spp = StandardSensitivePropertyProvider.fromKey(keyOrKeyId)
+        def sensitivePropertyProvider = StandardSensitivePropertyProvider.fromKey(keyOrKeyId)
         def map = encryptedProperties.getPropertyKeys().collectEntries { String key ->
-            if (encryptedProperties.getProperty(key + ".protected") == spp.getIdentifierKey()) {
-                [(key): spp.unprotect(encryptedProperties.getProperty(key))]
+            if (encryptedProperties.getProperty(key + ".protected") == sensitivePropertyProvider.getIdentifierKey()) {
+                [(key): sensitivePropertyProvider.unprotect(encryptedProperties.getProperty(key))]
             } else if (!key.endsWith(".protected")) {
                 [(key): encryptedProperties.getProperty(key)]
             }

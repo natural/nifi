@@ -119,8 +119,8 @@ class StandardSensitivePropertyProviderIT extends GroovyTestCase {
      */
     @Test
     void testKnownAES128KeyProducesAESProvider() throws Exception {
-        def spp = StandardSensitivePropertyProvider.fromKey(AES_128_KEY)
-        assert spp.getName() == new AESSensitivePropertyProvider(AES_128_KEY).getName()
+        def sensitivePropertyProvider = StandardSensitivePropertyProvider.fromKey(AES_128_KEY)
+        assert sensitivePropertyProvider.getName() == new AESSensitivePropertyProvider(AES_128_KEY).getName()
     }
 
     /**
@@ -128,8 +128,8 @@ class StandardSensitivePropertyProviderIT extends GroovyTestCase {
      */
     @Test
     void testKnownAES256KeyProducesAESProvider() throws Exception {
-        def spp = StandardSensitivePropertyProvider.fromKey(AES_256_KEY)
-        assert spp.getName() == new AESSensitivePropertyProvider(AES_256_KEY).getName()
+        def sensitivePropertyProvider = StandardSensitivePropertyProvider.fromKey(AES_256_KEY)
+        assert sensitivePropertyProvider.getName() == new AESSensitivePropertyProvider(AES_256_KEY).getName()
     }
 
     /**
@@ -137,8 +137,8 @@ class StandardSensitivePropertyProviderIT extends GroovyTestCase {
      */
     @Test
     void testKnownAWSKMSKeyProducesAWSKMSProvider() throws Exception {
-        def spp = StandardSensitivePropertyProvider.fromKey(AWS_KMS_KEY)
-        assert spp.getName() == new AWSKMSSensitivePropertyProvider(AWS_KMS_KEY).getName()
+        def sensitivePropertyProvider = StandardSensitivePropertyProvider.fromKey(AWS_KMS_KEY)
+        assert sensitivePropertyProvider.getName() == new AWSKMSSensitivePropertyProvider(AWS_KMS_KEY).getName()
     }
 
     /**
@@ -146,8 +146,8 @@ class StandardSensitivePropertyProviderIT extends GroovyTestCase {
      */
     @Test
     void testDefaultProtectionSchemeMatches() throws Exception {
-        def scheme = StandardSensitivePropertyProvider.getDefaultProtectionScheme()
-        assert scheme.equals(AESSensitivePropertyProvider.getDefaultProtectionScheme())
+        def defaultProtectionScheme = StandardSensitivePropertyProvider.getDefaultProtectionScheme()
+        assert defaultProtectionScheme == AESSensitivePropertyProvider.getDefaultProtectionScheme()
     }
 
 

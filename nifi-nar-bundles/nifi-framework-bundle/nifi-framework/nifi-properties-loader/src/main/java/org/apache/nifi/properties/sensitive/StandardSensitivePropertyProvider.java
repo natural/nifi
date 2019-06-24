@@ -30,14 +30,17 @@ public class StandardSensitivePropertyProvider {
     private static final Logger logger = LoggerFactory.getLogger(StandardSensitivePropertyProvider.class);
 
     /**
-     * Creates a {@link SensitivePropertyProvider} suitable for a given key.
+     * Creates a {@link SensitivePropertyProvider} suitable for a given key or key id.
      *
-     * If no provider recognizes a key, this implementation still returns an {@link AESSensitivePropertyProvider} with
-     * the supplied key.
+     * If an empty or null key/key id is given, this implementation returns null.  This is a convenience
+     * for clients using the various Property classes, as those classes allow a null SensitivePropertyProvider.
+     *
+     * If no provider recognizes a key/key id, this implementation throws {@link SensitivePropertyProtectionException}.
      *
      * @param keyOrKeyId provider encryption key
      * @param options array of string options
-     * @return concrete instance of SensitivePropertyProvider
+     * @return concrete instance of SensitivePropertyProvider, or null when no key/key id is specified
+     * @throws SensitivePropertyProtectionException when a key/key id is not handled by any provider.
      */
     public static SensitivePropertyProvider fromKey(String keyOrKeyId, String... options) {
         if (StringUtils.isEmpty(keyOrKeyId)) {
@@ -56,11 +59,9 @@ public class StandardSensitivePropertyProvider {
         } else if (AESSensitivePropertyProvider.isProviderFor(keyOrKeyId, options)) {
             logger.debug("StandardSensitivePropertyProvider selected specific AES provider for key: " + keyOrKeyId + " scheme: " + scheme);
             return new AESSensitivePropertyProvider(keyOrKeyId);
-
-        } else {
-            logger.debug("StandardSensitivePropertyProvider selected default (AES) for key: " + keyOrKeyId + " scheme: " + scheme);
-            return new AESSensitivePropertyProvider(keyOrKeyId);
         }
+
+        throw new SensitivePropertyProtectionException("No sensitive property provider for key or key id.");
     }
 
     /**

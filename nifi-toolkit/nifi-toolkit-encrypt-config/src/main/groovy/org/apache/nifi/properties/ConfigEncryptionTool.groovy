@@ -879,7 +879,7 @@ class ConfigEncryptionTool {
 
     String decryptLoginIdentityProviders(String encryptedXml, String existingKeyHex = keyHex) {
         try {
-            def spp = StandardSensitivePropertyProvider.fromKey(existingKeyHex)
+            def sensitivePropertyProvider = StandardSensitivePropertyProvider.fromKey(existingKeyHex)
             def doc = getXmlSlurper().parseText(encryptedXml)
             // Find the provider element by class even if it has been renamed
             def passwords = doc.provider.find { it.'class' as String == LDAP_PROVIDER_CLASS }.property.findAll {
@@ -899,7 +899,7 @@ class ConfigEncryptionTool {
                 if (isVerbose) {
                     logger.info("Attempting to decrypt ${password.text()}")
                 }
-                String decryptedValue = spp.unprotect(password.text().trim())
+                String decryptedValue = sensitivePropertyProvider.unprotect(password.text().trim())
                 password.replaceNode {
                     property(name: password.@name, encryption: "none", decryptedValue)
                 }
@@ -916,7 +916,7 @@ class ConfigEncryptionTool {
 
     String decryptAuthorizers(String encryptedXml, String existingKeyHex = keyHex) {
         try {
-            def spp = StandardSensitivePropertyProvider.fromKey(existingKeyHex)
+            def sensitivePropertyProvider = StandardSensitivePropertyProvider.fromKey(existingKeyHex)
             def filename = "authorizers.xml"
             def doc = getXmlSlurper().parseText(encryptedXml)
             // Find the provider element by class even if it has been renamed
@@ -939,7 +939,7 @@ class ConfigEncryptionTool {
                 if (isVerbose) {
                     logger.info("Attempting to decrypt ${password.text()}")
                 }
-                String decryptedValue = spp.unprotect(password.text().trim())
+                String decryptedValue = sensitivePropertyProvider.unprotect(password.text().trim())
                 password.replaceNode {
                     property(name: password.@name, encryption: "none", decryptedValue)
                 }
@@ -959,7 +959,7 @@ class ConfigEncryptionTool {
     String encryptLoginIdentityProviders(String plainXml, String newKeyHex = keyHex) {
         // TODO: Switch to XmlParser & XmlNodePrinter to maintain "empty" element structure
         try {
-            def spp = StandardSensitivePropertyProvider.fromKey(newKeyHex)
+            def sensitivePropertyProvider = StandardSensitivePropertyProvider.fromKey(newKeyHex)
             def doc = getXmlSlurper().parseText(plainXml)
             // Find the provider element by class even if it has been renamed
             def passwords = doc.provider.find { it.'class' as String == LDAP_PROVIDER_CLASS }
@@ -979,9 +979,9 @@ class ConfigEncryptionTool {
                 if (isVerbose) {
                     logger.info("Attempting to encrypt ${password.name()}")
                 }
-                String encryptedValue = spp.protect(password.text().trim())
+                String encryptedValue = sensitivePropertyProvider.protect(password.text().trim())
                 password.replaceNode {
-                    property(name: password.@name, encryption: spp.identifierKey, encryptedValue)
+                    property(name: password.@name, encryption: sensitivePropertyProvider.identifierKey, encryptedValue)
                 }
             }
 
@@ -1000,7 +1000,7 @@ class ConfigEncryptionTool {
     String encryptAuthorizers(String plainXml, String newKeyHex = keyHex) {
         // TODO: Switch to XmlParser & XmlNodePrinter to maintain "empty" element structure
         try {
-            def spp = StandardSensitivePropertyProvider.fromKey(newKeyHex)
+            def sensitivePropertyProvider = StandardSensitivePropertyProvider.fromKey(newKeyHex)
             def filename = "authorizers.xml"
             def doc = getXmlSlurper().parseText(plainXml)
             // Find the provider element by class even if it has been renamed
@@ -1021,9 +1021,9 @@ class ConfigEncryptionTool {
                 if (isVerbose) {
                     logger.info("Attempting to encrypt ${password.name()}")
                 }
-                String encryptedValue = spp.protect(password.text().trim())
+                String encryptedValue = sensitivePropertyProvider.protect(password.text().trim())
                 password.replaceNode {
-                    property(name: password.@name, encryption: spp.identifierKey, encryptedValue)
+                    property(name: password.@name, encryption: sensitivePropertyProvider.identifierKey, encryptedValue)
                 }
             }
 
@@ -1052,8 +1052,8 @@ class ConfigEncryptionTool {
             throw new IllegalArgumentException("Cannot encrypt empty NiFiProperties")
         }
 
-        SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(keyOrKeyId)
-        ProtectedNiFiProperties protectedWrapper = new ProtectedNiFiProperties(plainProperties, spp)
+        SensitivePropertyProvider sensitivePropertyProvider = StandardSensitivePropertyProvider.fromKey(keyOrKeyId)
+        ProtectedNiFiProperties protectedWrapper = new ProtectedNiFiProperties(plainProperties, sensitivePropertyProvider)
 
         List<String> sensitivePropertyKeys = protectedWrapper.getSensitivePropertyKeys()
         if (sensitivePropertyKeys.isEmpty()) {
@@ -1070,15 +1070,15 @@ class ConfigEncryptionTool {
             if (!plainProperties.getProperty(key)) {
                 logger.debug("Skipping encryption of ${key} because it is empty")
             } else {
-                String protectedValue = spp.protect(plainProperties.getProperty(key))
+                String protectedValue = sensitivePropertyProvider.protect(plainProperties.getProperty(key))
 
                 // Add the encrypted value
                 encryptedProperties.setProperty(key, protectedValue)
-                logger.info("Protected ${key} with ${spp.getIdentifierKey()} -> \t${protectedValue}")
+                logger.info("Protected ${key} with ${sensitivePropertyProvider.getIdentifierKey()} -> \t${protectedValue}")
 
                 // Add the protection key ("x.y.z.protected" -> "aes/gcm/{128,256}")
                 String protectionKey = protectedWrapper.getProtectionKey(key)
-                encryptedProperties.setProperty(protectionKey, spp.getIdentifierKey())
+                encryptedProperties.setProperty(protectionKey, sensitivePropertyProvider.getIdentifierKey())
                 logger.info("Updated protection key ${protectionKey}")
 
                 keysToSkip << key << protectionKey
@@ -1272,7 +1272,7 @@ class ConfigEncryptionTool {
     private
     static List<String> serializeNiFiPropertiesAndPreserveFormat(NiFiProperties niFiProperties, File originalPropertiesFile, String keyOrKeyId) {
         List<String> lines = originalPropertiesFile.readLines()
-        ProtectedNiFiProperties protectedNiFiProperties = new ProtectedNiFiProperties(niFiProperties, StandardSensitivePropertyProvider.fromKey(keyOrKeyId))
+        ProtectedNiFiProperties protectedNiFiProperties = new ProtectedNiFiProperties(niFiProperties, keyOrKeyId)
         // Only need to replace the keys that have been protected AND nifi.sensitive.props.key
         Map<String, String> protectedKeys = protectedNiFiProperties.getProtectedPropertyKeys()
         if (!protectedKeys.containsKey(NiFiProperties.SENSITIVE_PROPS_KEY)) {
@@ -1568,11 +1568,11 @@ class ConfigEncryptionTool {
 
                         // If the tool is not going to encrypt NiFiProperties and the existing file is already encrypted, encrypt and update the new sensitive props key
                         if (!tool.handlingNiFiProperties && existingNiFiPropertiesAreEncrypted) {
-                            SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(tool.keyHex)
-                            String encryptedSPK = spp.protect(newFlowPassword)
+                            SensitivePropertyProvider sensitivePropertyProvider = StandardSensitivePropertyProvider.fromKey(tool.keyHex)
+                            String encryptedSPK = sensitivePropertyProvider.protect(newFlowPassword)
                             rawProperties.put(NiFiProperties.SENSITIVE_PROPS_KEY, encryptedSPK)
                             // Manually update the protection scheme or it will be lost
-                            rawProperties.put(ProtectedNiFiProperties.getProtectionKey(NiFiProperties.SENSITIVE_PROPS_KEY), spp.getIdentifierKey())
+                            rawProperties.put(ProtectedNiFiProperties.getProtectionKey(NiFiProperties.SENSITIVE_PROPS_KEY), sensitivePropertyProvider.getIdentifierKey())
                             if (tool.isVerbose) {
                                 logger.info("Tool is not configured to encrypt nifi.properties, but the existing nifi.properties is encrypted and flow.xml.gz was migrated, so manually persisting the new encrypted value to nifi.properties")
                             }

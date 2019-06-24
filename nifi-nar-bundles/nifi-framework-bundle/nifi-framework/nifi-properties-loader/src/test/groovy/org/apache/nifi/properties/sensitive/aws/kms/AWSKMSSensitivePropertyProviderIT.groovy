@@ -32,7 +32,6 @@ import org.apache.nifi.properties.StandardNiFiProperties
 import org.apache.nifi.properties.sensitive.ProtectedNiFiProperties
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider
-import org.apache.nifi.properties.sensitive.StandardSensitivePropertyProvider
 import org.apache.nifi.util.NiFiProperties
 import org.junit.After
 import org.junit.AfterClass
@@ -289,7 +288,7 @@ class AWSKMSSensitivePropertyProviderIT extends GroovyTestCase {
             rawProps.setProperty(propKey, clearText)
             rawProps.setProperty(propKey + ".protected", "aws/kms/" + awsKmsKey)
             standardProps = new StandardNiFiProperties(rawProps)
-            protectedProps = new ProtectedNiFiProperties(standardProps, StandardSensitivePropertyProvider.fromKey("aws/kms/" + awsKmsKey))
+            protectedProps = new ProtectedNiFiProperties(standardProps, "aws/kms/" + awsKmsKey)
 
             logger.info("protectedProps has ${protectedProps.size()} properties: ${protectedProps.getPropertyKeys()}")
 
