@@ -53,6 +53,7 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
 
     /**
      * Ensures the key is usable, and ensures the key id is just the key id, no prefix.
+     *
      * @param keyId AWS KMS key identifier, possibly prefixed.
      * @return AWS KMS key identifier, bare.
      */
@@ -129,15 +130,25 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
     /**
      * True when the client specifies a key like 'aws/kms/...'.
      *
-     * @param keyOrKeyId AWS KMS key, prefixed by our IMPLEMENTATION_KEY
-     * @param options array of string options; currently unsupported
+     * @param value AWS KMS key, prefixed by our IMPLEMENTATION_KEY
+     * @param scheme name of encryption or protection scheme
      * @return
      */
-    public static boolean isProviderFor(String keyOrKeyId, String... options) {
-        if (StringUtils.isEmpty(keyOrKeyId)) {
+    public static boolean isProviderFor(String value, String scheme) {
+        if (StringUtils.isBlank(value)) {
             return false;
         }
-        return keyOrKeyId.startsWith(IMPLEMENTATION_KEY);
+        return value.startsWith(IMPLEMENTATION_KEY) || scheme.startsWith(IMPLEMENTATION_KEY);
     }
 
+
+    /**
+     * Returns a printable representation of a key.
+     *
+     * @param keyOrKeyId key material or key id
+     * @return printable string
+     */
+    public static String toPrintableString(String keyOrKeyId) {
+        return keyOrKeyId;
+    }
 }

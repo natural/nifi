@@ -343,8 +343,17 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
                     // Do nothing
                 } else if (isPropertyProtected(key)) {
                     String value = getProperty(key);
+                    String protectionScheme = getProperty(getProtectionKey(key));
+                    SensitivePropertyProvider propertyProvider = sensitivePropertyProvider;
+
                     try {
-                        rawProperties.setProperty(key, unprotectValue(key, value));
+
+                        // if (propertyProvider != null && StringUtils.isNotBlank(protectionScheme)) {
+                        //    logger.warn("NEW SCHEME: " + protectionScheme);
+                        //    propertyProvider = StandardSensitivePropertyProvider.fromKey(value, protectionScheme);
+                        // }
+
+                        rawProperties.setProperty(key, unprotectValue(key, value, propertyProvider));
                     } catch (SensitivePropertyProtectionException e) {
                         logger.warn("Failed to unprotect '{}'", key, e);
                         failedKeys.add(key);
@@ -375,7 +384,9 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
         return new StringBuilder("ProtectedNiFiProperties instance with ")
                 .append(size()).append(" properties (")
                 .append(getProtectedPropertyKeys().size())
-                .append(" protected)")
+                .append(" protected and ")
+                .append(getSensitivePropertyKeys().size())
+                .append(" sensitive)")
                 .toString();
     }
 
@@ -456,13 +467,10 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
      *
      * @param key            the retrieved property key
      * @param retrievedValue the retrieved property value
+     * @param propertyProvider the property provider used to unprotect the value
      * @return the unprotected value
      */
-    private String unprotectValue(String key, String retrievedValue) {
-        // if (sensitivePropertyProvider == null) {
-        //    return retrievedValue;
-        //}
-
+    private String unprotectValue(String key, String retrievedValue, SensitivePropertyProvider propertyProvider) {
         // Checks if the key is sensitive and marked as protected
         if (!isPropertyProtected(key)) {
             return retrievedValue;
@@ -470,15 +478,16 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
 
         final String protectionScheme = getProperty(getProtectionKey(key));
 
+        // FIXME
         if (protectionScheme.equals("unknown")) {
             return retrievedValue;
         }
 
         // try and make one to unprotect, and if that fails...
         try {
-            return sensitivePropertyProvider.unprotect(retrievedValue);
+            return propertyProvider.unprotect(retrievedValue);
         } catch (final SensitivePropertyProtectionException e) {
-            throw new SensitivePropertyProtectionException(e);
+            throw new SensitivePropertyProtectionException("Error unprotecting value for " + key, e.getCause());
         }
     }
 

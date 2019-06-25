@@ -25,6 +25,7 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -275,22 +276,24 @@ public class AESSensitivePropertyProvider implements SensitivePropertyProvider {
 
 
     /**
-     * True if this provider can handle the given combination of key and options.
+     * True if this provider can handle the given combination of value and scheme.
      *
-     * @param key Hex-encoded key
-     * @param options array of string options; currently unused
-     * @return true if the key looks like a suitable encryption key
+     * @param value Hex-encoded value
+     * @param scheme name of encryption or protection scheme
+     * @return true if the value looks like a suitable encryption value
      */
-    public static boolean isProviderFor(String key, String... options) {
-        if (options.length == 0) {
-            return true; // existing behavior when no options are given, this provider should handle it.
-        }
+    public static boolean isProviderFor(String value, String scheme) {
+        return StringUtils.isEmpty(scheme) || scheme.startsWith(IMPLEMENTATION_KEY);
+    }
 
-        if (options[0].startsWith(IMPLEMENTATION_KEY)) {
-            return true;
-        }
-
-        return false;
+    /**
+     * Returns a printable representation of a key.
+     *
+     * @param keyOrKeyId key material or key id
+     * @return printable string
+     */
+    public static String toPrintableString(String keyOrKeyId) {
+        return  UUID.nameUUIDFromBytes(keyOrKeyId.getBytes(StandardCharsets.UTF_8)).toString();
     }
 
 }

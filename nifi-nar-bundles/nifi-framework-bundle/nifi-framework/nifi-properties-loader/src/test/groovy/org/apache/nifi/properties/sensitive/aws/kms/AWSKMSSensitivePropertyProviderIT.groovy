@@ -95,19 +95,23 @@ class AWSKMSSensitivePropertyProviderIT extends GroovyTestCase {
         // generate a cmk
         CreateKeyRequest cmkRequest = new CreateKeyRequest().withDescription("CMK for unit tests")
         CreateKeyResult cmkResult = client.createKey(cmkRequest)
+        logger.info("Created customer master key: " + cmkResult.getKeyMetadata().keyId)
 
         // from the cmk, generate a dek
         GenerateDataKeyRequest dekRequest = new GenerateDataKeyRequest().withKeyId(cmkResult.keyMetadata.getKeyId()).withKeySpec("AES_128")
         GenerateDataKeyResult dekResult = client.generateDataKey(dekRequest)
+        logger.info("Created data encryption key: " + dekResult.getKeyId())
 
         // add an alias to the dek
         final String aliasName = "alias/aws-kms-spp-integration-test-" + UUID.randomUUID().toString()
         CreateAliasRequest aliasReq = new CreateAliasRequest().withAliasName(aliasName).withTargetKeyId(dekResult.getKeyId())
         client.createAlias(aliasReq)
+        logger.info("Created key alias: " + aliasName);
 
         // re-read the dek so we have the arn
         DescribeKeyRequest descRequest = new DescribeKeyRequest().withKeyId(dekResult.getKeyId())
         DescribeKeyResult descResult = client.describeKey(descRequest)
+        logger.info("Retrieved description for: " + descResult.keyMetadata.getArn())
 
         knownGoodKeys = [
                 dekResult.getKeyId(),

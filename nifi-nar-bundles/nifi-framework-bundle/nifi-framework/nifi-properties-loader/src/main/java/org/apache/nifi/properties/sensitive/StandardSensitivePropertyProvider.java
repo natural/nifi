@@ -38,30 +38,42 @@ public class StandardSensitivePropertyProvider {
      * If no provider recognizes a key/key id, this implementation throws {@link SensitivePropertyProtectionException}.
      *
      * @param keyOrKeyId provider encryption key
-     * @param options array of string options
+     * @param scheme name of encryption or protection scheme
      * @return concrete instance of SensitivePropertyProvider, or null when no key/key id is specified
      * @throws SensitivePropertyProtectionException when a key/key id is not handled by any provider.
      */
-    public static SensitivePropertyProvider fromKey(String keyOrKeyId, String... options) {
-        if (StringUtils.isEmpty(keyOrKeyId)) {
+    public static SensitivePropertyProvider fromKey(String keyOrKeyId, String scheme) {
+        if (StringUtils.isBlank(keyOrKeyId)) {
             return null;
         }
 
-        String scheme = "";
-        if (options.length > 0) {
-            scheme = options[0];
-        }
-
-        if (AWSKMSSensitivePropertyProvider.isProviderFor(keyOrKeyId, options)) {
-            logger.debug("StandardSensitivePropertyProvider selected specific AWS KMS for key: " + keyOrKeyId + " scheme: " + scheme);
+        if (AWSKMSSensitivePropertyProvider.isProviderFor(keyOrKeyId, scheme)) {
+            String printableKey = AWSKMSSensitivePropertyProvider.toPrintableString(keyOrKeyId);
+            logger.debug("StandardSensitivePropertyProvider selected specific AWSKMS provider for key value: " + printableKey + " scheme: " + scheme);
             return new AWSKMSSensitivePropertyProvider(keyOrKeyId);
 
-        } else if (AESSensitivePropertyProvider.isProviderFor(keyOrKeyId, options)) {
-            logger.debug("StandardSensitivePropertyProvider selected specific AES provider for key: " + keyOrKeyId + " scheme: " + scheme);
+        } else if (AESSensitivePropertyProvider.isProviderFor(keyOrKeyId, scheme)) {
+            String printableKey = AESSensitivePropertyProvider.toPrintableString(keyOrKeyId);
+            logger.debug("StandardSensitivePropertyProvider selected specific AES provider for key value: " + printableKey + " scheme: " + scheme);
             return new AESSensitivePropertyProvider(keyOrKeyId);
         }
 
         throw new SensitivePropertyProtectionException("No sensitive property provider for key or key id.");
+    }
+
+    public static SensitivePropertyProvider fromKey(String keyOrKeyId) {
+        return fromKey(keyOrKeyId, "");
+    }
+
+    public static boolean hasProviderFor(String keyOrKeyId, String scheme) {
+        if (AWSKMSSensitivePropertyProvider.isProviderFor(keyOrKeyId, scheme)) {
+            return true;
+
+        } else if (AESSensitivePropertyProvider.isProviderFor(keyOrKeyId, scheme)) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
