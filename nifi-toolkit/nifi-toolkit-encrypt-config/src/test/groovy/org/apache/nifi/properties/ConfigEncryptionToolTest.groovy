@@ -19,7 +19,6 @@ package org.apache.nifi.properties
 import org.apache.commons.cli.CommandLine
 import org.apache.commons.cli.CommandLineParser
 import org.apache.commons.cli.DefaultParser
-import org.apache.commons.lang3.StringUtils
 import org.apache.commons.lang3.SystemUtils
 import org.apache.log4j.AppenderSkeleton
 import org.apache.log4j.spi.LoggingEvent
@@ -405,10 +404,10 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         // Act
         flags.each { String arg ->
             tool.parse([arg, KEY_HEX, "-n", "nifi.properties"] as String[])
-            logger.info("Parsed key: ${tool.keyHex}")
+            logger.info("Parsed key: ${tool.keyOrKeyId}")
 
             // Assert
-            assert tool.keyHex == KEY_HEX
+            assert tool.keyOrKeyId == KEY_HEX
         }
     }
 
@@ -562,11 +561,11 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         tool.parse(args)
         logger.info("Using password flag: ${tool.usingPassword}")
         logger.info("Password: ${tool.password}")
-        logger.info("Key hex:  ${tool.keyHex}")
+        logger.info("Key hex:  ${tool.keyOrKeyId}")
 
         assert tool.usingPassword
         assert !tool.password
-        assert !tool.keyHex
+        assert !tool.keyOrKeyId
 
         TextDevice mockConsoleDevice = TextDevices.streamDevice(new ByteArrayInputStream(PASSWORD.bytes), new ByteArrayOutputStream())
 
@@ -586,11 +585,11 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         tool.parse(args)
         logger.info("Using password flag: ${tool.usingPassword}")
         logger.info("Password: ${tool.password}")
-        logger.info("Key hex:  ${tool.keyHex}")
+        logger.info("Key hex:  ${tool.keyOrKeyId}")
 
         assert !tool.usingPassword
         assert !tool.password
-        assert !tool.keyHex
+        assert !tool.keyOrKeyId
 
         TextDevice mockConsoleDevice = TextDevices.streamDevice(new ByteArrayInputStream(KEY_HEX.bytes), new ByteArrayOutputStream())
 
@@ -612,12 +611,12 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         tool.parse(args)
         logger.info("Using password flag: ${tool.usingPassword}")
         logger.info("Password: ${tool.password}")
-        logger.info("Key hex:  ${tool.keyHex}")
+        logger.info("Key hex:  ${tool.keyOrKeyId}")
 
         // Assert
         assert !tool.usingPassword
         assert !tool.password
-        assert tool.keyHex == KEY_HEX
+        assert tool.keyOrKeyId == KEY_HEX
 
         assert !TestAppender.events.isEmpty()
         assert TestAppender.events.collect {
@@ -635,12 +634,12 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         tool.parse(args)
         logger.info("Using password flag: ${tool.usingPassword}")
         logger.info("Password: ${tool.password}")
-        logger.info("Key hex:  ${tool.keyHex}")
+        logger.info("Key hex:  ${tool.keyOrKeyId}")
 
         // Assert
         assert tool.usingPassword
         assert tool.password == PASSWORD
-        assert !tool.keyHex
+        assert !tool.keyOrKeyId
 
         assert !TestAppender.events.isEmpty()
         assert TestAppender.events.collect {
@@ -878,7 +877,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         tool.parse(args)
         logger.info("Parsed nifi.properties location: ${tool.niFiPropertiesPath}")
 
-        tool.keyHex = KEY_HEX
+        tool.keyOrKeyId = KEY_HEX
 
         NiFiProperties plainNiFiProperties = tool.loadNiFiProperties()
         ProtectedNiFiProperties protectedWrapper = new ProtectedNiFiProperties(plainNiFiProperties, KEY_HEX)
@@ -906,7 +905,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         final String EXPECTED_KEY_LINE = ConfigEncryptionTool.BOOTSTRAP_KEY_PREFIX + KEY_HEX
 
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
-        tool.keyHex = KEY_HEX
+        tool.keyOrKeyId = KEY_HEX
 
         List<String> originalLines = [
                 ConfigEncryptionTool.BOOTSTRAP_KEY_COMMENT,
@@ -929,7 +928,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         final String EXPECTED_KEY_LINE = ConfigEncryptionTool.BOOTSTRAP_KEY_PREFIX + KEY_HEX
 
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
-        tool.keyHex = KEY_HEX
+        tool.keyOrKeyId = KEY_HEX
 
         List<String> originalLines = [
                 ConfigEncryptionTool.BOOTSTRAP_KEY_COMMENT,
@@ -952,7 +951,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         final String EXPECTED_KEY_LINE = ConfigEncryptionTool.BOOTSTRAP_KEY_PREFIX + KEY_HEX
 
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
-        tool.keyHex = KEY_HEX
+        tool.keyOrKeyId = KEY_HEX
 
         List<String> originalLines = [
                 "${ConfigEncryptionTool.BOOTSTRAP_KEY_PREFIX}="
@@ -974,7 +973,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         final String EXPECTED_KEY_LINE = ConfigEncryptionTool.BOOTSTRAP_KEY_PREFIX + KEY_HEX
 
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
-        tool.keyHex = KEY_HEX
+        tool.keyOrKeyId = KEY_HEX
 
         List<String> originalLines = []
 
@@ -1955,7 +1954,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         SensitivePropertyProvider sensitivePropertyProvider = StandardSensitivePropertyProvider.fromKey(KEY_HEX_128)
         assert sensitivePropertyProvider.unprotect(cipherText) == EXPECTED_PASSWORD
 
-        tool.keyHex = KEY_HEX_128
+        tool.keyOrKeyId = KEY_HEX_128
 
         def lines = workingFile.readLines()
         logger.info("Read lines: \n${lines.join("\n")}")
@@ -1986,7 +1985,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX_128
+        tool.keyOrKeyId = KEY_HEX_128
 
         def lines = workingFile.readLines()
         logger.info("Read lines: \n${lines.join("\n")}")
@@ -2017,7 +2016,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX_128
+        tool.keyOrKeyId = KEY_HEX_128
 
         def lines = workingFile.readLines()
         logger.info("Read lines: \n${lines.join("\n")}")
@@ -2049,7 +2048,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX_128
+        tool.keyOrKeyId = KEY_HEX_128
 
         def lines = workingFile.readLines()
         logger.info("Read lines: \n${lines.join("\n")}")
@@ -2078,7 +2077,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX
+        tool.keyOrKeyId = KEY_HEX
         String encryptionScheme = "encryption=\"aes/gcm/${getKeyLength(KEY_HEX)}\""
 
         def lines = workingFile.readLines()
@@ -2116,7 +2115,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX
+        tool.keyOrKeyId = KEY_HEX
         String encryptionScheme = "encryption=\"aes/gcm/${getKeyLength(KEY_HEX)}\""
 
         def lines = workingFile.readLines()
@@ -2155,7 +2154,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX
+        tool.keyOrKeyId = KEY_HEX
         String encryptionScheme = "encryption=\"aes/gcm/${getKeyLength(KEY_HEX)}\""
 
         def lines = workingFile.readLines()
@@ -2193,7 +2192,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX
+        tool.keyOrKeyId = KEY_HEX
         String encryptionScheme = "encryption=\"aes/gcm/${getKeyLength(KEY_HEX)}\""
 
         def lines = workingFile.readLines()
@@ -2231,7 +2230,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX
+        tool.keyOrKeyId = KEY_HEX
         String encryptionScheme = "encryption=\"aes/gcm/${getKeyLength(KEY_HEX)}\""
 
         def lines = workingFile.readLines()
@@ -2271,7 +2270,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX_128
+        tool.keyOrKeyId = KEY_HEX_128
 
         def lines = workingFile.readLines()
         logger.info("Read lines: \n${lines.join("\n")}")
@@ -2373,7 +2372,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX_128
+        tool.keyOrKeyId = KEY_HEX_128
 
         def lines = workingFile.readLines()
         logger.info("Read lines: \n${lines.join("\n")}")
@@ -2408,7 +2407,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX_128
+        tool.keyOrKeyId = KEY_HEX_128
 
         def lines = workingFile.readLines()
         logger.info("Read lines: \n${lines.join("\n")}")
@@ -2443,7 +2442,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX_128
+        tool.keyOrKeyId = KEY_HEX_128
 
         def lines = workingFile.readLines()
         logger.info("Read lines: \n${lines.join("\n")}")
@@ -2477,7 +2476,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX
+        tool.keyOrKeyId = KEY_HEX
 
         def lines = workingFile.readLines()
         logger.info("Read lines: \n${lines.join("\n")}")
@@ -2504,7 +2503,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX
+        tool.keyOrKeyId = KEY_HEX
         tool.loginIdentityProvidersPath = workingFile.path
         String writtenPath = "target/tmp/tmp-login-identity-providers-written.xml"
         tool.outputLoginIdentityProvidersPath = writtenPath
@@ -2717,7 +2716,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         SensitivePropertyProvider sensitivePropertyProvider = StandardSensitivePropertyProvider.fromKey(KEY_HEX_128)
         assert sensitivePropertyProvider.unprotect(cipherText) == EXPECTED_PASSWORD
 
-        tool.keyHex = KEY_HEX_128
+        tool.keyOrKeyId = KEY_HEX_128
 
         def lines = workingFile.readLines()
         logger.info("Read lines: \n${lines.join("\n")}")
@@ -2748,7 +2747,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX_128
+        tool.keyOrKeyId = KEY_HEX_128
 
         def lines = workingFile.readLines()
         logger.info("Read lines: \n${lines.join("\n")}")
@@ -2779,7 +2778,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX_128
+        tool.keyOrKeyId = KEY_HEX_128
 
         def lines = workingFile.readLines()
         logger.info("Read lines: \n${lines.join("\n")}")
@@ -2811,7 +2810,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX_128
+        tool.keyOrKeyId = KEY_HEX_128
 
         def lines = workingFile.readLines()
         logger.info("Read lines: \n${lines.join("\n")}")
@@ -2840,7 +2839,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX
+        tool.keyOrKeyId = KEY_HEX
         String encryptionScheme = "encryption=\"aes/gcm/${getKeyLength(KEY_HEX)}\""
 
         def lines = workingFile.readLines()
@@ -2878,7 +2877,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX
+        tool.keyOrKeyId = KEY_HEX
         String encryptionScheme = "encryption=\"aes/gcm/${getKeyLength(KEY_HEX)}\""
 
         def lines = workingFile.readLines()
@@ -2917,7 +2916,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX
+        tool.keyOrKeyId = KEY_HEX
         String encryptionScheme = "encryption=\"aes/gcm/${getKeyLength(KEY_HEX)}\""
 
         def lines = workingFile.readLines()
@@ -2955,7 +2954,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX
+        tool.keyOrKeyId = KEY_HEX
         String encryptionScheme = "encryption=\"aes/gcm/${getKeyLength(KEY_HEX)}\""
 
         def lines = workingFile.readLines()
@@ -2993,7 +2992,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX
+        tool.keyOrKeyId = KEY_HEX
         String encryptionScheme = "encryption=\"aes/gcm/${getKeyLength(KEY_HEX)}\""
 
         def lines = workingFile.readLines()
@@ -3033,7 +3032,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX_128
+        tool.keyOrKeyId = KEY_HEX_128
 
         def lines = workingFile.readLines()
         logger.info("Read lines: \n${lines.join("\n")}")
@@ -3135,7 +3134,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX
+        tool.keyOrKeyId = KEY_HEX
 
         def lines = workingFile.readLines()
         logger.info("Read lines: \n${lines.join("\n")}")
@@ -3168,7 +3167,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX
+        tool.keyOrKeyId = KEY_HEX
 
         def lines = workingFile.readLines()
         logger.info("Read lines: \n${lines.join("\n")}")
@@ -3203,7 +3202,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX
+        tool.keyOrKeyId = KEY_HEX
         tool.authorizersPath = workingFile.path
         String writtenPath = "target/tmp/tmp-authorizers-written.xml"
         tool.outputAuthorizersPath = writtenPath
@@ -3249,7 +3248,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         ConfigEncryptionTool tool = new ConfigEncryptionTool()
         tool.isVerbose = true
 
-        tool.keyHex = KEY_HEX
+        tool.keyOrKeyId = KEY_HEX
 
         def lines = workingFile.readLines()
         logger.info("Read lines: \n${lines.join("\n")}")
