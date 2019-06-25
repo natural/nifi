@@ -1194,7 +1194,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         logger.info("There are ${protectedWrapper.getSensitivePropertyKeys().size()} sensitive properties")
 
         NiFiProperties protectedProperties = protectedWrapper.protectPlainProperties("aes/gcm/256")
-        int protectedPropertyCount = ProtectedNiFiProperties.countProtectedProperties(protectedProperties, KEY_HEX)
+        int protectedPropertyCount = ProtectedNiFiProperties.countProtectedProperties(protectedProperties)
         logger.info("Counted ${protectedPropertyCount} protected keys")
 
         // Act
@@ -1236,7 +1236,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         int originalProtectedPropertyCount = protectedProperties.getProtectedPropertyKeys().size()
 
         NiFiProperties encryptedProperties = protectedProperties.protectPlainProperties("aes/gcm/256")
-        int protectedPropertyCount = ProtectedNiFiProperties.countProtectedProperties(encryptedProperties, KEY_HEX)
+        int protectedPropertyCount = ProtectedNiFiProperties.countProtectedProperties(encryptedProperties)
         logger.info("Counted ${protectedPropertyCount} protected keys")
 
         int protectedCountChange = protectedPropertyCount - originalProtectedPropertyCount
@@ -1285,7 +1285,7 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         (plainProperties as StandardNiFiProperties).@rawProperties.setProperty(NiFiProperties.SECURITY_TRUSTSTORE_PASSWD, "thisIsABadTruststorePassword")
 
         NiFiProperties protectedProperties = protectedWrapper.protectPlainProperties("aes/gcm/256")
-        int protectedPropertyCount = ProtectedNiFiProperties.countProtectedProperties(protectedProperties, KEY_HEX)
+        int protectedPropertyCount = ProtectedNiFiProperties.countProtectedProperties(protectedProperties)
         logger.info("Counted ${protectedPropertyCount} protected keys")
 
         // Act

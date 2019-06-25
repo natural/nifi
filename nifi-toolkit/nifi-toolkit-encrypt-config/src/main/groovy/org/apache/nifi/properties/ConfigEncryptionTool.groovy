@@ -1092,7 +1092,7 @@ class ConfigEncryptionTool {
             encryptedProperties.setProperty(key, plainProperties.getProperty(key))
         }
         NiFiProperties mergedProperties = new StandardNiFiProperties(encryptedProperties)
-        logger.info("Final result: ${mergedProperties.size()} keys including ${ProtectedNiFiProperties.countProtectedProperties(mergedProperties, keyOrKeyId)} protected keys")
+        logger.info("Final result: ${mergedProperties.size()} keys including ${ProtectedNiFiProperties.countProtectedProperties(mergedProperties)} protected keys")
 
         mergedProperties
     }

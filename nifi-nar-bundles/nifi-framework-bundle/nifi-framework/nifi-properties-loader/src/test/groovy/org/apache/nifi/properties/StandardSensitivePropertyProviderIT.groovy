@@ -18,7 +18,6 @@ package org.apache.nifi.properties
 
 import com.amazonaws.auth.PropertiesCredentials
 import org.apache.commons.lang3.StringUtils
-import org.apache.nifi.properties.sensitive.SensitivePropertyProvider
 import org.apache.nifi.properties.sensitive.StandardSensitivePropertyProvider
 import org.apache.nifi.properties.sensitive.aes.AESSensitivePropertyProvider
 import org.apache.nifi.properties.sensitive.aws.kms.AWSKMSSensitivePropertyProvider
@@ -27,7 +26,6 @@ import org.junit.After
 import org.junit.AfterClass
 import org.junit.Before
 import org.junit.BeforeClass
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.slf4j.Logger
@@ -36,6 +34,7 @@ import org.junit.runners.JUnit4
 
 import java.security.Security
 import java.security.SecureRandom
+import javax.crypto.Cipher
 
 
 @RunWith(JUnit4.class)
@@ -150,5 +149,16 @@ class StandardSensitivePropertyProviderIT extends GroovyTestCase {
         assert defaultProtectionScheme == AESSensitivePropertyProvider.getDefaultProtectionScheme()
     }
 
+    @Test
+    void testShouldGetDefaultProviderKey() throws Exception {
+        // Arrange
+        final String EXPECTED_PROVIDER_KEY = "aes/gcm/${Cipher.getMaxAllowedKeyLength("AES") > 128 ? 256 : 128}"
+        logger.info("Expected provider key: ${EXPECTED_PROVIDER_KEY}")
 
+        // Act
+        String defaultKey = StandardSensitivePropertyProvider.getDefaultProtectionScheme()
+        logger.info("Default key: ${defaultKey}")
+        // Assert
+        assert defaultKey == EXPECTED_PROVIDER_KEY
+    }
 }

@@ -448,8 +448,8 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
      * @param plainProperties the instance to count protected properties
      * @return the number of protected properties
      */
-    public static int countProtectedProperties(NiFiProperties plainProperties, String keyOrKeyId) {
-        return new ProtectedNiFiProperties(plainProperties, keyOrKeyId).getProtectedPropertyKeys().size();
+    public static int countProtectedProperties(NiFiProperties plainProperties) {
+        return new ProtectedNiFiProperties(plainProperties, "").getProtectedPropertyKeys().size();
     }
 
     /**
