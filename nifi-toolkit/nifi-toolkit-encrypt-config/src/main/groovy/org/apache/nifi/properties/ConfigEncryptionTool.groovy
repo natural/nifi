@@ -884,6 +884,8 @@ class ConfigEncryptionTool {
             def passwords = doc.provider.find { it.'class' as String == LDAP_PROVIDER_CLASS }.property.findAll {
                 // TODO: Update filter to include AWS identifier
                 // TODO: This should be refactored to a method and pluggable
+                // logger.warn("ENC: " + it.@encryption + " and: " + StandardSensitivePropertyProvider.hasProviderFor(it.@encryption));
+
                 it.@name =~ "Password" && it.@encryption =~ "aes/gcm/\\d{3}"
             }
 

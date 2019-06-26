@@ -47,29 +47,43 @@ public class StandardSensitivePropertyProvider {
             return null;
         }
 
-        if (AWSKMSSensitivePropertyProvider.isProviderFor(keyOrKeyId, scheme)) {
+        if (AWSKMSSensitivePropertyProvider.isProviderFor(keyOrKeyId) || AWSKMSSensitivePropertyProvider.isProviderFor(scheme)) {
             String printableKey = AWSKMSSensitivePropertyProvider.toPrintableString(keyOrKeyId);
-            logger.debug("StandardSensitivePropertyProvider selected specific AWSKMS provider for key value: " + printableKey + " scheme: " + scheme);
+            logger.debug("StandardSensitivePropertyProvider selected specific AWS KMS provider for key: " + printableKey);
             return new AWSKMSSensitivePropertyProvider(keyOrKeyId);
 
-        } else if (AESSensitivePropertyProvider.isProviderFor(keyOrKeyId, scheme)) {
+        } else if (AESSensitivePropertyProvider.isProviderFor(scheme) || StringUtils.isEmpty(scheme)) {
             String printableKey = AESSensitivePropertyProvider.toPrintableString(keyOrKeyId);
-            logger.debug("StandardSensitivePropertyProvider selected specific AES provider for key value: " + printableKey + " scheme: " + scheme);
+            logger.debug("StandardSensitivePropertyProvider selected specific AES provider for key: " + printableKey);
             return new AESSensitivePropertyProvider(keyOrKeyId);
         }
 
         throw new SensitivePropertyProtectionException("No sensitive property provider for key or key id.");
     }
 
+    /**
+     * Creates a {@link SensitivePropertyProvider} suitable for a given key or key id, without specifying a protection
+     * or encryption scheme.
+     *
+     * @param keyOrKeyId protection or encryption key
+     * @return concrete instance of SensitivePropertyProvider, or null when no key/key id is specified
+     * @throws SensitivePropertyProtectionException when a key/key id is not handled by any provider.
+     */
     public static SensitivePropertyProvider fromKey(String keyOrKeyId) {
         return fromKey(keyOrKeyId, "");
     }
 
-    public static boolean hasProviderFor(String keyOrKeyId, String scheme) {
-        if (AWSKMSSensitivePropertyProvider.isProviderFor(keyOrKeyId, scheme)) {
+    /**
+     * True if at least one known sensitive property provider implements protect/unprotect for the given scheme.
+     *
+     * @param scheme name of encryption or protection scheme
+     * @return true if at least one provider handles scheme
+     */
+    static boolean hasProviderFor(String scheme) {
+        if (AWSKMSSensitivePropertyProvider.isProviderFor(scheme)) {
             return true;
 
-        } else if (AESSensitivePropertyProvider.isProviderFor(keyOrKeyId, scheme)) {
+        } else if (AESSensitivePropertyProvider.isProviderFor(scheme)) {
             return true;
         }
 
@@ -79,7 +93,7 @@ public class StandardSensitivePropertyProvider {
     /**
      * @return the default protection scheme from the default provider.
      */
-    static String getDefaultProtectionScheme() {
+    public static String getDefaultProtectionScheme() {
         return AESSensitivePropertyProvider.getDefaultProtectionScheme();
     }
 }

@@ -41,7 +41,7 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
     private static final Logger logger = LoggerFactory.getLogger(AWSKMSSensitivePropertyProvider.class);
 
     private static final String IMPLEMENTATION_NAME = "AWS KMS Sensitive Property Provider";
-    protected static final String IMPLEMENTATION_KEY = "aws/kms/";
+    private static final String IMPLEMENTATION_KEY = "aws/kms/";
 
     private AWSKMS client;
     private final String keyId;
@@ -58,7 +58,7 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
      * @return AWS KMS key identifier, bare.
      */
     private String normalizeKey(String keyId) {
-        if (keyId == null || StringUtils.isBlank(keyId)) {
+        if (StringUtils.isBlank(keyId)) {
             throw new SensitivePropertyProtectionException("The key cannot be empty");
         }
         if (keyId.startsWith(IMPLEMENTATION_KEY)) {
@@ -126,19 +126,14 @@ public class AWSKMSSensitivePropertyProvider implements SensitivePropertyProvide
         return new String(response.getPlaintext().array(), Charset.defaultCharset());
     }
 
-
     /**
      * True when the client specifies a key like 'aws/kms/...'.
      *
-     * @param value AWS KMS key, prefixed by our IMPLEMENTATION_KEY
      * @param scheme name of encryption or protection scheme
-     * @return
+     * @return true if this class can provide protected values
      */
-    public static boolean isProviderFor(String value, String scheme) {
-        if (StringUtils.isBlank(value)) {
-            return false;
-        }
-        return value.startsWith(IMPLEMENTATION_KEY) || scheme.startsWith(IMPLEMENTATION_KEY);
+    public static boolean isProviderFor(String scheme) {
+        return StringUtils.isNotBlank(scheme) && scheme.startsWith(IMPLEMENTATION_KEY);
     }
 
 

@@ -52,9 +52,9 @@ public class AESSensitivePropertyProvider implements SensitivePropertyProvider {
     private static final String ALGORITHM = "AES/GCM/NoPadding";
     private static final String PROVIDER = "BC";
     private static final String DELIMITER = "||"; // "|" is not a valid Base64 character, so ensured not to be present in cipher text
+    private static final String PRINTABLE_PREFIX = "aes/printable/";
     private static final int IV_LENGTH = 12;
     private static final int MIN_CIPHER_TEXT_LENGTH = IV_LENGTH * 4 / 3 + DELIMITER.length() + 1;
-
     private Cipher cipher;
     private final SecretKey key;
 
@@ -72,7 +72,7 @@ public class AESSensitivePropertyProvider implements SensitivePropertyProvider {
     }
 
     private byte[] validateKey(String keyHex) {
-        if (keyHex == null || StringUtils.isBlank(keyHex)) {
+        if (StringUtils.isBlank(keyHex)) {
             throw new SensitivePropertyProtectionException("The key cannot be empty");
         }
         keyHex = formatHexKey(keyHex);
@@ -88,19 +88,19 @@ public class AESSensitivePropertyProvider implements SensitivePropertyProvider {
         return key;
     }
 
-    public AESSensitivePropertyProvider(byte[] key) throws NoSuchPaddingException, NoSuchAlgorithmException, NoSuchProviderException {
+    public AESSensitivePropertyProvider(byte[] key) throws SensitivePropertyProtectionException {
         this(key == null ? "" : Hex.toHexString(key));
     }
 
     private static String formatHexKey(String input) {
-        if (input == null || StringUtils.isBlank(input)) {
+        if (StringUtils.isBlank(input)) {
             return "";
         }
         return input.replaceAll("[^0-9a-fA-F]", "").toLowerCase();
     }
 
     private static boolean isHexKeyValid(String key) {
-        if (key == null || StringUtils.isBlank(key)) {
+        if (StringUtils.isBlank(key)) {
             return false;
         }
         // Key length is in "nibbles" (i.e. one hex char = 4 bits)
@@ -163,7 +163,7 @@ public class AESSensitivePropertyProvider implements SensitivePropertyProvider {
      */
     @Override
     public String protect(String unprotectedValue) throws SensitivePropertyProtectionException {
-        if (unprotectedValue == null || unprotectedValue.trim().length() == 0) {
+        if (StringUtils.isBlank(unprotectedValue)) {
             throw new IllegalArgumentException("Cannot encrypt an empty value");
         }
 
@@ -274,26 +274,23 @@ public class AESSensitivePropertyProvider implements SensitivePropertyProvider {
         return IMPLEMENTATION_KEY + getMaxValidKeyLength();
     }
 
-
     /**
-     * True if this provider can handle the given combination of value and scheme.
+     * True if this class can provide protected and unprotected values for the given scheme.
      *
-     * @param value Hex-encoded value
      * @param scheme name of encryption or protection scheme
-     * @return true if the value looks like a suitable encryption value
+     * @return true if this class can provide protected values
      */
-    public static boolean isProviderFor(String value, String scheme) {
-        return StringUtils.isEmpty(scheme) || scheme.startsWith(IMPLEMENTATION_KEY);
+    public static boolean isProviderFor(String scheme) {
+        return scheme.startsWith(IMPLEMENTATION_KEY);
     }
 
     /**
-     * Returns a printable representation of a key.
+     * Printable representation of a key.
      *
      * @param keyOrKeyId key material or key id
      * @return printable string
      */
     public static String toPrintableString(String keyOrKeyId) {
-        return  UUID.nameUUIDFromBytes(keyOrKeyId.getBytes(StandardCharsets.UTF_8)).toString();
+        return PRINTABLE_PREFIX + UUID.nameUUIDFromBytes(keyOrKeyId.getBytes(StandardCharsets.UTF_8)).toString();
     }
-
 }

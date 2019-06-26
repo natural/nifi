@@ -16,7 +16,6 @@
  */
 package org.apache.nifi.properties.sensitive.aws.kms
 
-import com.amazonaws.auth.PropertiesCredentials
 import com.amazonaws.services.kms.AWSKMSClient
 import com.amazonaws.services.kms.AWSKMSClientBuilder
 import com.amazonaws.services.kms.model.CreateAliasRequest
@@ -27,8 +26,8 @@ import com.amazonaws.services.kms.model.DescribeKeyResult
 import com.amazonaws.services.kms.model.GenerateDataKeyRequest
 import com.amazonaws.services.kms.model.GenerateDataKeyResult
 import com.amazonaws.services.kms.model.ScheduleKeyDeletionRequest
-import org.apache.commons.lang3.StringUtils
 import org.apache.nifi.properties.StandardNiFiProperties
+import org.apache.nifi.properties.sensitive.TestsWithAWSCredentials
 import org.apache.nifi.properties.sensitive.ProtectedNiFiProperties
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider
@@ -47,13 +46,8 @@ import java.security.SecureRandom
 
 
 @RunWith(JUnit4.class)
-class AWSKMSSensitivePropertyProviderIT extends GroovyTestCase {
+class AWSKMSSensitivePropertyProviderIT extends TestsWithAWSCredentials {
     private static final Logger logger = LoggerFactory.getLogger(AWSKMSSensitivePropertyProviderIT.class)
-    private static final Map<String, String> credentialsBeforeTest = new HashMap<>()
-    private static final Map<String, String> credentialsDuringTest = new HashMap<>()
-
-
-    protected final static String CREDENTIALS_FILE = System.getProperty("user.home") + "/aws-credentials.properties";
     private static String[] knownGoodKeys = []
     private static AWSKMSClient client
 
@@ -64,32 +58,6 @@ class AWSKMSSensitivePropertyProviderIT extends GroovyTestCase {
      */
     @BeforeClass
     static void setUpOnce() throws Exception {
-        final FileInputStream fis
-        try {
-            fis = new FileInputStream(CREDENTIALS_FILE)
-        } catch (FileNotFoundException e1) {
-            fail("Could not open credentials file " + CREDENTIALS_FILE + ": " + e1.getLocalizedMessage());
-            return
-        }
-        final PropertiesCredentials credentials = new PropertiesCredentials(fis)
-
-        System.setProperty("aws.secretKey", "floop")
-
-        credentialsDuringTest.put("aws.accessKeyId", credentials.AWSAccessKeyId)
-        credentialsDuringTest.put("aws.secretKey", credentials.AWSSecretKey)
-        credentialsDuringTest.put("aws.region", "us-east-2")
-
-        credentialsDuringTest.keySet().forEach({ name ->
-            def value = System.getProperty(name)
-            credentialsBeforeTest.put(name, value)
-            if (value != null && StringUtils.isNotBlank(value)) {
-                logger.info("Overwriting credential system property: " + name)
-            }
-            // We're copying the properties directly so the standard builder works.
-            System.setProperty(name, credentialsDuringTest.get(name))
-        })
-
-
         client = AWSKMSClientBuilder.standard().build() as AWSKMSClient
 
         // generate a cmk
@@ -137,18 +105,7 @@ class AWSKMSSensitivePropertyProviderIT extends GroovyTestCase {
             ScheduleKeyDeletionRequest req = new ScheduleKeyDeletionRequest().withKeyId(knownGoodKeys[0]).withPendingWindowInDays(7)
             client.scheduleKeyDeletion(req)
         }
-
-        credentialsBeforeTest.keySet().forEach { name ->
-            def value = credentialsBeforeTest.get(name)
-            if (value == null) { value = ""}
-
-            if (StringUtils.isNotBlank(value)) {
-                logger.info("Restoring credential system property: " + name)
-            }
-            System.setProperty(name, value)
-        }
     }
-
 
     /**
      * This test shows that bad keys lead to exceptions, not invalid instances.

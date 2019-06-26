@@ -345,14 +345,15 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
                     String value = getProperty(key);
                     String protectionScheme = getProperty(getProtectionKey(key));
                     SensitivePropertyProvider propertyProvider = sensitivePropertyProvider;
+                    String defaultScheme = sensitivePropertyProvider.getIdentifierKey();
+                    boolean sameScheme = defaultScheme.equals(protectionScheme);
+
+                    if (!sameScheme && StandardSensitivePropertyProvider.hasProviderFor(protectionScheme)) {
+                        propertyProvider = StandardSensitivePropertyProvider.fromKey(value, protectionScheme);
+                        logger.info("Selected specific sensitive property provider: " + propertyProvider.getName() + " for property: " + key);
+                    }
 
                     try {
-
-                        // if (propertyProvider != null && StringUtils.isNotBlank(protectionScheme)) {
-                        //    logger.warn("NEW SCHEME: " + protectionScheme);
-                        //    propertyProvider = StandardSensitivePropertyProvider.fromKey(value, protectionScheme);
-                        // }
-
                         rawProperties.setProperty(key, unprotectValue(key, value, propertyProvider));
                     } catch (SensitivePropertyProtectionException e) {
                         logger.warn("Failed to unprotect '{}'", key, e);
@@ -413,8 +414,6 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
      * @return the protected properties in a {@link StandardNiFiProperties} object
      */
     NiFiProperties protectPlainProperties(String protectionScheme) {
-        // SensitivePropertyProvider spp = StandardSensitivePropertyProvider.fromKey(sensitivePropertyProvider, protectionScheme);
-
         // Make a new holder (settable)
         Properties protectedProperties = new Properties();
 
@@ -490,5 +489,4 @@ public class ProtectedNiFiProperties extends StandardNiFiProperties {
             throw new SensitivePropertyProtectionException("Error unprotecting value for " + key, e.getCause());
         }
     }
-
 }
