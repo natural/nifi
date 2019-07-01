@@ -285,6 +285,7 @@ public class PutS3Object extends AbstractS3Processor {
 
     protected boolean localUploadExistsInS3(final AmazonS3Client s3, final String bucket, final MultipartState localState) {
         ListMultipartUploadsRequest listRequest = new ListMultipartUploadsRequest(bucket);
+        // No call needed to configure encryption for ListMultipartUploadsRequest.
         MultipartUploadListing listing = s3.listMultipartUploads(listRequest);
         for (MultipartUpload upload : listing.getMultipartUploads()) {
             if (upload.getUploadId().equals(localState.getUploadId())) {
@@ -502,10 +503,8 @@ public class PutS3Object extends AbstractS3Processor {
                             //----------------------------------------
                             final PutObjectRequest request = new PutObjectRequest(bucket, key, in, objectMetadata);
                             if (sseService != null) {
-                                sseService.configurePutRequest(request, objectMetadata);
+                                sseService.configureRequest(request, objectMetadata);
                             }
-
-                            getLogger().warn("D HERE: " + request.getSSECustomerKey() );
 
                             request.setStorageClass(StorageClass.valueOf(context.getProperty(STORAGE_CLASS).getValue()));
                             final AccessControlList acl = createACL(context, ff);
@@ -604,7 +603,7 @@ public class PutS3Object extends AbstractS3Processor {
                             if (currentState.getUploadId().isEmpty()) {
                                 final InitiateMultipartUploadRequest initiateRequest = new InitiateMultipartUploadRequest(bucket, key, objectMetadata);
                                 if (sseService != null) {
-                                    sseService.configurePutRequest(initiateRequest, objectMetadata);
+                                    sseService.configureRequest(initiateRequest, objectMetadata);
                                 }
                                 initiateRequest.setStorageClass(currentState.getStorageClass());
 
@@ -684,6 +683,9 @@ public class PutS3Object extends AbstractS3Processor {
                                         .withInputStream(in)
                                         .withPartNumber(part)
                                         .withPartSize(thisPartSize);
+                                if (sseService != null) {
+                                    sseService.configureRequest(uploadRequest, objectMetadata);
+                                }
                                 try {
                                     UploadPartResult uploadPartResult = s3.uploadPart(uploadRequest);
                                     currentState.addPartETag(uploadPartResult.getPartETag());
@@ -708,6 +710,7 @@ public class PutS3Object extends AbstractS3Processor {
                             //------------------------------------------------------------
                             CompleteMultipartUploadRequest completeRequest = new CompleteMultipartUploadRequest(
                                     bucket, key, currentState.getUploadId(), currentState.getPartETags());
+                            // No call to sseService needed for CompleteMultipartUploadRequest.
                             try {
                                 CompleteMultipartUploadResult completeResult =
                                         s3.completeMultipartUpload(completeRequest);
@@ -834,6 +837,7 @@ public class PutS3Object extends AbstractS3Processor {
         final String uploadId = upload.getUploadId();
         final AbortMultipartUploadRequest abortRequest = new AbortMultipartUploadRequest(
                 bucket, uploadKey, uploadId);
+        // No call needed to configure encryption for AbortMultipartUploadRequest.
         try {
             s3.abortMultipartUpload(abortRequest);
             getLogger().info("Aborting out of date multipart upload, bucket {} key {} ID {}, initiated {}",

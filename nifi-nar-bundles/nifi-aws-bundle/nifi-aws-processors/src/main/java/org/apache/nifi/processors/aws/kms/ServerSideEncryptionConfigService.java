@@ -16,12 +16,13 @@
  */
 package org.apache.nifi.processors.aws.kms;
 
-import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
+import com.amazonaws.AmazonWebServiceRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
 import org.apache.nifi.controller.ControllerService;
 
+import java.io.IOException;
+
+
 public interface ServerSideEncryptionConfigService extends ControllerService {
-    void configurePutRequest(PutObjectRequest request, ObjectMetadata objectMetadata);
-    void configurePutRequest(InitiateMultipartUploadRequest request, ObjectMetadata objectMetadata);
+    void configureRequest(AmazonWebServiceRequest request, ObjectMetadata objectMetadata) throws IOException;
 }

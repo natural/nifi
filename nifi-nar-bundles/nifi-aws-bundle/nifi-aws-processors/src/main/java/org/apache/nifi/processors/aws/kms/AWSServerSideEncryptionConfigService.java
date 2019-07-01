@@ -16,11 +16,13 @@
  */
 package org.apache.nifi.processors.aws.kms;
 
+import com.amazonaws.AmazonWebServiceRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.SSECustomerKey;
+import com.amazonaws.services.s3.model.UploadPartRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnEnabled;
@@ -30,13 +32,13 @@ import org.apache.nifi.components.ValidationContext;
 import org.apache.nifi.components.ValidationResult;
 import org.apache.nifi.controller.AbstractControllerService;
 import org.apache.nifi.controller.ConfigurationContext;
-import org.apache.nifi.controller.ControllerServiceInitializationContext;
 import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.reporting.InitializationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -85,23 +87,10 @@ public class AWSServerSideEncryptionConfigService extends AbstractControllerServ
     private String keyId = "";
     private String keyMaterial = "";
 
-    /**
-     * Provides a mechanism by which subclasses can perform initialization of
-     * the Controller Service before it is scheduled to be run
-     *
-     * @param config of initialization context
-     * @throws InitializationException if unable to init
-     */
-    protected void init(final ControllerServiceInitializationContext config) throws InitializationException {
-        logger.warn("HERE: " + config);
-        //.
-    }
-
     @Override
     protected Collection<ValidationResult> customValidate(ValidationContext validationContext) {
         final List<ValidationResult> validationResults = new ArrayList<>();
         final String encryptionMethod = validationContext.getProperty(ENCRYPTION_METHOD).getValue();
-        logger.warn("THERE custom validate: " + validationContext);
 
         // ensure the Key ID is set when enc method is SSE KMS
         if (encryptionMethod.equals(SSE_KMS.getValue())) {
@@ -145,32 +134,81 @@ public class AWSServerSideEncryptionConfigService extends AbstractControllerServ
         return Collections.unmodifiableList(properties);
     }
 
-    @Override
-    public void configurePutRequest(PutObjectRequest request, ObjectMetadata objectMetadata) {
+    // Key for fun:
+    //
+    // N/XPzMAOl1V/hTEA9X9+6D4iBrsOi/+jflt4br90RF0=
+
+    /**
+     * Configure a request with server-side encryption parameters.
+     *
+     * NB:  we're doing the object type casting because both `setSSEAwsKeyManagementParams` and
+     * `setSSECustomerKey` aren't defined on the same base type.
+     *
+     * @param request AWS request; must be {@link PutObjectRequest} or {@link InitiateMultipartUploadRequest} instance.
+     * @param objectMetadata request metadata.
+     * @throws IOException when request object cannot be cast to expected subclass.
+     */
+    public void configureRequest(AmazonWebServiceRequest request, ObjectMetadata objectMetadata) throws IOException {
+        PutObjectRequest putObjectRequest = toPutObjectRequest(request);
+        InitiateMultipartUploadRequest initUploadRequest = toMultipartUploadRequest(request);
+        UploadPartRequest uploadPartRequest = toUploadPartRequest(request);
+
         if (StringUtils.equals(encryptionMethod, SSE_S3.getValue())) {
             objectMetadata.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION);
 
         } else if (StringUtils.equals(encryptionMethod, SSE_KMS.getValue())) {
-            request.setSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(keyId));
+            SSEAwsKeyManagementParams keyParams = new SSEAwsKeyManagementParams(keyId);
+
+            if (putObjectRequest != null) {
+                putObjectRequest.setSSEAwsKeyManagementParams(keyParams);
+            } else if (initUploadRequest != null) {
+                initUploadRequest.setSSEAwsKeyManagementParams(keyParams);
+            } else if (uploadPartRequest != null) {
+                // upload parts don't re-specify KMS key information.
+            } else {
+                throw new IOException("Cannot cast request to subtype.");
+            }
 
         } else if (StringUtils.equals(encryptionMethod, SSE_C.getValue())) {
-            request.setSSECustomerKey(new SSECustomerKey(keyMaterial));
+            SSECustomerKey customerKey = new SSECustomerKey(keyMaterial);
+
+            if (putObjectRequest != null) {
+                putObjectRequest.setSSECustomerKey(customerKey);
+            } else if (initUploadRequest != null) {
+                initUploadRequest.setSSECustomerKey(customerKey);
+            } else if (uploadPartRequest != null) {
+                // but upload parts do need to re-specify customer keys:
+                uploadPartRequest.setSSECustomerKey(customerKey);
+            } else {
+                throw new IOException("Cannot cast request to subtype.");
+            }
         }
     }
 
-    @Override
-    public void configurePutRequest(InitiateMultipartUploadRequest request, ObjectMetadata objectMetadata) {
-        if (StringUtils.equals(encryptionMethod, SSE_S3.getValue())) {
-            objectMetadata.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION);
+    // Casts a request to an {@link InitiateMultipartUploadRequest} instance.
+    private static InitiateMultipartUploadRequest toMultipartUploadRequest(AmazonWebServiceRequest webServiceRequest) {
+        try {
+            return (InitiateMultipartUploadRequest) webServiceRequest;
+        } catch (final ClassCastException ignored) {
+            return null;
+        }
+    }
 
-        } else if (StringUtils.equals(encryptionMethod, SSE_KMS.getValue())) {
-            request.setSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(keyId));
+    // Casts a request to a {@link PutObjectRequest} instance.
+    private static PutObjectRequest toPutObjectRequest(AmazonWebServiceRequest webServiceRequest) {
+        try {
+            return (PutObjectRequest) webServiceRequest;
+        } catch (final ClassCastException ignored) {
+            return null;
+        }
+    }
 
-        } else if (StringUtils.equals(encryptionMethod, SSE_C.getValue())) {
-            // N/XPzMAOl1V/hTEA9X9+6D4iBrsOi/+jflt4br90RF0=
 
-            request.setSSECustomerKey(new SSECustomerKey(keyMaterial));
-
+    private static UploadPartRequest toUploadPartRequest(AmazonWebServiceRequest webServiceRequest) {
+        try {
+            return (UploadPartRequest) webServiceRequest;
+        } catch (final ClassCastException ignored) {
+            return null;
         }
     }
 }

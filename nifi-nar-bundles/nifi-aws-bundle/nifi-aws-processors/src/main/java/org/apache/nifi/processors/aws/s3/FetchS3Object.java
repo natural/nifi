@@ -45,6 +45,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
+import org.apache.nifi.processors.aws.kms.ServerSideEncryptionConfigService;
 
 @SupportsBatching
 @SeeAlso({PutS3Object.class, DeleteS3Object.class, ListS3.class})
@@ -72,6 +73,14 @@ public class FetchS3Object extends AbstractS3Processor {
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
             .required(false)
+            .build();
+
+    public static final PropertyDescriptor SERVER_SIDE_ENCRYPTION_SERVICE = new PropertyDescriptor.Builder()
+            .name("server-side-encryption-service")
+            .displayName("Server Side Encryption Service")
+            .description("Specifies the SSE Service Controller used configure requests.")
+            .required(false)
+            .identifiesControllerService(ServerSideEncryptionConfigService.class)
             .build();
 
     public static final List<PropertyDescriptor> properties = Collections.unmodifiableList(
