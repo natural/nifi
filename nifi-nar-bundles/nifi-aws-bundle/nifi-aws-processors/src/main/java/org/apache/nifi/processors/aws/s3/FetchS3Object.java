@@ -74,18 +74,10 @@ public class FetchS3Object extends AbstractS3Processor {
             .required(false)
             .build();
 
-    public static final PropertyDescriptor SERVER_SIDE_ENCRYPTION_SERVICE = new PropertyDescriptor.Builder()
-            .name("server-side-encryption-service")
-            .displayName("Server Side Encryption Service")
-            .description("Specifies the SSE Service Controller used configure requests.")
-            .required(false)
-            .identifiesControllerService(AbstractS3EncryptionService.class)
-            .build();
-
     public static final List<PropertyDescriptor> properties = Collections.unmodifiableList(
             Arrays.asList(BUCKET, KEY, REGION, ACCESS_KEY, SECRET_KEY, CREDENTIALS_FILE, AWS_CREDENTIALS_PROVIDER_SERVICE, TIMEOUT, VERSION_ID,
-                SSL_CONTEXT_SERVICE, ENDPOINT_OVERRIDE, SIGNER_OVERRIDE, SERVER_SIDE_ENCRYPTION_SERVICE,
-                PROXY_CONFIGURATION_SERVICE, PROXY_HOST, PROXY_HOST_PORT, PROXY_USERNAME, PROXY_PASSWORD));
+                SSL_CONTEXT_SERVICE, ENDPOINT_OVERRIDE, SIGNER_OVERRIDE, ENCRYPTION_SERVICE, PROXY_CONFIGURATION_SERVICE, PROXY_HOST,
+                PROXY_HOST_PORT, PROXY_USERNAME, PROXY_PASSWORD));
 
     @Override
     protected List<PropertyDescriptor> getSupportedPropertyDescriptors() {
@@ -112,11 +104,11 @@ public class FetchS3Object extends AbstractS3Processor {
             request = new GetObjectRequest(bucket, key, versionId);
         }
 
-        AbstractS3EncryptionService sseService = context.getProperty(SERVER_SIDE_ENCRYPTION_SERVICE).asControllerService(AbstractS3EncryptionService.class);
-        final ObjectMetadata objectMetadata = new ObjectMetadata(); // TODO:  ref the metdata below
-        if (sseService != null) {
+        AbstractS3EncryptionService encryptionService = context.getProperty(ENCRYPTION_SERVICE).asControllerService(AbstractS3EncryptionService.class);
+        final ObjectMetadata objectMetadata = new ObjectMetadata(); // TODO:  ref the metadata below
+        if (encryptionService != null) {
             try {
-                sseService.configureRequest(request, objectMetadata);
+                encryptionService.configureRequest(request, objectMetadata);
             } catch (IOException e) {
                 getLogger().error("Could not configure encrypted S3 fetch: " + e);
                 return;

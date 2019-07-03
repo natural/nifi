@@ -192,8 +192,8 @@ public class TestFetchS3Object {
         assertTrue(pd.contains(FetchS3Object.SSL_CONTEXT_SERVICE));
         assertTrue(pd.contains(FetchS3Object.TIMEOUT));
         assertTrue(pd.contains(FetchS3Object.VERSION_ID));
-        assertTrue(pd.contains(FetchS3Object.SERVER_SIDE_ENCRYPTION_SERVICE));
-        assertTrue(pd.contains(ProxyConfigurationService.PROXY_CONFIGURATION_SERVICE));
+        assertTrue(pd.contains(FetchS3Object.ENCRYPTION_SERVICE));
+        assertTrue(pd.contains(FetchS3Object.PROXY_CONFIGURATION_SERVICE));
         assertTrue(pd.contains(FetchS3Object.PROXY_HOST));
         assertTrue(pd.contains(FetchS3Object.PROXY_HOST_PORT));
         assertTrue(pd.contains(FetchS3Object.PROXY_USERNAME));
