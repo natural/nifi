@@ -126,6 +126,15 @@ public abstract class AbstractS3Processor extends AbstractAWSCredentialsProvider
                     new AllowableValue("S3SignerType", "Signature v2"))
             .defaultValue("Default Signature")
             .build();
+    public static final PropertyDescriptor ENCRYPTION_SERVICE = new PropertyDescriptor.Builder()
+            .name("encryption-service")
+            .displayName("Encryption Service")
+            .description("Specifies the Encryption Service Controller used configure requests.  "
+                    + "For backward compatibility, this value is ignored when 'Server Side Encryption' is set.")
+            .required(false)
+            .identifiesControllerService(AbstractS3EncryptionService.class)
+            .build();
+
     /**
      * Create client using credentials provider. This is the preferred way for creating clients
      */

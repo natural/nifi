@@ -45,7 +45,6 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
-import org.apache.nifi.processors.aws.kms.ServerSideEncryptionConfigService;
 
 @SupportsBatching
 @SeeAlso({PutS3Object.class, DeleteS3Object.class, ListS3.class})
@@ -80,12 +79,13 @@ public class FetchS3Object extends AbstractS3Processor {
             .displayName("Server Side Encryption Service")
             .description("Specifies the SSE Service Controller used configure requests.")
             .required(false)
-            .identifiesControllerService(ServerSideEncryptionConfigService.class)
+            .identifiesControllerService(AbstractS3EncryptionService.class)
             .build();
 
     public static final List<PropertyDescriptor> properties = Collections.unmodifiableList(
             Arrays.asList(BUCKET, KEY, REGION, ACCESS_KEY, SECRET_KEY, CREDENTIALS_FILE, AWS_CREDENTIALS_PROVIDER_SERVICE, TIMEOUT, VERSION_ID,
-                SSL_CONTEXT_SERVICE, ENDPOINT_OVERRIDE, SIGNER_OVERRIDE, PROXY_CONFIGURATION_SERVICE, PROXY_HOST, PROXY_HOST_PORT, PROXY_USERNAME, PROXY_PASSWORD));
+                SSL_CONTEXT_SERVICE, ENDPOINT_OVERRIDE, SIGNER_OVERRIDE, SERVER_SIDE_ENCRYPTION_SERVICE,
+                PROXY_CONFIGURATION_SERVICE, PROXY_HOST, PROXY_HOST_PORT, PROXY_USERNAME, PROXY_PASSWORD));
 
     @Override
     protected List<PropertyDescriptor> getSupportedPropertyDescriptors() {
@@ -110,6 +110,17 @@ public class FetchS3Object extends AbstractS3Processor {
             request = new GetObjectRequest(bucket, key);
         } else {
             request = new GetObjectRequest(bucket, key, versionId);
+        }
+
+        AbstractS3EncryptionService sseService = context.getProperty(SERVER_SIDE_ENCRYPTION_SERVICE).asControllerService(AbstractS3EncryptionService.class);
+        final ObjectMetadata objectMetadata = new ObjectMetadata(); // TODO:  ref the metdata below
+        if (sseService != null) {
+            try {
+                sseService.configureRequest(request, objectMetadata);
+            } catch (IOException e) {
+                getLogger().error("Could not configure encrypted S3 fetch: " + e);
+                return;
+            }
         }
 
         final Map<String, String> attributes = new HashMap<>();

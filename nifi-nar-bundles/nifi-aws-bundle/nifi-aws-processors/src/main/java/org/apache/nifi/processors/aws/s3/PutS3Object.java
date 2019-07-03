@@ -84,7 +84,6 @@ import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.StorageClass;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
-import org.apache.nifi.processors.aws.kms.ServerSideEncryptionConfigService;
 
 @SupportsBatching
 @SeeAlso({FetchS3Object.class, DeleteS3Object.class, ListS3.class})
@@ -210,15 +209,6 @@ public class PutS3Object extends AbstractS3Processor {
             .defaultValue(NO_SERVER_SIDE_ENCRYPTION)
             .build();
 
-    public static final PropertyDescriptor SERVER_SIDE_ENCRYPTION_SERVICE = new PropertyDescriptor.Builder()
-            .name("server-side-encryption-service")
-            .displayName("Server Side Encryption Service")
-            .description("Specifies the SSE Service Controller used configure requests.  " +
-                    "For backward compatibility, this value is ignored when 'Server Side Encryption' is set.")
-            .required(false)
-            .identifiesControllerService(ServerSideEncryptionConfigService.class)
-            .build();
-
     public static final PropertyDescriptor OBJECT_TAGS_PREFIX = new PropertyDescriptor.Builder()
             .name("s3-object-tags-prefix")
             .displayName("Object Tags Prefix")
@@ -244,8 +234,8 @@ public class PutS3Object extends AbstractS3Processor {
         Arrays.asList(KEY, BUCKET, CONTENT_TYPE, ACCESS_KEY, SECRET_KEY, CREDENTIALS_FILE, AWS_CREDENTIALS_PROVIDER_SERVICE, OBJECT_TAGS_PREFIX, REMOVE_TAG_PREFIX,
             STORAGE_CLASS, REGION, TIMEOUT, EXPIRATION_RULE_ID, FULL_CONTROL_USER_LIST, READ_USER_LIST, WRITE_USER_LIST, READ_ACL_LIST, WRITE_ACL_LIST, OWNER,
             CANNED_ACL, SSL_CONTEXT_SERVICE, ENDPOINT_OVERRIDE, SIGNER_OVERRIDE, MULTIPART_THRESHOLD, MULTIPART_PART_SIZE, MULTIPART_S3_AGEOFF_INTERVAL,
-            MULTIPART_S3_MAX_AGE, SERVER_SIDE_ENCRYPTION, SERVER_SIDE_ENCRYPTION_SERVICE, PROXY_CONFIGURATION_SERVICE, PROXY_HOST, PROXY_HOST_PORT, PROXY_USERNAME,
-            PROXY_PASSWORD));
+            MULTIPART_S3_MAX_AGE, SERVER_SIDE_ENCRYPTION, ENCRYPTION_SERVICE, PROXY_CONFIGURATION_SERVICE, PROXY_HOST,
+            PROXY_HOST_PORT, PROXY_USERNAME, PROXY_PASSWORD));
 
     final static String S3_BUCKET_KEY = "s3.bucket";
     final static String S3_OBJECT_KEY = "s3.key";
@@ -484,13 +474,13 @@ public class PutS3Object extends AbstractS3Processor {
                         }
 
                         final String serverSideEncryption = context.getProperty(SERVER_SIDE_ENCRYPTION).getValue();
-                        ServerSideEncryptionConfigService sseService = null;
+                        AbstractS3EncryptionService encryptionService = null;
 
                         if (!serverSideEncryption.equals(NO_SERVER_SIDE_ENCRYPTION)) {
                             objectMetadata.setSSEAlgorithm(serverSideEncryption);
                             attributes.put(S3_SSE_ALGORITHM, serverSideEncryption);
                         } else {
-                            sseService = context.getProperty(SERVER_SIDE_ENCRYPTION_SERVICE).asControllerService(ServerSideEncryptionConfigService.class);
+                            encryptionService = context.getProperty(ENCRYPTION_SERVICE).asControllerService(AbstractS3EncryptionService.class);
                         }
 
                         if (!userMetadata.isEmpty()) {
@@ -502,8 +492,8 @@ public class PutS3Object extends AbstractS3Processor {
                             // single part upload
                             //----------------------------------------
                             final PutObjectRequest request = new PutObjectRequest(bucket, key, in, objectMetadata);
-                            if (sseService != null) {
-                                sseService.configureRequest(request, objectMetadata);
+                            if (encryptionService != null) {
+                                encryptionService.configureRequest(request, objectMetadata);
                             }
 
                             request.setStorageClass(StorageClass.valueOf(context.getProperty(STORAGE_CLASS).getValue()));
@@ -602,8 +592,8 @@ public class PutS3Object extends AbstractS3Processor {
                             //------------------------------------------------------------
                             if (currentState.getUploadId().isEmpty()) {
                                 final InitiateMultipartUploadRequest initiateRequest = new InitiateMultipartUploadRequest(bucket, key, objectMetadata);
-                                if (sseService != null) {
-                                    sseService.configureRequest(initiateRequest, objectMetadata);
+                                if (encryptionService != null) {
+                                    encryptionService.configureRequest(initiateRequest, objectMetadata);
                                 }
                                 initiateRequest.setStorageClass(currentState.getStorageClass());
 
@@ -683,8 +673,8 @@ public class PutS3Object extends AbstractS3Processor {
                                         .withInputStream(in)
                                         .withPartNumber(part)
                                         .withPartSize(thisPartSize);
-                                if (sseService != null) {
-                                    sseService.configureRequest(uploadRequest, objectMetadata);
+                                if (encryptionService != null) {
+                                    encryptionService.configureRequest(uploadRequest, objectMetadata);
                                 }
                                 try {
                                     UploadPartResult uploadPartResult = s3.uploadPart(uploadRequest);
@@ -710,7 +700,7 @@ public class PutS3Object extends AbstractS3Processor {
                             //------------------------------------------------------------
                             CompleteMultipartUploadRequest completeRequest = new CompleteMultipartUploadRequest(
                                     bucket, key, currentState.getUploadId(), currentState.getPartETags());
-                            // No call to sseService needed for CompleteMultipartUploadRequest.
+                            // No call to encryptionService needed for CompleteMultipartUploadRequest.
                             try {
                                 CompleteMultipartUploadResult completeResult =
                                         s3.completeMultipartUpload(completeRequest);

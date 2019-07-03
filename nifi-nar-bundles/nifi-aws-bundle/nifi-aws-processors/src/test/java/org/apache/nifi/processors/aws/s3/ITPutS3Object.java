@@ -33,17 +33,24 @@ import com.amazonaws.services.s3.model.GetObjectTaggingResult;
 import com.amazonaws.services.s3.model.ListMultipartUploadsRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.Tag;
+import org.apache.nifi.attribute.expression.language.StandardPropertyValue;
+import org.apache.nifi.authorization.AuthorizerConfigurationContext;
 import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.controller.ConfigurationContext;
+import org.apache.nifi.controller.ControllerServiceLookup;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.processor.DataUnit;
 import org.apache.nifi.processor.ProcessContext;
+import org.apache.nifi.processor.util.pattern.Put;
 import org.apache.nifi.processors.aws.AbstractAWSCredentialsProviderProcessor;
 import org.apache.nifi.processors.aws.credentials.provider.service.AWSCredentialsProviderControllerService;
 import org.apache.nifi.provenance.ProvenanceEventRecord;
 import org.apache.nifi.provenance.ProvenanceEventType;
 import org.apache.nifi.reporting.InitializationException;
+import org.apache.nifi.util.MockConfigurationContext;
 import org.apache.nifi.util.MockFlowFile;
+import org.apache.nifi.util.MockPropertyValue;
 import org.apache.nifi.util.TestRunner;
 import org.apache.nifi.util.TestRunners;
 import org.junit.Assert;
@@ -58,11 +65,17 @@ import com.amazonaws.services.s3.model.MultipartUploadListing;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.Region;
 import com.amazonaws.services.s3.model.StorageClass;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Provides integration level testing with actual AWS S3 resources for {@link PutS3Object} and requires additional configuration and resources to work.
  */
 public class ITPutS3Object extends AbstractS3IT {
+    private static final Logger logger = LoggerFactory.getLogger(ITPutS3Object.class);
 
     final static String TEST_ENDPOINT = "https://endpoint.com";
     //    final static String TEST_TRANSIT_URI = "https://" + BUCKET_NAME + ".endpoint.com";
@@ -888,6 +901,49 @@ public class ITPutS3Object extends AbstractS3IT {
         Assert.assertEquals("PII", objectTags.get(0).getKey());
         Assert.assertEquals("true", objectTags.get(0).getValue());
     }
+
+    @Test
+    public void testEncryptionService() throws IOException, InitializationException {
+        final PutS3Object processor = new PutS3Object();
+        final TestRunner runner = TestRunners.newTestRunner(processor);
+        // final ProcessContext context = runner.getProcessContext();
+        final S3EncryptionService encryptionService = new S3EncryptionService();
+        final ConfigurationContext configurationContext = mock(ConfigurationContext.class);
+
+        runner.setProperty(PutS3Object.CREDENTIALS_FILE, CREDENTIALS_FILE);
+        runner.setProperty(PutS3Object.REGION, REGION);
+        runner.setProperty(PutS3Object.BUCKET, BUCKET_NAME);
+        runner.addControllerService(PutS3Object.ENCRYPTION_SERVICE.getName(), encryptionService);
+        runner.setProperty(PutS3Object.ENCRYPTION_SERVICE, encryptionService.getIdentifier());
+
+        final String encryptionMethod = S3EncryptionService.MethodName.SSE_S3;
+        final String keyId = "";
+
+        when(configurationContext.getProperty(S3EncryptionService.ENCRYPTION_METHOD)).thenReturn(new MockPropertyValue(encryptionMethod));
+        when(configurationContext.getProperty(S3EncryptionService.ENCRYPTION_VALUE)).thenReturn(new MockPropertyValue(keyId));
+
+        runner.setProperty(encryptionService, S3EncryptionService.ENCRYPTION_VALUE, keyId);
+        runner.setProperty(encryptionService, S3EncryptionService.ENCRYPTION_METHOD, encryptionMethod);
+
+        encryptionService.onConfigured(configurationContext);
+        runner.enableControllerService(encryptionService);
+
+        final Map<String, String> attrs = new HashMap<>();
+        attrs.put("filename", "test.txt");
+        runner.enqueue(getResourcePath(SAMPLE_FILE_RESOURCE_NAME), attrs);
+        runner.assertValid();
+        runner.run();
+        runner.assertAllFlowFilesTransferred(PutS3Object.REL_SUCCESS);
+
+        final List<MockFlowFile> successFiles = runner.getFlowFilesForRelationship(PutS3Object.REL_SUCCESS);
+        final List<MockFlowFile> failureFiles = runner.getFlowFilesForRelationship(PutS3Object.REL_FAILURE);
+
+        Assert.assertEquals(1, successFiles.size());
+        Assert.assertEquals(0, failureFiles.size());
+
+        logger.error("FAIL: " + "some mesg.");
+    }
+
 
     private class MockAmazonS3Client extends AmazonS3Client {
         MultipartUploadListing listing;

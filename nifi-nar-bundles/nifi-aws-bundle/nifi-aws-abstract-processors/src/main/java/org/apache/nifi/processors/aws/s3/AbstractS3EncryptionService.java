@@ -14,15 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.processors.aws.kms;
+package org.apache.nifi.processors.aws.s3;
 
 import com.amazonaws.AmazonWebServiceRequest;
+import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import org.apache.nifi.controller.ControllerService;
 
 import java.io.IOException;
 
 
-public interface ServerSideEncryptionConfigService extends ControllerService {
+public interface AbstractS3EncryptionService extends ControllerService {
     void configureRequest(AmazonWebServiceRequest request, ObjectMetadata objectMetadata) throws IOException;
+    AmazonS3Client createClient() throws IOException;
+
 }

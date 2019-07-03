@@ -213,8 +213,8 @@ public class TestPutS3Object {
         assertTrue(pd.contains(PutS3Object.WRITE_ACL_LIST));
         assertTrue(pd.contains(PutS3Object.WRITE_USER_LIST));
         assertTrue(pd.contains(PutS3Object.SERVER_SIDE_ENCRYPTION));
-        assertTrue(pd.contains(PutS3Object.SERVER_SIDE_ENCRYPTION_SERVICE));
-        assertTrue(pd.contains(ProxyConfigurationService.PROXY_CONFIGURATION_SERVICE));
+        assertTrue(pd.contains(PutS3Object.ENCRYPTION_SERVICE));
+        assertTrue(pd.contains(PutS3Object.PROXY_CONFIGURATION_SERVICE));
         assertTrue(pd.contains(PutS3Object.PROXY_HOST));
         assertTrue(pd.contains(PutS3Object.PROXY_HOST_PORT));
         assertTrue(pd.contains(PutS3Object.PROXY_USERNAME));
