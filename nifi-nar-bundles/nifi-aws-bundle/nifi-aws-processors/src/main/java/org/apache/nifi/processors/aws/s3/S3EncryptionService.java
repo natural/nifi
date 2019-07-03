@@ -17,14 +17,22 @@
 package org.apache.nifi.processors.aws.s3;
 
 import com.amazonaws.AmazonWebServiceRequest;
+import com.amazonaws.ClientConfiguration;
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.regions.Region;
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3EncryptionClient;
+import com.amazonaws.services.s3.model.CryptoConfiguration;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
+import com.amazonaws.services.s3.model.KMSEncryptionMaterialsProvider;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.UploadPartRequest;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnEnabled;
 import org.apache.nifi.components.AllowableValue;
@@ -93,7 +101,16 @@ public class S3EncryptionService extends AbstractControllerService implements Ab
             .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
             .build();
 
+    public static final PropertyDescriptor REGION = new PropertyDescriptor.Builder()
+            .name("Region")
+            .required(false)
+            .allowableValues(AbstractS3Processor.getAvailableRegions())
+            .defaultValue(AbstractS3Processor.createAllowableValue(Regions.DEFAULT_REGION).getValue())
+            .build();
+
+
     private String keyValue = "";
+    private String region = "";
     private S3EncryptionMethod encryptionMethod = null;
 
     @OnEnabled
@@ -101,6 +118,9 @@ public class S3EncryptionService extends AbstractControllerService implements Ab
         final String methodName = context.getProperty(ENCRYPTION_METHOD).getValue();
 
         keyValue = context.getProperty(ENCRYPTION_VALUE).getValue();
+        if (context.getProperty(REGION) != null ) {
+            region = context.getProperty(REGION).getValue();
+        }
         encryptionMethod = methodMap.get(methodName);
 
         if (encryptionMethod == null) {
@@ -140,14 +160,10 @@ public class S3EncryptionService extends AbstractControllerService implements Ab
     }
 
     @Override
-    public AmazonS3Client createClient() throws IOException {
-        if (encryptionMethod == null) {
-            throw new IOException("No encryption method set.");
-        }
-        return encryptionMethod.createClient();
+    public AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration) {
+        return encryptionMethod.createClient(credentialsProvider, clientConfiguration, region, keyValue);
     }
 }
-
 
 class NoOpMethod implements S3EncryptionMethod {
     @Override
@@ -155,12 +171,10 @@ class NoOpMethod implements S3EncryptionMethod {
     }
 
     @Override
-    public AmazonS3Client createClient() {
+    public AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration, String region, String keyIdOrMaterial) {
         return null;
     }
 }
-
-
 
 class SSES3Method implements S3EncryptionMethod {
     @Override
@@ -169,8 +183,9 @@ class SSES3Method implements S3EncryptionMethod {
     }
 
     @Override
-    public AmazonS3Client createClient() {
+    public AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration, String region, String keyIdOrMaterial) {
         return null;
+        // return new AmazonS3Client(credentialsProvider, clientConfiguration);
     }
 }
 
@@ -191,11 +206,10 @@ class SSEKMSMethod implements S3EncryptionMethod {
     }
 
     @Override
-    public AmazonS3Client createClient() {
+    public AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration, String region, String keyIdOrMaterial) {
         return null;
     }
 }
-
 
 class SSECMethod implements S3EncryptionMethod {
     @Override
@@ -222,11 +236,10 @@ class SSECMethod implements S3EncryptionMethod {
     }
 
     @Override
-    public AmazonS3Client createClient() {
+    public AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration, String region, String keyIdOrMaterial) {
         return null;
     }
 }
-
 
 class CSEKMSMethod implements S3EncryptionMethod {
     @Override
@@ -234,8 +247,19 @@ class CSEKMSMethod implements S3EncryptionMethod {
     }
 
     @Override
-    public AmazonS3Client createClient() {
-        return null;
+    public AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration, String region, String keyIdOrMaterial) {
+        KMSEncryptionMaterialsProvider materialProvider = new KMSEncryptionMaterialsProvider(keyIdOrMaterial);
+        CryptoConfiguration cryptoConfig = new CryptoConfiguration();
+
+        if (StringUtils.isNotBlank(region)) {
+            cryptoConfig.setAwsKmsRegion(Region.getRegion(Regions.fromName(region)));
+        }
+
+        AmazonS3EncryptionClient client = new AmazonS3EncryptionClient(credentialsProvider, materialProvider, cryptoConfig);
+        if (StringUtils.isNotBlank(region)) {
+            client.setRegion(Region.getRegion(Regions.fromName(region)));
+        }
+        return client;
     }
 }
 
@@ -245,7 +269,7 @@ class CSECMKMethod implements S3EncryptionMethod {
     }
 
     @Override
-    public AmazonS3Client createClient() {
+    public AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration, String region, String keyIdOrMaterial) {
         return null;
     }
 }

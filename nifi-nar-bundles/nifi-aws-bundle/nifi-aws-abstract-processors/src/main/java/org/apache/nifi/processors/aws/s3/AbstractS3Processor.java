@@ -20,6 +20,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.services.s3.AmazonS3Encryption;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.components.AllowableValue;
 import org.apache.nifi.components.PropertyDescriptor;
@@ -141,13 +143,19 @@ public abstract class AbstractS3Processor extends AbstractAWSCredentialsProvider
     @Override
     protected AmazonS3Client createClient(final ProcessContext context, final AWSCredentialsProvider credentialsProvider, final ClientConfiguration config) {
         getLogger().info("Creating client with credentials provider");
-
         initializeSignerOverride(context, config);
+        AbstractS3EncryptionService encryptionService = context.getProperty(ENCRYPTION_SERVICE).asControllerService(AbstractS3EncryptionService.class);
+        AmazonS3Client s3 = null;
 
-        final AmazonS3Client s3 = new AmazonS3Client(credentialsProvider, config);
+        if (encryptionService != null) {
+            s3 = encryptionService.createClient(credentialsProvider, config);
+        }
+
+        if (s3 == null) {
+            s3 = new AmazonS3Client(credentialsProvider, config);
+        }
 
         initalizeEndpointOverride(context, s3);
-
         return s3;
     }
 
@@ -176,14 +184,7 @@ public abstract class AbstractS3Processor extends AbstractAWSCredentialsProvider
     @Override
     protected AmazonS3Client createClient(final ProcessContext context, final AWSCredentials credentials, final ClientConfiguration config) {
         getLogger().info("Creating client with AWS credentials");
-
-        initializeSignerOverride(context, config);
-
-        final AmazonS3Client s3 = new AmazonS3Client(credentials, config);
-
-        initalizeEndpointOverride(context, s3);
-
-        return s3;
+        return createClient(context, new AWSStaticCredentialsProvider(credentials), config);
     }
 
     protected Grantee createGrantee(final String value) {

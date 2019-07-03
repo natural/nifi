@@ -17,12 +17,15 @@
 package org.apache.nifi.processors.aws.s3;
 
 import com.amazonaws.AmazonWebServiceRequest;
+import com.amazonaws.ClientConfiguration;
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ObjectMetadata;
+
 
 import java.io.IOException;
 
 interface S3EncryptionMethod {
     void configureRequest(AmazonWebServiceRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException;
-    AmazonS3Client createClient();
+    AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration, String region, String keyIdOrMaterial);
 }

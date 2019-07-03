@@ -17,6 +17,8 @@
 package org.apache.nifi.processors.aws.s3;
 
 import com.amazonaws.AmazonWebServiceRequest;
+import com.amazonaws.ClientConfiguration;
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import org.apache.nifi.controller.ControllerService;
@@ -26,6 +28,5 @@ import java.io.IOException;
 
 public interface AbstractS3EncryptionService extends ControllerService {
     void configureRequest(AmazonWebServiceRequest request, ObjectMetadata objectMetadata) throws IOException;
-    AmazonS3Client createClient() throws IOException;
-
+    AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration);
 }
