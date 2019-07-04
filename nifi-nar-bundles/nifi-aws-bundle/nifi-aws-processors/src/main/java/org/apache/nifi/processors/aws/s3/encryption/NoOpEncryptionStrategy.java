@@ -16,5 +16,5 @@
  */
 package org.apache.nifi.processors.aws.s3.encryption;
 
-public class NoOpStrategy implements S3EncryptionStrategy {
+public class NoOpEncryptionStrategy implements S3EncryptionStrategy {
 }

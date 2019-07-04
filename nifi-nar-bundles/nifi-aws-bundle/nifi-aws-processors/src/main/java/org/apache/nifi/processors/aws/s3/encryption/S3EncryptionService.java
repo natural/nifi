@@ -61,7 +61,7 @@ public class S3EncryptionService extends AbstractControllerService implements Ab
     public static final String METHOD_NAME_CSE_CMK = "CSE_CMK";
 
     private static final Map<String, S3EncryptionStrategy> namedStrategies = new HashMap<String, S3EncryptionStrategy>() {{
-        put(METHOD_NAME_NONE, new NoOpStrategy());
+        put(METHOD_NAME_NONE, new NoOpEncryptionStrategy());
         put(METHOD_NAME_SSE_S3, new ServerSideS3EncryptionStrategy());
         put(METHOD_NAME_SSE_KMS, new ServerSideKMSEncryptionStrategy());
         put(METHOD_NAME_SSE_C, new ServerSideCEKEncryptionStrategy());
@@ -105,19 +105,20 @@ public class S3EncryptionService extends AbstractControllerService implements Ab
     private String keyValue = "";
     private String region = "";
     private S3EncryptionStrategy encryptionStrategy = null;
+    private String strategyName = "";
 
     @OnEnabled
     public void onConfigured(final ConfigurationContext context) throws InitializationException {
-        final String methodName = context.getProperty(ENCRYPTION_METHOD).getValue();
+        strategyName = context.getProperty(ENCRYPTION_METHOD).getValue();
 
         keyValue = context.getProperty(ENCRYPTION_VALUE).getValue();
         if (context.getProperty(REGION) != null ) {
             region = context.getProperty(REGION).getValue();
         }
-        encryptionStrategy = namedStrategies.get(methodName);
+        encryptionStrategy = namedStrategies.get(strategyName);
 
         if (encryptionStrategy == null) {
-            final String msg = "No encryption method found for: " + methodName;
+            final String msg = "No encryption method found for: " + strategyName;
             logger.warn(msg);
             throw new InitializationException(msg);
         }
@@ -167,6 +168,16 @@ public class S3EncryptionService extends AbstractControllerService implements Ab
     @Override
     public AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration) {
         return encryptionStrategy.createClient(credentialsProvider, clientConfiguration, region, keyValue);
+    }
+
+    @Override
+    public String getRegion() {
+        return region;
+    }
+
+    @Override
+    public String getStrategyName() {
+        return strategyName;
     }
 }
 

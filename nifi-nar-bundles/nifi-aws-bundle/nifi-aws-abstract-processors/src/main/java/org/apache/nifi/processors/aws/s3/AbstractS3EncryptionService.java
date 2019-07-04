@@ -16,7 +16,6 @@
  */
 package org.apache.nifi.processors.aws.s3;
 
-import com.amazonaws.AmazonWebServiceRequest;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3Client;
@@ -31,17 +30,13 @@ import java.io.IOException;
 
 
 public interface AbstractS3EncryptionService extends ControllerService {
-    default void configurePutObjectRequest(PutObjectRequest request, ObjectMetadata objectMetadata) throws IOException {
-    }
-
-    default void configureInitiateMultipartUploadRequest(InitiateMultipartUploadRequest request, ObjectMetadata objectMetadata) throws IOException {
-    }
-
-    default void configureGetObjectRequest(GetObjectRequest request, ObjectMetadata objectMetadata) throws IOException {
-    }
-
-    default void configureUploadPartRequest(UploadPartRequest request, ObjectMetadata objectMetadata) throws IOException {
-    }
+    void configurePutObjectRequest(PutObjectRequest request, ObjectMetadata objectMetadata) throws IOException;
+    void configureInitiateMultipartUploadRequest(InitiateMultipartUploadRequest request, ObjectMetadata objectMetadata) throws IOException;
+    void configureGetObjectRequest(GetObjectRequest request, ObjectMetadata objectMetadata) throws IOException;
+    void configureUploadPartRequest(UploadPartRequest request, ObjectMetadata objectMetadata) throws IOException;
 
     AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration);
+
+    String getRegion();
+    String getStrategyName();
 }
