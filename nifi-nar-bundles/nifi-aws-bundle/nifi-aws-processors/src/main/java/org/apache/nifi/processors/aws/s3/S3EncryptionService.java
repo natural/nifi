@@ -66,13 +66,13 @@ public class S3EncryptionService extends AbstractControllerService implements Ab
         static String CSE_CMK = "CSE_CMK";
     }
 
-    private static final Map<String, S3EncryptionMethod> methodMap = new HashMap<String, S3EncryptionMethod>() {{
-        put(MethodName.NONE, new NoOpMethod());
-        put(MethodName.SSE_S3, new SSES3Method());
-        put(MethodName.SSE_KMS, new SSEKMSMethod());
-        put(MethodName.SSE_C, new SSECMethod());
-        put(MethodName.CSE_KMS, new CSEKMSMethod());
-        put(MethodName.CSE_CMK, new CSECMKMethod());
+    private static final Map<String, S3EncryptionStrategy> methodMap = new HashMap<String, S3EncryptionStrategy>() {{
+        put(MethodName.NONE, new NoOpStrategy());
+        put(MethodName.SSE_S3, new ServerSideS3EncryptionStrategy());
+        put(MethodName.SSE_KMS, new ServerSideKMSEncryptionStrategy());
+        put(MethodName.SSE_C, new ServerSideCustomerKeyEncryptionStrategy());
+        put(MethodName.CSE_KMS, new ClientSideKMSEncryptionStrategy());
+        put(MethodName.CSE_CMK, new ClientSideCustomerMasterKeyEncryptionStrategy());
     }};
 
     private static final AllowableValue NONE = new AllowableValue(MethodName.NONE, "None","No encryption.");
@@ -108,10 +108,9 @@ public class S3EncryptionService extends AbstractControllerService implements Ab
             .defaultValue(AbstractS3Processor.createAllowableValue(Regions.DEFAULT_REGION).getValue())
             .build();
 
-
     private String keyValue = "";
     private String region = "";
-    private S3EncryptionMethod encryptionMethod = null;
+    private S3EncryptionStrategy encryptionMethod = null;
 
     @OnEnabled
     public void onConfigured(final ConfigurationContext context) throws InitializationException {
@@ -138,25 +137,36 @@ public class S3EncryptionService extends AbstractControllerService implements Ab
         return Collections.unmodifiableList(properties);
     }
 
-    // Key for fun:
-    //
-    // N/XPzMAOl1V/hTEA9X9+6D4iBrsOi/+jflt4br90RF0=
-
-    /**
-     * Configure a request with server-side encryption parameters.
-     *
-     * NB:  we're doing the object type casting because both `setSSEAwsKeyManagementParams` and
-     * `setSSECustomerKey` aren't defined on the same base type.
-     *
-     * @param request AWS request; must be {@link PutObjectRequest} or {@link InitiateMultipartUploadRequest} instance.
-     * @param objectMetadata request metadata.
-     * @throws IOException when request object cannot be cast to expected subclass.
-     */
-    public void configureRequest(AmazonWebServiceRequest request, ObjectMetadata objectMetadata) throws IOException {
+    @Override
+    public void configurePutObjectRequest(PutObjectRequest request, ObjectMetadata objectMetadata) throws IOException {
         if (encryptionMethod == null) {
             throw new IOException("No encryption method set.");
         }
-        encryptionMethod.configureRequest(request, objectMetadata, keyValue);
+        encryptionMethod.configurePutObjectRequest(request, objectMetadata, keyValue);
+    }
+
+    @Override
+    public void configureInitiateMultipartUploadRequest(InitiateMultipartUploadRequest request, ObjectMetadata objectMetadata) throws IOException {
+        if (encryptionMethod == null) {
+            throw new IOException("No encryption method set.");
+        }
+        encryptionMethod.configureInitiateMultipartUploadRequest(request, objectMetadata, keyValue);
+    }
+
+    @Override
+    public void configureGetObjectRequest(GetObjectRequest request, ObjectMetadata objectMetadata) throws IOException {
+        if (encryptionMethod == null) {
+            throw new IOException("No encryption method set.");
+        }
+        encryptionMethod.configureGetObjectRequest(request, objectMetadata, keyValue);
+    }
+
+    @Override
+    public void configureUploadPartRequest(UploadPartRequest request, ObjectMetadata objectMetadata) throws IOException {
+        if (encryptionMethod == null) {
+            throw new IOException("No encryption method set.");
+        }
+        encryptionMethod.configureUploadPartRequest(request, objectMetadata, keyValue);
     }
 
     @Override
@@ -165,111 +175,76 @@ public class S3EncryptionService extends AbstractControllerService implements Ab
     }
 }
 
-class NoOpMethod implements S3EncryptionMethod {
-    @Override
-    public void configureRequest(AmazonWebServiceRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
-    }
-
-    @Override
-    public AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration, String region, String keyIdOrMaterial) {
-        return null;
-    }
+class NoOpStrategy implements S3EncryptionStrategy {
 }
 
-class SSES3Method implements S3EncryptionMethod {
+class ServerSideS3EncryptionStrategy implements S3EncryptionStrategy {
     @Override
-    public void configureRequest(AmazonWebServiceRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
+    public void configurePutObjectRequest(PutObjectRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
         objectMetadata.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION);
     }
-
-    @Override
-    public AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration, String region, String keyIdOrMaterial) {
-        return null;
-        // return new AmazonS3Client(credentialsProvider, clientConfiguration);
-    }
 }
 
-class SSEKMSMethod implements S3EncryptionMethod {
+class ServerSideKMSEncryptionStrategy implements S3EncryptionStrategy {
     @Override
-    public void configureRequest(AmazonWebServiceRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
+    public void configurePutObjectRequest(PutObjectRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
         SSEAwsKeyManagementParams keyParams = new SSEAwsKeyManagementParams(keyValue);
-        PutObjectRequest putObjectRequest = S3RequestTypeCast.toPutObjectRequest(request);
-        InitiateMultipartUploadRequest initUploadRequest = S3RequestTypeCast.toMultipartUploadRequest(request);
-
-        if (putObjectRequest != null) {
-            putObjectRequest.setSSEAwsKeyManagementParams(keyParams);
-        } else if (initUploadRequest != null) {
-            initUploadRequest.setSSEAwsKeyManagementParams(keyParams);
-        } else {
-            throw new IOException("Cannot cast request to subtype.");
-        }
+        request.setSSEAwsKeyManagementParams(keyParams);
     }
 
     @Override
-    public AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration, String region, String keyIdOrMaterial) {
-        return null;
+    public void configureInitiateMultipartUploadRequest(InitiateMultipartUploadRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
+        SSEAwsKeyManagementParams keyParams = new SSEAwsKeyManagementParams(keyValue);
+        request.setSSEAwsKeyManagementParams(keyParams);
     }
 }
 
-class SSECMethod implements S3EncryptionMethod {
+class ServerSideCustomerKeyEncryptionStrategy implements S3EncryptionStrategy {
     @Override
-    public void configureRequest(AmazonWebServiceRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
+    public void configurePutObjectRequest(PutObjectRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
         SSECustomerKey customerKey = new SSECustomerKey(keyValue);
-        PutObjectRequest putObjectRequest = S3RequestTypeCast.toPutObjectRequest(request);
-        InitiateMultipartUploadRequest initUploadRequest = S3RequestTypeCast.toMultipartUploadRequest(request);
-        UploadPartRequest uploadPartRequest = S3RequestTypeCast.toUploadPartRequest(request);
-        GetObjectRequest getObjectRequest = S3RequestTypeCast.toGetObjectRequest(request);
-
-        if (putObjectRequest != null) {
-            putObjectRequest.setSSECustomerKey(customerKey);
-        } else if (initUploadRequest != null) {
-            initUploadRequest.setSSECustomerKey(customerKey);
-        } else if (getObjectRequest != null) {
-            // get part requests need to re-specify customer keys:
-            getObjectRequest.setSSECustomerKey(customerKey);
-        } else if (uploadPartRequest != null) {
-            // upload part requests need to re-specify customer keys:
-            uploadPartRequest.setSSECustomerKey(customerKey);
-        } else {
-            throw new IOException("Cannot cast request to subtype.");
-        }
+        request.setSSECustomerKey(customerKey);
     }
 
     @Override
-    public AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration, String region, String keyIdOrMaterial) {
-        return null;
+    public void configureInitiateMultipartUploadRequest(InitiateMultipartUploadRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
+        SSECustomerKey customerKey = new SSECustomerKey(keyValue);
+        request.setSSECustomerKey(customerKey);
+    }
+
+    @Override
+    public void configureGetObjectRequest(GetObjectRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
+        SSECustomerKey customerKey = new SSECustomerKey(keyValue);
+        request.setSSECustomerKey(customerKey);
+    }
+
+    @Override
+    public void configureUploadPartRequest(UploadPartRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
+        SSECustomerKey customerKey = new SSECustomerKey(keyValue);
+        request.setSSECustomerKey(customerKey);
     }
 }
 
-class CSEKMSMethod implements S3EncryptionMethod {
-    @Override
-    public void configureRequest(AmazonWebServiceRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
-    }
 
+class ClientSideKMSEncryptionStrategy implements S3EncryptionStrategy {
     @Override
     public AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration, String region, String keyIdOrMaterial) {
         KMSEncryptionMaterialsProvider materialProvider = new KMSEncryptionMaterialsProvider(keyIdOrMaterial);
-        CryptoConfiguration cryptoConfig = new CryptoConfiguration();
+        boolean haveRegion = StringUtils.isNotBlank(region);
 
-        if (StringUtils.isNotBlank(region)) {
+        CryptoConfiguration cryptoConfig = new CryptoConfiguration();
+        if (haveRegion) {
             cryptoConfig.setAwsKmsRegion(Region.getRegion(Regions.fromName(region)));
         }
 
         AmazonS3EncryptionClient client = new AmazonS3EncryptionClient(credentialsProvider, materialProvider, cryptoConfig);
-        if (StringUtils.isNotBlank(region)) {
+        if (haveRegion) {
             client.setRegion(Region.getRegion(Regions.fromName(region)));
         }
+
         return client;
     }
 }
 
-class CSECMKMethod implements S3EncryptionMethod {
-    @Override
-    public void configureRequest(AmazonWebServiceRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
-    }
-
-    @Override
-    public AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration, String region, String keyIdOrMaterial) {
-        return null;
-    }
+class ClientSideCustomerMasterKeyEncryptionStrategy implements S3EncryptionStrategy {
 }

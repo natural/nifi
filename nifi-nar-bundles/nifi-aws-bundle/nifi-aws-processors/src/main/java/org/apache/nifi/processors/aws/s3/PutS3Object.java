@@ -493,7 +493,7 @@ public class PutS3Object extends AbstractS3Processor {
                             //----------------------------------------
                             final PutObjectRequest request = new PutObjectRequest(bucket, key, in, objectMetadata);
                             if (encryptionService != null) {
-                                encryptionService.configureRequest(request, objectMetadata);
+                                encryptionService.configurePutObjectRequest(request, objectMetadata);
                             }
 
                             request.setStorageClass(StorageClass.valueOf(context.getProperty(STORAGE_CLASS).getValue()));
@@ -593,7 +593,7 @@ public class PutS3Object extends AbstractS3Processor {
                             if (currentState.getUploadId().isEmpty()) {
                                 final InitiateMultipartUploadRequest initiateRequest = new InitiateMultipartUploadRequest(bucket, key, objectMetadata);
                                 if (encryptionService != null) {
-                                    encryptionService.configureRequest(initiateRequest, objectMetadata);
+                                    encryptionService.configureInitiateMultipartUploadRequest(initiateRequest, objectMetadata);
                                 }
                                 initiateRequest.setStorageClass(currentState.getStorageClass());
 
@@ -674,7 +674,7 @@ public class PutS3Object extends AbstractS3Processor {
                                         .withPartNumber(part)
                                         .withPartSize(thisPartSize);
                                 if (encryptionService != null) {
-                                    encryptionService.configureRequest(uploadRequest, objectMetadata);
+                                    encryptionService.configureUploadPartRequest(uploadRequest, objectMetadata);
                                 }
                                 try {
                                     UploadPartResult uploadPartResult = s3.uploadPart(uploadRequest);

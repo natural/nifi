@@ -108,7 +108,7 @@ public class FetchS3Object extends AbstractS3Processor {
         final ObjectMetadata objectMetadata = new ObjectMetadata(); // TODO:  ref the metadata below
         if (encryptionService != null) {
             try {
-                encryptionService.configureRequest(request, objectMetadata);
+                encryptionService.configureGetObjectRequest(request, objectMetadata);
             } catch (IOException e) {
                 getLogger().error("Could not configure encrypted S3 fetch: " + e);
                 return;
