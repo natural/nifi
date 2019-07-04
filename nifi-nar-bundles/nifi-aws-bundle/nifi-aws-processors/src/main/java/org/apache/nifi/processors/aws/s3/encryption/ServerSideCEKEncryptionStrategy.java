@@ -23,29 +23,31 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 
-import java.io.IOException;
-
-public class ServerSideCustomerKeyEncryptionStrategy implements S3EncryptionStrategy {
+/**
+ * See https://docs.aws.amazon.com/AmazonS3/latest/dev/ServerSideEncryptionCustomerKeys.html
+ *
+ */
+public class ServerSideCEKEncryptionStrategy implements S3EncryptionStrategy {
     @Override
-    public void configurePutObjectRequest(PutObjectRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
+    public void configurePutObjectRequest(PutObjectRequest request, ObjectMetadata objectMetadata, String keyValue) {
         SSECustomerKey customerKey = new SSECustomerKey(keyValue);
         request.setSSECustomerKey(customerKey);
     }
 
     @Override
-    public void configureInitiateMultipartUploadRequest(InitiateMultipartUploadRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
+    public void configureInitiateMultipartUploadRequest(InitiateMultipartUploadRequest request, ObjectMetadata objectMetadata, String keyValue) {
         SSECustomerKey customerKey = new SSECustomerKey(keyValue);
         request.setSSECustomerKey(customerKey);
     }
 
     @Override
-    public void configureGetObjectRequest(GetObjectRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
+    public void configureGetObjectRequest(GetObjectRequest request, ObjectMetadata objectMetadata, String keyValue) {
         SSECustomerKey customerKey = new SSECustomerKey(keyValue);
         request.setSSECustomerKey(customerKey);
     }
 
     @Override
-    public void configureUploadPartRequest(UploadPartRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
+    public void configureUploadPartRequest(UploadPartRequest request, ObjectMetadata objectMetadata, String keyValue) {
         SSECustomerKey customerKey = new SSECustomerKey(keyValue);
         request.setSSECustomerKey(customerKey);
     }

@@ -16,11 +16,6 @@
  */
 package org.apache.nifi.processors.aws.s3.encryption;
 
-/**
- * See https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingClientSideEncryption.html#client-side-encryption-kms-managed-master-key-intro
- *
- */
-
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.regions.Region;
@@ -28,21 +23,32 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3EncryptionClient;
 import com.amazonaws.services.s3.model.CryptoConfiguration;
-import com.amazonaws.services.s3.model.KMSEncryptionMaterialsProvider;
+import com.amazonaws.services.s3.model.EncryptionMaterials;
+import com.amazonaws.services.s3.model.StaticEncryptionMaterialsProvider;
 import org.apache.commons.lang3.StringUtils;
+import org.bouncycastle.util.encoders.Base64;
 
-public class ClientSideKMSEncryptionStrategy implements S3EncryptionStrategy {
+import javax.crypto.spec.SecretKeySpec;
+
+/**
+ * See https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingClientSideEncryption.html#client-side-encryption-client-side-master-key-intro
+ *
+ *
+ */
+public class ClientSideCMKEncryptionStrategy implements S3EncryptionStrategy {
     @Override
     public AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration, String region, String keyIdOrMaterial) {
-        KMSEncryptionMaterialsProvider materialProvider = new KMSEncryptionMaterialsProvider(keyIdOrMaterial);
+        byte[] keyMaterial = Base64.decode(keyIdOrMaterial);
+        SecretKeySpec symmetricKey = new SecretKeySpec(keyMaterial, "AES");
+        StaticEncryptionMaterialsProvider encryptionMaterialsProvider = new StaticEncryptionMaterialsProvider(new EncryptionMaterials(symmetricKey));
         boolean haveRegion = StringUtils.isNotBlank(region);
-
         CryptoConfiguration cryptoConfig = new CryptoConfiguration();
+
         if (haveRegion) {
             cryptoConfig.setAwsKmsRegion(Region.getRegion(Regions.fromName(region)));
         }
 
-        AmazonS3EncryptionClient client = new AmazonS3EncryptionClient(credentialsProvider, materialProvider, cryptoConfig);
+        AmazonS3EncryptionClient client = new AmazonS3EncryptionClient(credentialsProvider, encryptionMaterialsProvider, cryptoConfig);
         if (haveRegion) {
             client.setRegion(Region.getRegion(Regions.fromName(region)));
         }

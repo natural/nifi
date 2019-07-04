@@ -25,20 +25,17 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 
-
-import java.io.IOException;
-
 public interface S3EncryptionStrategy {
-    default void configurePutObjectRequest(PutObjectRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
+    default void configurePutObjectRequest(PutObjectRequest request, ObjectMetadata objectMetadata, String keyValue) {
     }
 
-    default void configureInitiateMultipartUploadRequest(InitiateMultipartUploadRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
+    default void configureInitiateMultipartUploadRequest(InitiateMultipartUploadRequest request, ObjectMetadata objectMetadata, String keyValue) {
     }
 
-    default void configureGetObjectRequest(GetObjectRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
+    default void configureGetObjectRequest(GetObjectRequest request, ObjectMetadata objectMetadata, String keyValue) {
     }
 
-    default void configureUploadPartRequest(UploadPartRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
+    default void configureUploadPartRequest(UploadPartRequest request, ObjectMetadata objectMetadata, String keyValue) {
     }
 
     default AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration, String region, String keyIdOrMaterial) {

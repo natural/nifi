@@ -21,17 +21,19 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 
-import java.io.IOException;
-
+/**
+ * See https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingKMSEncryption.html
+ *
+ */
 public class ServerSideKMSEncryptionStrategy implements S3EncryptionStrategy {
     @Override
-    public void configurePutObjectRequest(PutObjectRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
+    public void configurePutObjectRequest(PutObjectRequest request, ObjectMetadata objectMetadata, String keyValue) {
         SSEAwsKeyManagementParams keyParams = new SSEAwsKeyManagementParams(keyValue);
         request.setSSEAwsKeyManagementParams(keyParams);
     }
 
     @Override
-    public void configureInitiateMultipartUploadRequest(InitiateMultipartUploadRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
+    public void configureInitiateMultipartUploadRequest(InitiateMultipartUploadRequest request, ObjectMetadata objectMetadata, String keyValue) {
         SSEAwsKeyManagementParams keyParams = new SSEAwsKeyManagementParams(keyValue);
         request.setSSEAwsKeyManagementParams(keyParams);
     }

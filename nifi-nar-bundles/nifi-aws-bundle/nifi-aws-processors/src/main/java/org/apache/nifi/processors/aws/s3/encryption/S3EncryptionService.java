@@ -60,14 +60,13 @@ public class S3EncryptionService extends AbstractControllerService implements Ab
     public static final String METHOD_NAME_CSE_KMS = "CSE_KMS";
     public static final String METHOD_NAME_CSE_CMK = "CSE_CMK";
 
-
-    private static final Map<String, S3EncryptionStrategy> methodMap = new HashMap<String, S3EncryptionStrategy>() {{
+    private static final Map<String, S3EncryptionStrategy> namedStrategies = new HashMap<String, S3EncryptionStrategy>() {{
         put(METHOD_NAME_NONE, new NoOpStrategy());
         put(METHOD_NAME_SSE_S3, new ServerSideS3EncryptionStrategy());
         put(METHOD_NAME_SSE_KMS, new ServerSideKMSEncryptionStrategy());
-        put(METHOD_NAME_SSE_C, new ServerSideCustomerKeyEncryptionStrategy());
+        put(METHOD_NAME_SSE_C, new ServerSideCEKEncryptionStrategy());
         put(METHOD_NAME_CSE_KMS, new ClientSideKMSEncryptionStrategy());
-        put(METHOD_NAME_CSE_CMK, new ClientSideCustomerMasterKeyEncryptionStrategy());
+        put(METHOD_NAME_CSE_CMK, new ClientSideCMKEncryptionStrategy());
     }};
 
     private static final AllowableValue NONE = new AllowableValue(METHOD_NAME_NONE, "None","No encryption.");
@@ -105,7 +104,7 @@ public class S3EncryptionService extends AbstractControllerService implements Ab
 
     private String keyValue = "";
     private String region = "";
-    private S3EncryptionStrategy encryptionMethod = null;
+    private S3EncryptionStrategy encryptionStrategy = null;
 
     @OnEnabled
     public void onConfigured(final ConfigurationContext context) throws InitializationException {
@@ -115,9 +114,9 @@ public class S3EncryptionService extends AbstractControllerService implements Ab
         if (context.getProperty(REGION) != null ) {
             region = context.getProperty(REGION).getValue();
         }
-        encryptionMethod = methodMap.get(methodName);
+        encryptionStrategy = namedStrategies.get(methodName);
 
-        if (encryptionMethod == null) {
+        if (encryptionStrategy == null) {
             final String msg = "No encryption method found for: " + methodName;
             logger.warn(msg);
             throw new InitializationException(msg);
@@ -129,44 +128,45 @@ public class S3EncryptionService extends AbstractControllerService implements Ab
         final List<PropertyDescriptor> properties = new ArrayList<>();
         properties.add(ENCRYPTION_METHOD);
         properties.add(ENCRYPTION_VALUE);
+        properties.add(REGION);
         return Collections.unmodifiableList(properties);
     }
 
     @Override
     public void configurePutObjectRequest(PutObjectRequest request, ObjectMetadata objectMetadata) throws IOException {
-        if (encryptionMethod == null) {
+        if (encryptionStrategy == null) {
             throw new IOException("No encryption method set.");
         }
-        encryptionMethod.configurePutObjectRequest(request, objectMetadata, keyValue);
+        encryptionStrategy.configurePutObjectRequest(request, objectMetadata, keyValue);
     }
 
     @Override
     public void configureInitiateMultipartUploadRequest(InitiateMultipartUploadRequest request, ObjectMetadata objectMetadata) throws IOException {
-        if (encryptionMethod == null) {
+        if (encryptionStrategy == null) {
             throw new IOException("No encryption method set.");
         }
-        encryptionMethod.configureInitiateMultipartUploadRequest(request, objectMetadata, keyValue);
+        encryptionStrategy.configureInitiateMultipartUploadRequest(request, objectMetadata, keyValue);
     }
 
     @Override
     public void configureGetObjectRequest(GetObjectRequest request, ObjectMetadata objectMetadata) throws IOException {
-        if (encryptionMethod == null) {
+        if (encryptionStrategy == null) {
             throw new IOException("No encryption method set.");
         }
-        encryptionMethod.configureGetObjectRequest(request, objectMetadata, keyValue);
+        encryptionStrategy.configureGetObjectRequest(request, objectMetadata, keyValue);
     }
 
     @Override
     public void configureUploadPartRequest(UploadPartRequest request, ObjectMetadata objectMetadata) throws IOException {
-        if (encryptionMethod == null) {
+        if (encryptionStrategy == null) {
             throw new IOException("No encryption method set.");
         }
-        encryptionMethod.configureUploadPartRequest(request, objectMetadata, keyValue);
+        encryptionStrategy.configureUploadPartRequest(request, objectMetadata, keyValue);
     }
 
     @Override
     public AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration) {
-        return encryptionMethod.createClient(credentialsProvider, clientConfiguration, region, keyValue);
+        return encryptionStrategy.createClient(credentialsProvider, clientConfiguration, region, keyValue);
     }
 }
 

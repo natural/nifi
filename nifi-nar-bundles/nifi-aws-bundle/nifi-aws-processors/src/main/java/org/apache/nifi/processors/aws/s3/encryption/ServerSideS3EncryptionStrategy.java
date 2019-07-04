@@ -19,11 +19,14 @@ package org.apache.nifi.processors.aws.s3.encryption;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 
-import java.io.IOException;
 
+/**
+ * See https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingServerSideEncryption.html
+ *
+ */
 public class ServerSideS3EncryptionStrategy implements S3EncryptionStrategy {
     @Override
-    public void configurePutObjectRequest(PutObjectRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
+    public void configurePutObjectRequest(PutObjectRequest request, ObjectMetadata objectMetadata, String keyValue) {
         objectMetadata.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION);
     }
 }
