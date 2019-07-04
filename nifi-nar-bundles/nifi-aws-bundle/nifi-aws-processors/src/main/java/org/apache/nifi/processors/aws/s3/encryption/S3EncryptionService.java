@@ -14,25 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.processors.aws.s3;
+package org.apache.nifi.processors.aws.s3.encryption;
 
-import com.amazonaws.AmazonWebServiceRequest;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.AmazonS3EncryptionClient;
-import com.amazonaws.services.s3.model.CryptoConfiguration;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
-import com.amazonaws.services.s3.model.KMSEncryptionMaterialsProvider;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
-import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.UploadPartRequest;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnEnabled;
 import org.apache.nifi.components.AllowableValue;
@@ -41,6 +33,10 @@ import org.apache.nifi.controller.AbstractControllerService;
 import org.apache.nifi.controller.ConfigurationContext;
 import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.processor.util.StandardValidators;
+
+import org.apache.nifi.processors.aws.s3.AbstractS3EncryptionService;
+import org.apache.nifi.processors.aws.s3.AbstractS3Processor;
+
 import org.apache.nifi.reporting.InitializationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,32 +53,31 @@ import java.util.Map;
 public class S3EncryptionService extends AbstractControllerService implements AbstractS3EncryptionService {
     private static final Logger logger = LoggerFactory.getLogger(S3EncryptionService.class);
 
-    static class MethodName {
-        static String NONE = "NONE";
-        static String SSE_S3 = "SSE_S3";
-        static String SSE_KMS = "SSE_KMS";
-        static String SSE_C = "SSE_C";
-        static String CSE_KMS = "CSE_KMS";
-        static String CSE_CMK = "CSE_CMK";
-    }
+    public static final String METHOD_NAME_NONE = "NONE";
+    public static final String METHOD_NAME_SSE_S3 = "SSE_S3";
+    public static final String METHOD_NAME_SSE_KMS = "SSE_KMS";
+    public static final String METHOD_NAME_SSE_C = "SSE_C";
+    public static final String METHOD_NAME_CSE_KMS = "CSE_KMS";
+    public static final String METHOD_NAME_CSE_CMK = "CSE_CMK";
+
 
     private static final Map<String, S3EncryptionStrategy> methodMap = new HashMap<String, S3EncryptionStrategy>() {{
-        put(MethodName.NONE, new NoOpStrategy());
-        put(MethodName.SSE_S3, new ServerSideS3EncryptionStrategy());
-        put(MethodName.SSE_KMS, new ServerSideKMSEncryptionStrategy());
-        put(MethodName.SSE_C, new ServerSideCustomerKeyEncryptionStrategy());
-        put(MethodName.CSE_KMS, new ClientSideKMSEncryptionStrategy());
-        put(MethodName.CSE_CMK, new ClientSideCustomerMasterKeyEncryptionStrategy());
+        put(METHOD_NAME_NONE, new NoOpStrategy());
+        put(METHOD_NAME_SSE_S3, new ServerSideS3EncryptionStrategy());
+        put(METHOD_NAME_SSE_KMS, new ServerSideKMSEncryptionStrategy());
+        put(METHOD_NAME_SSE_C, new ServerSideCustomerKeyEncryptionStrategy());
+        put(METHOD_NAME_CSE_KMS, new ClientSideKMSEncryptionStrategy());
+        put(METHOD_NAME_CSE_CMK, new ClientSideCustomerMasterKeyEncryptionStrategy());
     }};
 
-    private static final AllowableValue NONE = new AllowableValue(MethodName.NONE, "None","No encryption.");
-    private static final AllowableValue SSE_S3 = new AllowableValue(MethodName.SSE_S3, "Server-side S3","Use server-side, S3-managed encryption.");
-    private static final AllowableValue SSE_KMS = new AllowableValue(MethodName.SSE_KMS, "Server-side KMS","Use server-side, KMS key to perform encryption.");
-    private static final AllowableValue SSE_C = new AllowableValue(MethodName.SSE_C, "Server-side Customer Key","Use server-side, customer-supplied key for encryption.");
-    private static final AllowableValue CSE_KMS = new AllowableValue(MethodName.CSE_KMS, "Client-side KMS","Use client-side, KMS key to perform encryption.");
-    private static final AllowableValue CSE_CMK = new AllowableValue(MethodName.CSE_CMK, "Client-side Customer Master Key","Use client-side, customer-supplied master key to perform encryption.");
+    private static final AllowableValue NONE = new AllowableValue(METHOD_NAME_NONE, "None","No encryption.");
+    private static final AllowableValue SSE_S3 = new AllowableValue(METHOD_NAME_SSE_S3, "Server-side S3","Use server-side, S3-managed encryption.");
+    private static final AllowableValue SSE_KMS = new AllowableValue(METHOD_NAME_SSE_KMS, "Server-side KMS","Use server-side, KMS key to perform encryption.");
+    private static final AllowableValue SSE_C = new AllowableValue(METHOD_NAME_SSE_C, "Server-side Customer Key","Use server-side, customer-supplied key for encryption.");
+    private static final AllowableValue CSE_KMS = new AllowableValue(METHOD_NAME_CSE_KMS, "Client-side KMS","Use client-side, KMS key to perform encryption.");
+    private static final AllowableValue CSE_CMK = new AllowableValue(METHOD_NAME_CSE_CMK, "Client-side Customer Master Key","Use client-side, customer-supplied master key to perform encryption.");
 
-    static final PropertyDescriptor ENCRYPTION_METHOD = new PropertyDescriptor.Builder()
+    public static final PropertyDescriptor ENCRYPTION_METHOD = new PropertyDescriptor.Builder()
             .name("Encryption Method")
             .displayName("Encryption Method")
             .description("Method to use for S3 data encryption and decryption.")
@@ -91,7 +86,7 @@ public class S3EncryptionService extends AbstractControllerService implements Ab
             .defaultValue(NONE.getValue())
             .build();
 
-    static final PropertyDescriptor ENCRYPTION_VALUE = new PropertyDescriptor.Builder()
+    public static final PropertyDescriptor ENCRYPTION_VALUE = new PropertyDescriptor.Builder()
             .name("Key ID or Key Material")
             .displayName("Key ID or Key Material")
             .description("Key ID or Key Material used to encrypt and decrypt S3 data.")
@@ -175,76 +170,4 @@ public class S3EncryptionService extends AbstractControllerService implements Ab
     }
 }
 
-class NoOpStrategy implements S3EncryptionStrategy {
-}
 
-class ServerSideS3EncryptionStrategy implements S3EncryptionStrategy {
-    @Override
-    public void configurePutObjectRequest(PutObjectRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
-        objectMetadata.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION);
-    }
-}
-
-class ServerSideKMSEncryptionStrategy implements S3EncryptionStrategy {
-    @Override
-    public void configurePutObjectRequest(PutObjectRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
-        SSEAwsKeyManagementParams keyParams = new SSEAwsKeyManagementParams(keyValue);
-        request.setSSEAwsKeyManagementParams(keyParams);
-    }
-
-    @Override
-    public void configureInitiateMultipartUploadRequest(InitiateMultipartUploadRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
-        SSEAwsKeyManagementParams keyParams = new SSEAwsKeyManagementParams(keyValue);
-        request.setSSEAwsKeyManagementParams(keyParams);
-    }
-}
-
-class ServerSideCustomerKeyEncryptionStrategy implements S3EncryptionStrategy {
-    @Override
-    public void configurePutObjectRequest(PutObjectRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
-        SSECustomerKey customerKey = new SSECustomerKey(keyValue);
-        request.setSSECustomerKey(customerKey);
-    }
-
-    @Override
-    public void configureInitiateMultipartUploadRequest(InitiateMultipartUploadRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
-        SSECustomerKey customerKey = new SSECustomerKey(keyValue);
-        request.setSSECustomerKey(customerKey);
-    }
-
-    @Override
-    public void configureGetObjectRequest(GetObjectRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
-        SSECustomerKey customerKey = new SSECustomerKey(keyValue);
-        request.setSSECustomerKey(customerKey);
-    }
-
-    @Override
-    public void configureUploadPartRequest(UploadPartRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
-        SSECustomerKey customerKey = new SSECustomerKey(keyValue);
-        request.setSSECustomerKey(customerKey);
-    }
-}
-
-
-class ClientSideKMSEncryptionStrategy implements S3EncryptionStrategy {
-    @Override
-    public AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration, String region, String keyIdOrMaterial) {
-        KMSEncryptionMaterialsProvider materialProvider = new KMSEncryptionMaterialsProvider(keyIdOrMaterial);
-        boolean haveRegion = StringUtils.isNotBlank(region);
-
-        CryptoConfiguration cryptoConfig = new CryptoConfiguration();
-        if (haveRegion) {
-            cryptoConfig.setAwsKmsRegion(Region.getRegion(Regions.fromName(region)));
-        }
-
-        AmazonS3EncryptionClient client = new AmazonS3EncryptionClient(credentialsProvider, materialProvider, cryptoConfig);
-        if (haveRegion) {
-            client.setRegion(Region.getRegion(Regions.fromName(region)));
-        }
-
-        return client;
-    }
-}
-
-class ClientSideCustomerMasterKeyEncryptionStrategy implements S3EncryptionStrategy {
-}

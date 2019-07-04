@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.processors.aws.s3;
+package org.apache.nifi.processors.aws.s3.encryption;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
@@ -28,7 +28,7 @@ import com.amazonaws.services.s3.model.UploadPartRequest;
 
 import java.io.IOException;
 
-interface S3EncryptionStrategy {
+public interface S3EncryptionStrategy {
     default void configurePutObjectRequest(PutObjectRequest request, ObjectMetadata objectMetadata, String keyValue) throws IOException {
     }
 
