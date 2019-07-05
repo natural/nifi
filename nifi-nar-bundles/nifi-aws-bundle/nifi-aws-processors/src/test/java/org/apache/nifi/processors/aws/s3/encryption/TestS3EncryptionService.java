@@ -44,11 +44,11 @@ public class TestS3EncryptionService {
         service = new S3EncryptionService();
         context = Mockito.mock(ConfigurationContext.class);
 
-        strategyName = S3EncryptionService.METHOD_NAME_NONE;
+        strategyName = S3EncryptionService.STRATEGY_NAME_NONE;
         keyIdOrMaterial = "test-key-id";
         region = "us-west-1";
 
-        Mockito.when(context.getProperty(S3EncryptionService.ENCRYPTION_METHOD)).thenReturn(new MockPropertyValue(strategyName));
+        Mockito.when(context.getProperty(S3EncryptionService.ENCRYPTION_STRATEGY)).thenReturn(new MockPropertyValue(strategyName));
         Mockito.when(context.getProperty(S3EncryptionService.ENCRYPTION_VALUE)).thenReturn(new MockPropertyValue(keyIdOrMaterial));
         Mockito.when(context.getProperty(S3EncryptionService.REGION)).thenReturn(new MockPropertyValue(region));
         service.onConfigured(context);
@@ -95,7 +95,7 @@ public class TestS3EncryptionService {
         List<PropertyDescriptor> properties = service.getSupportedPropertyDescriptors();
         Assert.assertEquals(3, properties.size());
 
-        Assert.assertEquals(properties.get(0).getName(), S3EncryptionService.ENCRYPTION_METHOD.getName());
+        Assert.assertEquals(properties.get(0).getName(), S3EncryptionService.ENCRYPTION_STRATEGY.getName());
         Assert.assertEquals(properties.get(1).getName(), S3EncryptionService.ENCRYPTION_VALUE.getName());
         Assert.assertEquals(properties.get(2).getName(), S3EncryptionService.REGION.getName());
     }
