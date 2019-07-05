@@ -95,7 +95,7 @@ public class ITPutS3Object extends AbstractS3IT {
 
 
     @BeforeClass
-    public static void oneTimeCreateKMSKey() {
+    public static void setupClass() {
         byte[] keyRawBytes = new byte[32];
         SecureRandom secureRandom = new SecureRandom();
         secureRandom.nextBytes(keyRawBytes);
@@ -105,13 +105,11 @@ public class ITPutS3Object extends AbstractS3IT {
     }
 
     @AfterClass
-    public static void oneTimeDestroyKMSKey() {
+    public static void teardownClass() {
         if (StringUtils.isNotEmpty(kmsKeyId)) {
             deleteKMSKey(kmsKeyId);
         }
     }
-
-
 
     @Test
     public void testSimplePut() throws IOException {

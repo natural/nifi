@@ -275,8 +275,8 @@ public class PutS3Object extends AbstractS3Processor {
 
     protected boolean localUploadExistsInS3(final AmazonS3Client s3, final String bucket, final MultipartState localState) {
         ListMultipartUploadsRequest listRequest = new ListMultipartUploadsRequest(bucket);
-        // No call needed to configure encryption for ListMultipartUploadsRequest.
         MultipartUploadListing listing = s3.listMultipartUploads(listRequest);
+
         for (MultipartUpload upload : listing.getMultipartUploads()) {
             if (upload.getUploadId().equals(localState.getUploadId())) {
                 return true;
@@ -700,7 +700,8 @@ public class PutS3Object extends AbstractS3Processor {
                             //------------------------------------------------------------
                             CompleteMultipartUploadRequest completeRequest = new CompleteMultipartUploadRequest(
                                     bucket, key, currentState.getUploadId(), currentState.getPartETags());
-                            // No call to encryptionService needed for CompleteMultipartUploadRequest.
+
+                            // No call to an encryption service is needed for a CompleteMultipartUploadRequest.
                             try {
                                 CompleteMultipartUploadResult completeResult =
                                         s3.completeMultipartUpload(completeRequest);
@@ -827,7 +828,7 @@ public class PutS3Object extends AbstractS3Processor {
         final String uploadId = upload.getUploadId();
         final AbortMultipartUploadRequest abortRequest = new AbortMultipartUploadRequest(
                 bucket, uploadKey, uploadId);
-        // No call needed to configure encryption for AbortMultipartUploadRequest.
+        // No call to an encryption service is necessary for an AbortMultipartUploadRequest.
         try {
             s3.abortMultipartUpload(abortRequest);
             getLogger().info("Aborting out of date multipart upload, bucket {} key {} ID {}, initiated {}",

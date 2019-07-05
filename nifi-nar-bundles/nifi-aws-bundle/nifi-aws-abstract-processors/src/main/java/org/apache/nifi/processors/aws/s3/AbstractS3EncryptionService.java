@@ -26,17 +26,55 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import org.apache.nifi.controller.ControllerService;
 
-import java.io.IOException;
-
-
+/**
+ * This interface defines how clients interact with an S3 encryption service.
+ */
 public interface AbstractS3EncryptionService extends ControllerService {
-    void configurePutObjectRequest(PutObjectRequest request, ObjectMetadata objectMetadata) throws IOException;
-    void configureInitiateMultipartUploadRequest(InitiateMultipartUploadRequest request, ObjectMetadata objectMetadata) throws IOException;
-    void configureGetObjectRequest(GetObjectRequest request, ObjectMetadata objectMetadata) throws IOException;
-    void configureUploadPartRequest(UploadPartRequest request, ObjectMetadata objectMetadata) throws IOException;
 
-    AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration);
+    /**
+     * Configure a {@link PutObjectRequest} for encryption.
+     * @param request the request to configure.
+     * @param objectMetadata the request metadata to configure.
+     */
+    void configurePutObjectRequest(PutObjectRequest request, ObjectMetadata objectMetadata);
 
+    /**
+     * Configure an {@link InitiateMultipartUploadRequest} for encryption.
+     * @param request the request to configure.
+     * @param objectMetadata the request metadata to configure.
+     */
+    void configureInitiateMultipartUploadRequest(InitiateMultipartUploadRequest request, ObjectMetadata objectMetadata);
+
+    /**
+     * Configure a {@link GetObjectRequest} for encryption.
+     * @param request the request to configure.
+     * @param objectMetadata the request metadata to configure.
+     */
+    void configureGetObjectRequest(GetObjectRequest request, ObjectMetadata objectMetadata);
+
+    /**
+     * Configure an {@link UploadPartRequest} for encryption.
+     * @param request the request to configure.
+     * @param objectMetadata the request metadata to configure.
+     */
+    void configureUploadPartRequest(UploadPartRequest request, ObjectMetadata objectMetadata);
+
+    /**
+     * Create an S3 encryption client.
+     *
+     * @param credentialsProvider AWS credentials provider.
+     * @param clientConfiguration Client configuration.
+     * @return {@link AmazonS3Client}, perhaps an {@link com.amazonaws.services.s3.AmazonS3EncryptionClient}
+     */
+    AmazonS3Client createEncryptionClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration);
+
+    /**
+     * @return The region associated with the service, as a String.
+     */
     String getRegion();
+
+    /**
+     * @return The name of the encryption strategy associated with the service.
+     */
     String getStrategyName();
 }

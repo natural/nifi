@@ -29,8 +29,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
-
-import java.io.IOException;
 import java.util.List;
 
 
@@ -64,11 +62,11 @@ public class TestS3EncryptionService {
 
     @Test
     public void testCreateClientReturnsNull() {
-        Assert.assertNull(service.createClient(null, null));
+        Assert.assertNull(service.createEncryptionClient(null, null));
     }
 
     @Test
-    public void testRequests() throws IOException {
+    public void testRequests() {
         final ObjectMetadata metadata = new ObjectMetadata();
         final GetObjectRequest getObjectRequest = new GetObjectRequest("", "");
         final InitiateMultipartUploadRequest initUploadRequest = new InitiateMultipartUploadRequest("", "");

@@ -21,7 +21,6 @@ import java.util.Collections;
 import java.util.List;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.services.s3.AmazonS3Encryption;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.components.AllowableValue;
 import org.apache.nifi.components.PropertyDescriptor;
@@ -148,7 +147,7 @@ public abstract class AbstractS3Processor extends AbstractAWSCredentialsProvider
         AmazonS3Client s3 = null;
 
         if (encryptionService != null) {
-            s3 = encryptionService.createClient(credentialsProvider, config);
+            s3 = encryptionService.createEncryptionClient(credentialsProvider, config);
         }
 
         if (s3 == null) {

@@ -42,7 +42,7 @@ public class TestS3EncryptionStrategies {
     private UploadPartRequest uploadPartRequest = null;
 
     @Before
-    public void setUp() {
+    public void setup() {
         byte[] keyRawBytes = new byte[32];
         SecureRandom secureRandom = new SecureRandom();
         secureRandom.nextBytes(keyRawBytes);
@@ -60,7 +60,7 @@ public class TestS3EncryptionStrategies {
         S3EncryptionStrategy strategy = new ClientSideKMSEncryptionStrategy();
 
         // This shows that the strategy builds a client:
-        Assert.assertNotNull(strategy.createClient(null, null, region, randomKeyMaterial));
+        Assert.assertNotNull(strategy.createEncryptionClient(null, null, region, randomKeyMaterial));
 
         // This shows that the strategy does not modify the metadata or any of the requests:
         Assert.assertNull(metadata.getSSEAlgorithm());
@@ -80,7 +80,7 @@ public class TestS3EncryptionStrategies {
         S3EncryptionStrategy strategy = new ClientSideCMKEncryptionStrategy();
 
         // This shows that the strategy builds a client:
-        Assert.assertNotNull(strategy.createClient(null, null, region, randomKeyMaterial));
+        Assert.assertNotNull(strategy.createEncryptionClient(null, null, region, randomKeyMaterial));
 
         // This shows that the strategy does not modify the metadata or any of the requests:
         Assert.assertNull(metadata.getSSEAlgorithm());
@@ -100,7 +100,7 @@ public class TestS3EncryptionStrategies {
         S3EncryptionStrategy strategy = new ServerSideCEKEncryptionStrategy();
 
         // This shows that the strategy does *not* build a client:
-        Assert.assertNull(strategy.createClient(null, null, "", ""));
+        Assert.assertNull(strategy.createEncryptionClient(null, null, "", ""));
 
         // This shows that the strategy sets the SSE customer key as expected:
         strategy.configurePutObjectRequest(putObjectRequest, metadata, randomKeyMaterial);
@@ -130,7 +130,7 @@ public class TestS3EncryptionStrategies {
         S3EncryptionStrategy strategy = new ServerSideKMSEncryptionStrategy();
 
         // This shows that the strategy does *not* build a client:
-        Assert.assertNull(strategy.createClient(null, null, "", ""));
+        Assert.assertNull(strategy.createEncryptionClient(null, null, "", ""));
 
         // This shows that the strategy sets the SSE KMS key id as expected:
         strategy.configurePutObjectRequest(putObjectRequest, metadata, randomKeyId);
@@ -150,7 +150,7 @@ public class TestS3EncryptionStrategies {
         S3EncryptionStrategy strategy = new ServerSideS3EncryptionStrategy();
 
         // This shows that the strategy does *not* build a client:
-        Assert.assertNull(strategy.createClient(null, null, "", ""));
+        Assert.assertNull(strategy.createEncryptionClient(null, null, "", ""));
 
         // This shows that the strategy sets the SSE algorithm field as expected:
         strategy.configurePutObjectRequest(putObjectRequest, metadata, "");
@@ -162,7 +162,7 @@ public class TestS3EncryptionStrategies {
         S3EncryptionStrategy strategy = new NoOpEncryptionStrategy();
 
         // This shows that the strategy does *not* build a client:
-        Assert.assertNull(strategy.createClient(null, null, "", ""));
+        Assert.assertNull(strategy.createEncryptionClient(null, null, "", ""));
 
         // This shows the request and metadata start with various null objects:
         Assert.assertNull(metadata.getSSEAlgorithm());

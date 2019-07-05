@@ -33,7 +33,7 @@ import org.apache.commons.lang3.StringUtils;
 
 public class ClientSideKMSEncryptionStrategy implements S3EncryptionStrategy {
     @Override
-    public AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration, String region, String keyIdOrMaterial) {
+    public AmazonS3Client createEncryptionClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration, String region, String keyIdOrMaterial) {
         KMSEncryptionMaterialsProvider materialProvider = new KMSEncryptionMaterialsProvider(keyIdOrMaterial);
         boolean haveRegion = StringUtils.isNotBlank(region);
 

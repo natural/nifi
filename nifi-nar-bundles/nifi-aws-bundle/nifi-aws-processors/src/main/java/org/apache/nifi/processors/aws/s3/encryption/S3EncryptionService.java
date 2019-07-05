@@ -41,7 +41,6 @@ import org.apache.nifi.reporting.InitializationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -104,8 +103,8 @@ public class S3EncryptionService extends AbstractControllerService implements Ab
 
     private String keyValue = "";
     private String region = "";
-    private S3EncryptionStrategy encryptionStrategy = null;
-    private String strategyName = "";
+    private S3EncryptionStrategy encryptionStrategy = new NoOpEncryptionStrategy();
+    private String strategyName = METHOD_NAME_NONE;
 
     @OnEnabled
     public void onConfigured(final ConfigurationContext context) throws InitializationException {
@@ -134,40 +133,28 @@ public class S3EncryptionService extends AbstractControllerService implements Ab
     }
 
     @Override
-    public void configurePutObjectRequest(PutObjectRequest request, ObjectMetadata objectMetadata) throws IOException {
-        if (encryptionStrategy == null) {
-            throw new IOException("No encryption method set.");
-        }
+    public void configurePutObjectRequest(PutObjectRequest request, ObjectMetadata objectMetadata) {
         encryptionStrategy.configurePutObjectRequest(request, objectMetadata, keyValue);
     }
 
     @Override
-    public void configureInitiateMultipartUploadRequest(InitiateMultipartUploadRequest request, ObjectMetadata objectMetadata) throws IOException {
-        if (encryptionStrategy == null) {
-            throw new IOException("No encryption method set.");
-        }
+    public void configureInitiateMultipartUploadRequest(InitiateMultipartUploadRequest request, ObjectMetadata objectMetadata) {
         encryptionStrategy.configureInitiateMultipartUploadRequest(request, objectMetadata, keyValue);
     }
 
     @Override
-    public void configureGetObjectRequest(GetObjectRequest request, ObjectMetadata objectMetadata) throws IOException {
-        if (encryptionStrategy == null) {
-            throw new IOException("No encryption method set.");
-        }
+    public void configureGetObjectRequest(GetObjectRequest request, ObjectMetadata objectMetadata) {
         encryptionStrategy.configureGetObjectRequest(request, objectMetadata, keyValue);
     }
 
     @Override
-    public void configureUploadPartRequest(UploadPartRequest request, ObjectMetadata objectMetadata) throws IOException {
-        if (encryptionStrategy == null) {
-            throw new IOException("No encryption method set.");
-        }
+    public void configureUploadPartRequest(UploadPartRequest request, ObjectMetadata objectMetadata) {
         encryptionStrategy.configureUploadPartRequest(request, objectMetadata, keyValue);
     }
 
     @Override
-    public AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration) {
-        return encryptionStrategy.createClient(credentialsProvider, clientConfiguration, region, keyValue);
+    public AmazonS3Client createEncryptionClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration) {
+        return encryptionStrategy.createEncryptionClient(credentialsProvider, clientConfiguration, region, keyValue);
     }
 
     @Override

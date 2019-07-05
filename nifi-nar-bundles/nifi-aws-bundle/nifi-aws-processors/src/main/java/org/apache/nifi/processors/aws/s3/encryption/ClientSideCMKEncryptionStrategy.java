@@ -37,7 +37,7 @@ import javax.crypto.spec.SecretKeySpec;
  */
 public class ClientSideCMKEncryptionStrategy implements S3EncryptionStrategy {
     @Override
-    public AmazonS3Client createClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration, String region, String keyIdOrMaterial) {
+    public AmazonS3Client createEncryptionClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration, String region, String keyIdOrMaterial) {
         byte[] keyMaterial = Base64.decode(keyIdOrMaterial);
         SecretKeySpec symmetricKey = new SecretKeySpec(keyMaterial, "AES");
         StaticEncryptionMaterialsProvider encryptionMaterialsProvider = new StaticEncryptionMaterialsProvider(new EncryptionMaterials(symmetricKey));
