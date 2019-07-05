@@ -26,6 +26,7 @@ import com.amazonaws.services.s3.model.CryptoConfiguration;
 import com.amazonaws.services.s3.model.EncryptionMaterials;
 import com.amazonaws.services.s3.model.StaticEncryptionMaterialsProvider;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.nifi.components.ValidationResult;
 import org.bouncycastle.util.encoders.Base64;
 
 import javax.crypto.spec.SecretKeySpec;
@@ -54,5 +55,21 @@ public class ClientSideCMKEncryptionStrategy implements S3EncryptionStrategy {
         }
 
         return client;
+    }
+
+    @Override
+    public ValidationResult validateKey(String keyValue) {
+        boolean decoded = false;
+        boolean sized = false;
+        byte[] keyMaterial;
+
+        try {
+            keyMaterial = Base64.decode(keyValue);
+            decoded = true;
+            sized = (keyMaterial.length > 0) && (keyMaterial.length % 32) == 0;
+        } catch (final Exception ignored) {
+        }
+
+        return new ValidationResult.Builder().valid(decoded && sized).build();
     }
 }

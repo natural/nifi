@@ -29,6 +29,8 @@ import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnEnabled;
 import org.apache.nifi.components.AllowableValue;
 import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.components.ValidationContext;
+import org.apache.nifi.components.ValidationResult;
 import org.apache.nifi.controller.AbstractControllerService;
 import org.apache.nifi.controller.ConfigurationContext;
 import org.apache.nifi.expression.ExpressionLanguageScope;
@@ -42,10 +44,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 
 @Tags({"service", "encryption", "encrypt", "decryption", "decrypt", "key"})
@@ -108,19 +113,32 @@ public class S3EncryptionService extends AbstractControllerService implements Ab
 
     @OnEnabled
     public void onConfigured(final ConfigurationContext context) throws InitializationException {
-        strategyName = context.getProperty(ENCRYPTION_METHOD).getValue();
+        final String newStrategyName = context.getProperty(ENCRYPTION_METHOD).getValue();
+        final String newKeyValue = context.getProperty(ENCRYPTION_VALUE).getValue();
+        final S3EncryptionStrategy newEncryptionStrategy = namedStrategies.get(newStrategyName);
+        String newRegion = null;
 
-        keyValue = context.getProperty(ENCRYPTION_VALUE).getValue();
         if (context.getProperty(REGION) != null ) {
-            region = context.getProperty(REGION).getValue();
+            newRegion = context.getProperty(REGION).getValue();
         }
-        encryptionStrategy = namedStrategies.get(strategyName);
 
-        if (encryptionStrategy == null) {
+        if (newEncryptionStrategy == null) {
             final String msg = "No encryption method found for: " + strategyName;
             logger.warn(msg);
             throw new InitializationException(msg);
         }
+
+        strategyName = newStrategyName;
+        encryptionStrategy = newEncryptionStrategy;
+        keyValue = newKeyValue;
+        region = newRegion;
+    }
+
+    @Override
+    protected Collection<ValidationResult> customValidate(final ValidationContext validationContext) {
+        Collection<ValidationResult> validationResults = new ArrayList<>();
+        validationResults.add(encryptionStrategy.validateKey(validationContext.getProperty(ENCRYPTION_VALUE).getValue()));
+        return validationResults;
     }
 
     @Override

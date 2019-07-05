@@ -22,6 +22,8 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.UploadPartRequest;
+import org.apache.nifi.components.ValidationResult;
+import org.bouncycastle.util.encoders.Base64;
 
 /**
  * See https://docs.aws.amazon.com/AmazonS3/latest/dev/ServerSideEncryptionCustomerKeys.html
@@ -50,5 +52,21 @@ public class ServerSideCEKEncryptionStrategy implements S3EncryptionStrategy {
     public void configureUploadPartRequest(UploadPartRequest request, ObjectMetadata objectMetadata, String keyValue) {
         SSECustomerKey customerKey = new SSECustomerKey(keyValue);
         request.setSSECustomerKey(customerKey);
+    }
+
+    @Override
+    public ValidationResult validateKey(String keyValue) {
+        boolean decoded = false;
+        boolean sized = false;
+        byte[] keyMaterial;
+
+        try {
+            keyMaterial = Base64.decode(keyValue);
+            decoded = true;
+            sized = (keyMaterial.length > 0) && (keyMaterial.length % 32) == 0;
+        } catch (final Exception ignored) {
+        }
+
+        return new ValidationResult.Builder().valid(decoded && sized).build();
     }
 }

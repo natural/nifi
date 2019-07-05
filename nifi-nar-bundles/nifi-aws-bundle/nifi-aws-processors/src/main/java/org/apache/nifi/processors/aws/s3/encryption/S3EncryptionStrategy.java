@@ -24,6 +24,7 @@ import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.UploadPartRequest;
+import org.apache.nifi.components.ValidationResult;
 
 /**
  * This interface defines the API for S3 encryption strategies.  The methods have empty defaults
@@ -77,5 +78,15 @@ public interface S3EncryptionStrategy {
      */
     default AmazonS3Client createEncryptionClient(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration, String region, String keyIdOrMaterial) {
         return null;
+    }
+
+    /**
+     * Validate a key id or key material.
+     *
+     * @param keyValue key id or key material to validate.
+     * @return ValidationResult instance.
+     */
+    default ValidationResult validateKey(String keyValue) {
+        return new ValidationResult.Builder().valid(true).build();
     }
 }
