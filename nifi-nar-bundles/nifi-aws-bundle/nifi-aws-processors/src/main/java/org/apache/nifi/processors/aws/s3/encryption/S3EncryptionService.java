@@ -25,6 +25,7 @@ import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.UploadPartRequest;
+import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnEnabled;
 import org.apache.nifi.components.AllowableValue;
@@ -52,6 +53,7 @@ import java.util.Map;
 
 
 @Tags({"service", "encryption", "encrypt", "decryption", "decrypt", "key"})
+@CapabilityDescription("Adds configurable encryption to S3 Put and S3 Fetch operations.")
 public class S3EncryptionService extends AbstractControllerService implements AbstractS3EncryptionService {
     private static final Logger logger = LoggerFactory.getLogger(S3EncryptionService.class);
 

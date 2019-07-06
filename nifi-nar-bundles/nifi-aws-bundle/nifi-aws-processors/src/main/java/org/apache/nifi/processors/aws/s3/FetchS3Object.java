@@ -105,9 +105,8 @@ public class FetchS3Object extends AbstractS3Processor {
         }
 
         AbstractS3EncryptionService encryptionService = context.getProperty(ENCRYPTION_SERVICE).asControllerService(AbstractS3EncryptionService.class);
-        final ObjectMetadata objectMetadata = new ObjectMetadata(); // TODO:  ref the metadata below
         if (encryptionService != null) {
-            encryptionService.configureGetObjectRequest(request, objectMetadata);
+            encryptionService.configureGetObjectRequest(request, new ObjectMetadata());
         }
 
         final Map<String, String> attributes = new HashMap<>();
