@@ -17,6 +17,11 @@
 
 package org.apache.nifi.repository.schema;
 
+import org.bouncycastle.jcajce.provider.symmetric.ARC4;
+import org.bouncycastle.util.encoders.Base64;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.EOFException;
@@ -25,6 +30,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -34,14 +40,17 @@ import java.util.Map;
 import java.util.Optional;
 
 public class SchemaRecordReader {
+    private static final Logger logger = LoggerFactory.getLogger(SchemaRecordReader.class);
     private final RecordSchema schema;
+    private final SimpleCipher cipher;
 
-    public SchemaRecordReader(final RecordSchema schema) {
+    public SchemaRecordReader(final RecordSchema schema, SimpleCipher cipher) {
         this.schema = schema;
+        this.cipher = cipher;
     }
 
-    public static SchemaRecordReader fromSchema(final RecordSchema schema) {
-        return new SchemaRecordReader(schema);
+    public static SchemaRecordReader fromSchema(final RecordSchema schema, SimpleCipher cipher) {
+        return new SchemaRecordReader(schema, cipher);
     }
 
     private static void fillBuffer(final InputStream in, final byte[] destination) throws IOException {
@@ -194,14 +203,19 @@ public class SchemaRecordReader {
             }
             case STRING: {
                 final DataInputStream dis = new DataInputStream(in);
-                return dis.readUTF();
+                String value = dis.readUTF();
+                return getDecodedAndDecrypted(value);
             }
             case LONG_STRING: {
-                final int length = readInt(in);
-                final byte[] buffer = new byte[length];
-                fillBuffer(in, buffer);
-                return new String(buffer, StandardCharsets.UTF_8);
+                //final int length = readInt(in);
+                //final byte[] buffer = new byte[length];
+                //fillBuffer(in, buffer);
+                //return getDecodedAndDecrypted(buffer);
+                final DataInputStream dis = new DataInputStream(in);
+                String value = dis.readUTF();
+                return getDecodedAndDecrypted(value);
             }
+
             case BYTE_ARRAY: {
                 final int length = readInt(in);
                 final byte[] buffer = new byte[length];
@@ -234,7 +248,7 @@ public class SchemaRecordReader {
             }
             case UNION: {
                 final DataInputStream dis = new DataInputStream(in);
-                final String childFieldType = dis.readUTF();
+                final String childFieldType = dis.readUTF(); // getDecodedAndDecrypted(dis.readUTF()); //
                 final Optional<RecordField> fieldOption = subFields.stream().filter(field -> field.getFieldName().equals(childFieldType)).findFirst();
                 if (!fieldOption.isPresent()) {
                     throw new IOException("Found a field of type '" + childFieldType + "' but that was not in the expected list of types");
@@ -246,6 +260,27 @@ public class SchemaRecordReader {
             default: {
                 throw new IOException("Unrecognized Field Type " + fieldType + " for field '" + fieldName + "'");
             }
+        }
+    }
+
+    private String getDecodedAndDecrypted(String value) {
+        try {
+            return getDecodedAndDecrypted(Base64.decode(value));
+        } catch (final Exception e) {
+            logger.debug("Decrypt string failed: " + e + "; unchanged value returned.");
+            return value;
+        }
+    }
+
+    private String getDecodedAndDecrypted(byte[] value) {
+        if (cipher == null || true) {
+            return new String(value);
+        }
+        try {
+            return new String(cipher.decrypt(value), StandardCharsets.UTF_8);
+        } catch (final Exception e) {
+            logger.info("Decrypt bytes failed: " + e + "; unchanged value returned.");
+            return new String(value);
         }
     }
 

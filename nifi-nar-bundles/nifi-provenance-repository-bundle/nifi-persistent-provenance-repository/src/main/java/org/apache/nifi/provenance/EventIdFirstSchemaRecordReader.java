@@ -100,7 +100,7 @@ public class EventIdFirstSchemaRecordReader extends CompressableRecordReader {
             schema = RecordSchema.readFrom(bais);
         }
 
-        recordReader = SchemaRecordReader.fromSchema(schema);
+        recordReader = SchemaRecordReader.fromSchema(schema, null);
 
         final int headerSchemaLength = in.readInt();
         final byte[] headerSchemaBuffer = new byte[headerSchemaLength];
@@ -111,7 +111,7 @@ public class EventIdFirstSchemaRecordReader extends CompressableRecordReader {
             headerSchema = RecordSchema.readFrom(bais);
         }
 
-        final SchemaRecordReader headerReader = SchemaRecordReader.fromSchema(headerSchema);
+        final SchemaRecordReader headerReader = SchemaRecordReader.fromSchema(headerSchema, null);
         final Record headerRecord = headerReader.readRecord(in);
         componentIds = (List<String>) headerRecord.getFieldValue(EventIdFirstHeaderSchema.FieldNames.COMPONENT_IDS);
         componentTypes = (List<String>) headerRecord.getFieldValue(EventIdFirstHeaderSchema.FieldNames.COMPONENT_TYPES);

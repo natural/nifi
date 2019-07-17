@@ -17,6 +17,7 @@
 
 package org.apache.nifi.repository.schema;
 
+import org.bouncycastle.util.encoders.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +27,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UTFDataFormatException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +41,15 @@ public class SchemaRecordWriter {
     private static final Logger logger = LoggerFactory.getLogger(SchemaRecordWriter.class);
     private static final int CACHE_BUFFER_SIZE = 65536;
     private static final ByteArrayCache byteArrayCache = new ByteArrayCache(32, CACHE_BUFFER_SIZE);
+    private final SimpleCipher cipher;
+
+    public SchemaRecordWriter() {
+        this.cipher = null;
+    }
+
+    public SchemaRecordWriter(SimpleCipher cipher) {
+        this.cipher = cipher;
+    }
 
     public void writeRecord(final Record record, final OutputStream out) throws IOException {
         // write sentinel value to indicate that there is a record. This allows the reader to then read one
@@ -122,7 +133,7 @@ public class SchemaRecordWriter {
     }
 
     @SuppressWarnings("unchecked")
-    private void writeFieldValue(final RecordField field, final Object value, final DataOutputStream out, final byte[] buffer) throws IOException {
+    private void writeFieldValue(final RecordField field, final Object value, final DataOutputStream out, byte[] buffer) throws IOException {
         switch (field.getFieldType()) {
             case BOOLEAN:
                 out.writeBoolean((boolean) value);
@@ -142,26 +153,43 @@ public class SchemaRecordWriter {
                 writeUTFLimited(out, (String) value, field.getFieldName());
                 break;
             case LONG_STRING:
+                writeUTFLimited(out, (String) value, field.getFieldName());
+                break;
+
                 // In many cases, we will see a String value that consists solely of values in the range of
                 // 1-127, which means that in UTF-8 they will translate into a single byte each. If all characters
                 // in the string adhere to this, then we can skip calling String.getBytes() because that will allocate
                 // a new byte[] every time, which results in a lot of pressure on the garbage collector.
-                final String string = (String) value;
-                final int length = string.length();
+            default:
+                String string = (String) value;
+                int length = string.length();
 
                 if (length <= buffer.length && allSingleByteInUtf8(string)) {
+
+                    if (cipher != null ) {
+                        byte[] bytes = Arrays.copyOfRange(string.getBytes(), 0, MAX_ALLOWED_UTF_LENGTH);
+                        string = Base64.toBase64String(cipher.encrypt(bytes));
+                    }
+
+                    length = string.length();
                     out.writeInt(length);
 
                     for (int i = 0; i < length; i++) {
                         final char ch = string.charAt(i);
                         buffer[i] = (byte) ch;
                     }
-
                     out.write(buffer, 0, length);
                 } else {
-                    final byte[] charArray = ((String) value).getBytes(StandardCharsets.UTF_8);
-                    out.writeInt(charArray.length);
-                    out.write(charArray);
+                    // byte[] charArray = ((String) value).getBytes(StandardCharsets.UTF_8);
+                    byte[] bytes = string.getBytes(StandardCharsets.UTF_8);
+                    if (cipher != null ) {
+                        // byte[] charArray = ((String) value).getBytes(StandardCharsets.UTF_8);
+                        // string = Base64.toBase64String(cipher.encrypt(charArray));
+                        bytes = Base64.encode(cipher.encrypt(bytes));
+                        length = bytes.length;
+                    }
+                    out.writeInt(length);
+                    out.write(bytes);
                 }
                 break;
             case MAP:
@@ -178,7 +206,7 @@ public class SchemaRecordWriter {
                 break;
             case UNION:
                 final NamedValue namedValue = (NamedValue) value;
-                writeUTFLimited(out, namedValue.getName(), field.getFieldName());
+                out.writeUTF(namedValue.getName()); // no enc
                 final Record childRecord = (Record) namedValue.getValue();
                 writeRecordFields(childRecord, out, buffer);
                 break;
@@ -189,11 +217,19 @@ public class SchemaRecordWriter {
         }
     }
 
-    private void writeUTFLimited(final DataOutputStream out, final String utfString, final String fieldName) throws IOException {
+    private void writeUTFLimited(final DataOutputStream out, String utfString, final String fieldName) throws IOException {
+        if (cipher != null) {
+            if (utfString.length() > 24_000) {
+                utfString = utfString.substring(0, 24_000);
+                logger.warn("encryption trunc-ed");
+            }
+            utfString = Base64.toBase64String(cipher.encrypt(utfString.getBytes()));
+        }
+
         try {
             out.writeUTF(utfString);
         } catch (UTFDataFormatException e) {
-            final String truncated = utfString.substring(0, getCharsInUTF8Limit(utfString, MAX_ALLOWED_UTF_LENGTH));
+            final String truncated = utfString.substring(0, MAX_ALLOWED_UTF_LENGTH); //getCharsInUTF8Limit(utfString, MAX_ALLOWED_UTF_LENGTH)); // this doesn't happen now
             logger.warn("Truncating repository record value for field '{}'!  Attempted to write {} chars that encode to a UTF8 byte length greater than "
                             + "supported maximum ({}), truncating to {} chars.",
                     (fieldName == null) ? "" : fieldName, utfString.length(), MAX_ALLOWED_UTF_LENGTH, truncated.length());

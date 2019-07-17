@@ -42,7 +42,7 @@ public class SchemaSwapDeserializer implements SwapDeserializer {
     @SuppressWarnings("unchecked")
     public SwapContents deserializeFlowFiles(final DataInputStream in, final String swapLocation, final FlowFileQueue queue, final ResourceClaimManager claimManager) throws IOException {
         final RecordSchema schema = RecordSchema.readFrom(in);
-        final SchemaRecordReader reader = SchemaRecordReader.fromSchema(schema);
+        final SchemaRecordReader reader = SchemaRecordReader.fromSchema(schema, null);
 
         final Record parentRecord = reader.readRecord(in);
         final List<Record> flowFileRecords = (List<Record>) parentRecord.getFieldValue(SwapSchema.FLOWFILE_CONTENTS);
@@ -65,7 +65,7 @@ public class SchemaSwapDeserializer implements SwapDeserializer {
         final RecordField summaryRecordField = new ComplexRecordField(SwapSchema.SWAP_SUMMARY, Repetition.EXACTLY_ONE, summaryFields);
         final RecordSchema summarySchema = new RecordSchema(Collections.singletonList(summaryRecordField));
 
-        final Record summaryRecordParent = SchemaRecordReader.fromSchema(summarySchema).readRecord(in);
+        final Record summaryRecordParent = SchemaRecordReader.fromSchema(summarySchema, null).readRecord(in);
         final Record summaryRecord = (Record) summaryRecordParent.getFieldValue(SwapSchema.SWAP_SUMMARY);
         final SwapSummary swapSummary = SwapSummaryFieldMap.getSwapSummary(summaryRecord, claimManager);
         return swapSummary;

@@ -105,7 +105,7 @@ public class SchemaRepositoryRecordSerde extends RepositoryRecordSerde implement
     @Override
     public void readHeader(final DataInputStream in) throws IOException {
         final RecordSchema recoverySchema = RecordSchema.readFrom(in);
-        reader = SchemaRecordReader.fromSchema(recoverySchema);
+        reader = SchemaRecordReader.fromSchema(recoverySchema, null);
     }
 
     @Override

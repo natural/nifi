@@ -62,7 +62,7 @@ public class ByteArraySchemaRecordReader extends CompressableRecordReader {
             schema = RecordSchema.readFrom(bais);
         }
 
-        recordReader = SchemaRecordReader.fromSchema(schema);
+        recordReader = SchemaRecordReader.fromSchema(schema, null);
     }
 
     @Override

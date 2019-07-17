@@ -63,7 +63,7 @@ public class TestSchemaRecordReader {
         })));
         final RecordSchema schema = new RecordSchema(fields);
 
-        final SchemaRecordReader reader = SchemaRecordReader.fromSchema(schema);
+        final SchemaRecordReader reader = SchemaRecordReader.fromSchema(schema, null);
 
         final byte[] buffer;
         try (final ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -167,7 +167,7 @@ public class TestSchemaRecordReader {
 
         final RecordSchema schema = new RecordSchema(fields);
 
-        final SchemaRecordReader reader = SchemaRecordReader.fromSchema(schema);
+        final SchemaRecordReader reader = SchemaRecordReader.fromSchema(schema, null);
 
         // for each field, make the first one missing and the second one present.
         final byte[] buffer;
