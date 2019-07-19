@@ -17,56 +17,17 @@
 
 package org.apache.nifi.wali;
 
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.security.SecureRandom;
-
-class AbstractSimpleCipherTest {
-    static SecureRandom random = new SecureRandom();
-
-    byte[] secret;
-    SecretKey cipherKey;
-
-    @Before
-    public void setupSecretAndKey() {
-        secret = randomBytes(randomInt(1024*1024*10));
-        cipherKey = new SecretKeySpec(randomBytes(32), "AES");
-
-    }
-
-    static byte[] randomBytes(int size) {
-        byte[] bytes = new byte[size];
-        random.nextBytes(bytes);
-        return bytes;
-    }
-
-    static int randomInt(int size) {
-        return random.nextInt(size);
-    }
-}
-
 
 
 public class SimpleCipherToolOutputStreamTest extends AbstractSimpleCipherTest {
-    @Before
-    public void setUp() throws Exception {
-    }
-
-    @After
-    public void tearDown() throws Exception {
-    }
-
     @Test
     public void testCipherOutputStream() throws IOException {
         ByteArrayOutputStream cipherByteOutputStream = new ByteArrayOutputStream();

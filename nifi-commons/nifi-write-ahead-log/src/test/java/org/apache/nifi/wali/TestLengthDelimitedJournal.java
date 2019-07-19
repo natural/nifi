@@ -56,13 +56,13 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-public class TestLengthDelimitedJournal {
+public class TestLengthDelimitedJournal extends AbstractSimpleCipherTest {
     private final File journalFile = new File("target/testLengthDelimitedJournal/testJournal.journal");
     private SerDeFactory<DummyRecord> serdeFactory;
     private DummyRecordSerde serde;
     private ObjectPool<ByteArrayDataOutputStream> streamPool;
     private static final int BUFFER_SIZE = 4096;
-    private final SecretKey[] cipherKeys = new SecretKey[4];
+
 
     @Before
     public void setupJournal() throws IOException {
@@ -78,11 +78,6 @@ public class TestLengthDelimitedJournal {
             () -> new ByteArrayDataOutputStream(BUFFER_SIZE),
             stream -> stream.getByteArrayOutputStream().size() < BUFFER_SIZE,
             stream -> stream.getByteArrayOutputStream().reset());
-
-        cipherKeys[0] = null;
-        cipherKeys[1] = new SecretKeySpec(SimpleCipherTool.randomBytes(32), "AES");
-        cipherKeys[2] = new SecretKeySpec(SimpleCipherTool.randomBytes(16), "AES");
-        cipherKeys[3] = null;
     }
 
     @Test

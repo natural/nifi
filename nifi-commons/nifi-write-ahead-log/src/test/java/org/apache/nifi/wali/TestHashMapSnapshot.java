@@ -69,59 +69,62 @@ public class TestHashMapSnapshot extends AbstractSimpleCipherTest {
 
     @Test
     public void testSuccessfulRoundTrip() throws IOException {
-        final HashMapSnapshot<DummyRecord> snapshot = new HashMapSnapshot<>(storageDirectory, serdeFactory, cipherKey);
-        final Map<String, String> props = new HashMap<>();
+        for (SecretKey cipherKey : cipherKeys) {
+            final HashMapSnapshot<DummyRecord> snapshot = new HashMapSnapshot<>(storageDirectory, serdeFactory, cipherKey);
+            final Map<String, String> props = new HashMap<>();
 
-        for (int i = 0; i < 10; i++) {
-            final DummyRecord record = new DummyRecord(String.valueOf(i), UpdateType.CREATE);
-            props.put("key", String.valueOf(i));
-            record.setProperties(props);
-            snapshot.update(Collections.singleton(record));
+            for (int i = 0; i < 10; i++) {
+                final DummyRecord record = new DummyRecord(String.valueOf(i), UpdateType.CREATE);
+                props.put("key", String.valueOf(i));
+                record.setProperties(props);
+                snapshot.update(Collections.singleton(record));
+            }
+
+            for (int i = 2; i < 10; i += 2) {
+                final DummyRecord record = new DummyRecord(String.valueOf(i), UpdateType.DELETE);
+                snapshot.update(Collections.singleton(record));
+            }
+
+            for (int i = 1; i < 10; i += 2) {
+                final DummyRecord record = new DummyRecord(String.valueOf(i), UpdateType.SWAP_OUT);
+                record.setSwapLocation("swapFile-" + i);
+                snapshot.update(Collections.singleton(record));
+            }
+
+            final DummyRecord swapIn7 = new DummyRecord("7", UpdateType.SWAP_IN);
+            swapIn7.setSwapLocation("swapFile-7");
+            snapshot.update(Collections.singleton(swapIn7));
+
+            final Set<String> swappedOutLocations = new HashSet<>();
+            swappedOutLocations.add("swapFile-1");
+            swappedOutLocations.add("swapFile-3");
+            swappedOutLocations.add("swapFile-5");
+            swappedOutLocations.add("swapFile-9");
+
+            final SnapshotCapture<DummyRecord> capture = snapshot.prepareSnapshot(180L);
+            assertEquals(180L, capture.getMaxTransactionId());
+            assertEquals(swappedOutLocations, capture.getSwapLocations());
+
+            final Map<Object, DummyRecord> records = capture.getRecords();
+            assertEquals(2, records.size());
+            assertTrue(records.containsKey("0"));
+            assertTrue(records.containsKey("7"));
+
+            snapshot.writeSnapshot(capture);
+
+            final SnapshotRecovery<DummyRecord> recovery = snapshot.recover();
+            assertEquals(180L, recovery.getMaxTransactionId());
+            assertEquals(swappedOutLocations, recovery.getRecoveredSwapLocations());
+
+            final Map<Object, DummyRecord> recoveredRecords = recovery.getRecords();
+            assertEquals(records, recoveredRecords);
         }
-
-        for (int i = 2; i < 10; i += 2) {
-            final DummyRecord record = new DummyRecord(String.valueOf(i), UpdateType.DELETE);
-            snapshot.update(Collections.singleton(record));
-        }
-
-        for (int i = 1; i < 10; i += 2) {
-            final DummyRecord record = new DummyRecord(String.valueOf(i), UpdateType.SWAP_OUT);
-            record.setSwapLocation("swapFile-" + i);
-            snapshot.update(Collections.singleton(record));
-        }
-
-        final DummyRecord swapIn7 = new DummyRecord("7", UpdateType.SWAP_IN);
-        swapIn7.setSwapLocation("swapFile-7");
-        snapshot.update(Collections.singleton(swapIn7));
-
-        final Set<String> swappedOutLocations = new HashSet<>();
-        swappedOutLocations.add("swapFile-1");
-        swappedOutLocations.add("swapFile-3");
-        swappedOutLocations.add("swapFile-5");
-        swappedOutLocations.add("swapFile-9");
-
-        final SnapshotCapture<DummyRecord> capture = snapshot.prepareSnapshot(180L);
-        assertEquals(180L, capture.getMaxTransactionId());
-        assertEquals(swappedOutLocations, capture.getSwapLocations());
-
-        final Map<Object, DummyRecord> records = capture.getRecords();
-        assertEquals(2, records.size());
-        assertTrue(records.containsKey("0"));
-        assertTrue(records.containsKey("7"));
-
-        snapshot.writeSnapshot(capture);
-
-        final SnapshotRecovery<DummyRecord> recovery = snapshot.recover();
-        assertEquals(180L, recovery.getMaxTransactionId());
-        assertEquals(swappedOutLocations, recovery.getRecoveredSwapLocations());
-
-        final Map<Object, DummyRecord> recoveredRecords = recovery.getRecords();
-        assertEquals(records, recoveredRecords);
     }
 
     @Test
     public void testOOMEWhenWritingResultsInPreviousSnapshotStillRecoverable() throws IOException {
-        final HashMapSnapshot<DummyRecord> snapshot = new HashMapSnapshot<>(storageDirectory, serdeFactory, cipherKey);
+        // note about the 3 edits again
+        final HashMapSnapshot<DummyRecord> snapshot = new HashMapSnapshot<>(storageDirectory, serdeFactory, cipherKeys[1]);
         final Map<String, String> props = new HashMap<>();
 
         for (int i = 0; i < 11; i++) {
@@ -169,7 +172,7 @@ public class TestHashMapSnapshot extends AbstractSimpleCipherTest {
 
     @Test
     public void testIOExceptionWhenWritingResultsInPreviousSnapshotStillRecoverable() throws IOException {
-        final HashMapSnapshot<DummyRecord> snapshot = new HashMapSnapshot<>(storageDirectory, serdeFactory, cipherKey);
+        final HashMapSnapshot<DummyRecord> snapshot = new HashMapSnapshot<>(storageDirectory, serdeFactory, cipherKeys[1]);
         final Map<String, String> props = new HashMap<>();
 
         for (int i = 0; i < 11; i++) {

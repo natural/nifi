@@ -57,27 +57,27 @@ public class SimpleCipherInputStream extends CipherInputStream {
 
         try {
             final int marker = in.read();
-            if (marker != SimpleCipherOutputStream.MARKER_BYTE) {
+            if (marker != SimpleCipher.MARKER_BYTE) {
                 if (in.markSupported()) {
                     in.reset();
                 }
                 return in;
             }
 
-            byte[] iv = new byte[SimpleCipherTool.IV_BYTE_LEN];
+            byte[] iv = new byte[SimpleCipher.IV_BYTE_LEN];
 
             int len = in.read(iv);
             if (len != iv.length) {
                 throw new IOException("Could not read IV.");
             }
 
-            byte[] aad = new byte[SimpleCipherTool.AAD_BYTE_LEN];
+            byte[] aad = new byte[SimpleCipher.AAD_BYTE_LEN];
             len = in.read(aad);
             if (len != aad.length) {
                 throw new IOException("Could not read AAD.");
             }
 
-            AEADBlockCipher cipher = SimpleCipherTool.initCipher(key, false, iv, aad);
+            AEADBlockCipher cipher = SimpleCipher.initCipher(key, false, iv, aad);
             return new SimpleCipherInputStream(in, cipher);
 
         } catch (final IOException ignored) {
