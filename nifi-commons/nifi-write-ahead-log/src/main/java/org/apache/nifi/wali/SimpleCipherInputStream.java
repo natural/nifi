@@ -16,43 +16,86 @@
  */
 package org.apache.nifi.wali;
 
-import org.bouncycastle.crypto.engines.AESEngine;
 import org.bouncycastle.crypto.io.CipherInputStream;
 import org.bouncycastle.crypto.modes.AEADBlockCipher;
-import org.bouncycastle.crypto.modes.EAXBlockCipher;
-import org.bouncycastle.crypto.params.AEADParameters;
-import org.bouncycastle.crypto.params.KeyParameter;
 
 import javax.crypto.SecretKey;
 import java.io.IOException;
 import java.io.InputStream;
 
-
+/**
+ *
+ */
 public class SimpleCipherInputStream extends CipherInputStream {
-    // clients need to know the cipher we used so they can size their buffers:
     protected AEADBlockCipher cipher;
 
-    public SimpleCipherInputStream(InputStream input, AEADBlockCipher cipher) {
-        super(input, cipher);
+    /**
+     *
+     * @param in
+     * @param cipher
+     */
+    public SimpleCipherInputStream(InputStream in, AEADBlockCipher cipher) {
+        super(in, cipher);
         this.cipher = cipher;
     }
 
-    public static SimpleCipherInputStream initWithKey(InputStream in, SecretKey key) throws IOException {
-        byte[] iv = new byte[SimpleCipher.IV_BYTE_LEN];
-
-        int len = in.read(iv);
-        if (len != iv.length) {
-            throw new IOException("f1");
+    /**
+     *
+     * @param in
+     * @param key
+     * @return
+     * @throws IOException
+     */
+    public static InputStream wrapWithKey(InputStream in, SecretKey key) throws IOException {
+        if (key == null ) {
+            return in;
         }
 
-        byte[] aad = new byte[SimpleCipher.AAD_BYTE_LEN];
-        len = in.read(aad);
-        if (len != aad.length) {
-            throw new IOException("f2");
+        if (in.markSupported()) {
+            in.mark(0);
         }
 
-        AEADBlockCipher cipher = SimpleCipher.initCipher(false, key, iv, aad);
-        final SimpleCipherInputStream stream = new SimpleCipherInputStream(in, cipher);
-        return stream;
+        try {
+            final int marker = in.read();
+            if (marker != SimpleCipherOutputStream.MARKER_BYTE) {
+                if (in.markSupported()) {
+                    in.reset();
+                }
+                return in;
+            }
+
+            byte[] iv = new byte[SimpleCipherTool.IV_BYTE_LEN];
+
+            int len = in.read(iv);
+            if (len != iv.length) {
+                throw new IOException("Could not read IV.");
+            }
+
+            byte[] aad = new byte[SimpleCipherTool.AAD_BYTE_LEN];
+            len = in.read(aad);
+            if (len != aad.length) {
+                throw new IOException("Could not read AAD.");
+            }
+
+            AEADBlockCipher cipher = SimpleCipherTool.initCipher(key, false, iv, aad);
+            return new SimpleCipherInputStream(in, cipher);
+
+        } catch (final IOException ignored) {
+            if (in.markSupported()) {
+                in.reset();
+            }
+            return in;
+        }
+
+
+    }
+
+    @Override
+    public void close() throws IOException {
+        try {
+            in.close();
+        } catch (final Exception ignored) {
+            throw new IOException(ignored);
+        }
     }
 }

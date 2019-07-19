@@ -197,7 +197,7 @@ public class SequentialAccessWriteAheadLog<T> implements WriteAheadRepository<T>
             logger.debug("Min Transaction ID for journal {} is {}, so will recover records from journal", journalFile, journalMinTransactionId);
             journalFilesRecovered++;
 
-            try (final WriteAheadJournal<T> journal = new LengthDelimitedJournal<>(journalFile, serdeFactory, streamPool, 0L)) {
+            try (final WriteAheadJournal<T> journal = new LengthDelimitedJournal<>(journalFile, serdeFactory, streamPool, 0L, null)) {
                 final JournalRecovery journalRecovery = journal.recoverRecords(recoveredRecords, swapLocations);
                 final int updates = journalRecovery.getUpdateCount();
 
@@ -302,7 +302,7 @@ public class SequentialAccessWriteAheadLog<T> implements WriteAheadRepository<T>
                 journalFile = new File(journalsDirectory, String.valueOf(nextTransactionId) + ".journal");
             }
 
-            journal = new LengthDelimitedJournal<>(journalFile, serdeFactory, streamPool, nextTransactionId);
+            journal = new LengthDelimitedJournal<>(journalFile, serdeFactory, streamPool, nextTransactionId, null);
             journal.writeHeader();
 
             logger.debug("Created new Journal starting with Transaction ID {}", nextTransactionId);
@@ -314,7 +314,7 @@ public class SequentialAccessWriteAheadLog<T> implements WriteAheadRepository<T>
         snapshot.writeSnapshot(snapshotCapture);
 
         for (final File existingJournal : existingJournals) {
-            final WriteAheadJournal journal = new LengthDelimitedJournal<>(existingJournal, serdeFactory, streamPool, nextTransactionId);
+            final WriteAheadJournal journal = new LengthDelimitedJournal<>(existingJournal, serdeFactory, streamPool, nextTransactionId, null);
             journal.dispose();
         }
 
