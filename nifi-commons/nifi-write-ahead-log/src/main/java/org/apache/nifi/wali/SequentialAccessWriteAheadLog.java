@@ -96,7 +96,7 @@ public class SequentialAccessWriteAheadLog<T> implements WriteAheadRepository<T>
             throw new IOException("File " + storageDirectory + " is a regular file and not a directory");
         }
 
-        final HashMapSnapshot<T> hashMapSnapshot = new HashMapSnapshot<>(storageDirectory, serdeFactory);
+        final HashMapSnapshot<T> hashMapSnapshot = new HashMapSnapshot<>(storageDirectory, serdeFactory, null);
         this.snapshot = hashMapSnapshot;
         this.recordLookup = hashMapSnapshot;
 

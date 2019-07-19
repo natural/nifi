@@ -32,18 +32,33 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.SecureRandom;
 
-public class SimpleCipherToolOutputStreamTest {
-    private static byte[] secret;
-    private static SecretKey key;
-    private static SecureRandom random;
+class AbstractSimpleCipherTest {
+    static SecureRandom random = new SecureRandom();
 
-    @BeforeClass
-    public static void setUpClass() {
-        random = new SecureRandom();
+    byte[] secret;
+    SecretKey cipherKey;
+
+    @Before
+    public void setupSecretAndKey() {
         secret = randomBytes(randomInt(1024*1024*10));
-        key = new SecretKeySpec(randomBytes(32), "AES");
+        cipherKey = new SecretKeySpec(randomBytes(32), "AES");
+
     }
 
+    static byte[] randomBytes(int size) {
+        byte[] bytes = new byte[size];
+        random.nextBytes(bytes);
+        return bytes;
+    }
+
+    static int randomInt(int size) {
+        return random.nextInt(size);
+    }
+}
+
+
+
+public class SimpleCipherToolOutputStreamTest extends AbstractSimpleCipherTest {
     @Before
     public void setUp() throws Exception {
     }
@@ -55,14 +70,14 @@ public class SimpleCipherToolOutputStreamTest {
     @Test
     public void testCipherOutputStream() throws IOException {
         ByteArrayOutputStream cipherByteOutputStream = new ByteArrayOutputStream();
-        OutputStream stream = SimpleCipherOutputStream.wrapWithKey(cipherByteOutputStream, key);
+        OutputStream stream = SimpleCipherOutputStream.wrapWithKey(cipherByteOutputStream, cipherKey);
 
         stream.write(secret);
         stream.close();
 
         byte[] cipherText = cipherByteOutputStream.toByteArray();
         ByteArrayInputStream cipherByteInputStream = new ByteArrayInputStream(cipherText);
-        InputStream cipherInputStream = SimpleCipherInputStream.wrapWithKey(cipherByteInputStream, key);
+        InputStream cipherInputStream = SimpleCipherInputStream.wrapWithKey(cipherByteInputStream, cipherKey);
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 
         byte[] plainText = new byte[((SimpleCipherInputStream) cipherInputStream).cipher.getOutputSize(cipherText.length)];
@@ -72,16 +87,6 @@ public class SimpleCipherToolOutputStreamTest {
         }
 
         Assert.assertArrayEquals(secret, buffer.toByteArray());
-    }
-
-    static byte[] randomBytes(int size) {
-        byte[] bytes = new byte[size];
-        random.nextBytes(bytes);
-        return bytes;
-    }
-
-    static int randomInt(int size) {
-        return random.nextInt(size);
     }
 
 }

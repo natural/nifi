@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -32,6 +33,7 @@ import java.util.Set;
 
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.wali.DummyRecord;
 import org.wali.DummyRecordSerde;
@@ -39,8 +41,10 @@ import org.wali.SerDeFactory;
 import org.wali.SingletonSerDeFactory;
 import org.wali.UpdateType;
 
-public class TestHashMapSnapshot {
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
+public class TestHashMapSnapshot extends AbstractSimpleCipherTest {
     private final File storageDirectory = new File("target/test-hashmap-snapshot");
     private DummyRecordSerde serde;
     private SerDeFactory<DummyRecord> serdeFactory;
@@ -65,7 +69,7 @@ public class TestHashMapSnapshot {
 
     @Test
     public void testSuccessfulRoundTrip() throws IOException {
-        final HashMapSnapshot<DummyRecord> snapshot = new HashMapSnapshot<>(storageDirectory, serdeFactory);
+        final HashMapSnapshot<DummyRecord> snapshot = new HashMapSnapshot<>(storageDirectory, serdeFactory, cipherKey);
         final Map<String, String> props = new HashMap<>();
 
         for (int i = 0; i < 10; i++) {
@@ -117,7 +121,7 @@ public class TestHashMapSnapshot {
 
     @Test
     public void testOOMEWhenWritingResultsInPreviousSnapshotStillRecoverable() throws IOException {
-        final HashMapSnapshot<DummyRecord> snapshot = new HashMapSnapshot<>(storageDirectory, serdeFactory);
+        final HashMapSnapshot<DummyRecord> snapshot = new HashMapSnapshot<>(storageDirectory, serdeFactory, cipherKey);
         final Map<String, String> props = new HashMap<>();
 
         for (int i = 0; i < 11; i++) {
@@ -165,7 +169,7 @@ public class TestHashMapSnapshot {
 
     @Test
     public void testIOExceptionWhenWritingResultsInPreviousSnapshotStillRecoverable() throws IOException {
-        final HashMapSnapshot<DummyRecord> snapshot = new HashMapSnapshot<>(storageDirectory, serdeFactory);
+        final HashMapSnapshot<DummyRecord> snapshot = new HashMapSnapshot<>(storageDirectory, serdeFactory, cipherKey);
         final Map<String, String> props = new HashMap<>();
 
         for (int i = 0; i < 11; i++) {
