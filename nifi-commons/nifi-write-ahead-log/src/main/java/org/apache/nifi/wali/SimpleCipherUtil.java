@@ -30,6 +30,7 @@ import java.security.SecureRandom;
  *
  */
 class SimpleCipherUtil {
+    public static final String ALGO = "AES";
     // NB:  the cipher output stream uses this value to distinguish cipher text streams from (probably) plain text streams.
     // Using a magic value is suboptimal but for our use cases it gives us a measure of predictability:
     static byte MARKER_BYTE = 0x7f;

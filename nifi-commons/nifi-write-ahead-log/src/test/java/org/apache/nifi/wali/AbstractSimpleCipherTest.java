@@ -24,7 +24,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.security.SecureRandom;
 
 
-class AbstractSimpleCipherUtilTest {
+class AbstractSimpleCipherTest {
     static SecureRandom random = new SecureRandom();
     final SecretKey[] cipherKeys = new SecretKey[4];
 
@@ -34,11 +34,11 @@ class AbstractSimpleCipherUtilTest {
     @Before
     public void setupSecretAndKey() {
         secret = randomBytes(randomInt(1024*1024*10));
-        cipherKey = new SecretKeySpec(randomBytes(32), "AES");
+        cipherKey = new SecretKeySpec(randomBytes(32), SimpleCipherUtil.ALGO);
 
         cipherKeys[0] = null;
-        cipherKeys[1] = new SecretKeySpec(randomBytes(32), "AES");
-        cipherKeys[2] = new SecretKeySpec(randomBytes(16), "AES");
+        cipherKeys[1] = new SecretKeySpec(randomBytes(32), SimpleCipherUtil.ALGO);
+        cipherKeys[2] = new SecretKeySpec(randomBytes(16), SimpleCipherUtil.ALGO);
         cipherKeys[3] = null;
     }
 

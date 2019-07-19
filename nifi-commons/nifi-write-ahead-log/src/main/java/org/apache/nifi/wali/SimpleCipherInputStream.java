@@ -44,6 +44,8 @@ public class SimpleCipherInputStream extends CipherInputStream {
     /**
      * Static factory for wrapping an input stream with a block cipher.
      *
+     * NB:  this function eagerly reads the initial cipher values from the plain input stream before returning the cipher stream.
+     *
      * @param in input stream to wrap.
      * @param key cipher key.
      * @return wrapped input stream.

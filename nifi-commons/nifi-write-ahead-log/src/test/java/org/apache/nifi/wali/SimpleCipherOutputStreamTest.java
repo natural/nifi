@@ -26,7 +26,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 
-public class SimpleCipherUtilToolOutputStreamTest extends AbstractSimpleCipherUtilTest {
+public class SimpleCipherOutputStreamTest extends AbstractSimpleCipherTest {
     @Test
     public void testCipherOutputStream() throws IOException {
         ByteArrayOutputStream cipherByteOutputStream = new ByteArrayOutputStream();

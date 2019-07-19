@@ -41,6 +41,8 @@ public class SimpleCipherOutputStream extends CipherOutputStream {
     /**
      * Static factory for wrapping an output stream with a block cipher.
      *
+     * NB:  this function eagerly writes the initial cipher values to the plain output stream before returning the cipher stream.
+     *
      * @param out output stream to wrap.
      * @param key cipher key.
      * @return wrapped output stream.

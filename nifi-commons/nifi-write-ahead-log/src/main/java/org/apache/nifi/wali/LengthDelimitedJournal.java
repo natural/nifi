@@ -378,7 +378,7 @@ public class LengthDelimitedJournal<T> implements WriteAheadJournal<T> {
 
         try {
             if (fileOut != null) {
-                // fileOut.getChannel().force(false);
+                // Before transparent crypto, this was: fileOut.getChannel().force(false);
                 fileOut.flush();
             }
         } catch (final IOException ioe) {
