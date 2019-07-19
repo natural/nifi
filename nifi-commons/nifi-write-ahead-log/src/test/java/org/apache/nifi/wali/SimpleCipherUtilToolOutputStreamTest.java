@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.nifi.wali;
 
 import org.junit.Assert;
@@ -27,7 +26,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 
-public class SimpleCipherToolOutputStreamTest extends AbstractSimpleCipherTest {
+public class SimpleCipherUtilToolOutputStreamTest extends AbstractSimpleCipherUtilTest {
     @Test
     public void testCipherOutputStream() throws IOException {
         ByteArrayOutputStream cipherByteOutputStream = new ByteArrayOutputStream();

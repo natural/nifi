@@ -23,6 +23,7 @@ import org.wali.SerDeFactory;
 import org.wali.SyncListener;
 import org.wali.WriteAheadRepository;
 
+import javax.crypto.SecretKey;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -83,12 +84,13 @@ public class SequentialAccessWriteAheadLog<T> implements WriteAheadRepository<T>
     private volatile boolean recovered = false;
     private WriteAheadJournal<T> journal;
     private volatile long nextTransactionId = 0L;
+    private SecretKey cipherKey;
 
     public SequentialAccessWriteAheadLog(final File storageDirectory, final SerDeFactory<T> serdeFactory) throws IOException {
-        this(storageDirectory, serdeFactory, SyncListener.NOP_SYNC_LISTENER);
+        this(storageDirectory, serdeFactory, SyncListener.NOP_SYNC_LISTENER, null);
     }
 
-    public SequentialAccessWriteAheadLog(final File storageDirectory, final SerDeFactory<T> serdeFactory, final SyncListener syncListener) throws IOException {
+    public SequentialAccessWriteAheadLog(final File storageDirectory, final SerDeFactory<T> serdeFactory, final SyncListener syncListener, SecretKey cipherKey) throws IOException {
         if (!storageDirectory.exists() && !storageDirectory.mkdirs()) {
             throw new IOException("Directory " + storageDirectory + " does not exist and cannot be created");
         }
@@ -96,7 +98,7 @@ public class SequentialAccessWriteAheadLog<T> implements WriteAheadRepository<T>
             throw new IOException("File " + storageDirectory + " is a regular file and not a directory");
         }
 
-        final HashMapSnapshot<T> hashMapSnapshot = new HashMapSnapshot<>(storageDirectory, serdeFactory, null);
+        final HashMapSnapshot<T> hashMapSnapshot = new HashMapSnapshot<>(storageDirectory, serdeFactory, cipherKey);
         this.snapshot = hashMapSnapshot;
         this.recordLookup = hashMapSnapshot;
 
@@ -110,6 +112,7 @@ public class SequentialAccessWriteAheadLog<T> implements WriteAheadRepository<T>
 
         this.serdeFactory = serdeFactory;
         this.syncListener = (syncListener == null) ? SyncListener.NOP_SYNC_LISTENER : syncListener;
+        this.cipherKey = cipherKey;
     }
 
     @Override
@@ -197,7 +200,7 @@ public class SequentialAccessWriteAheadLog<T> implements WriteAheadRepository<T>
             logger.debug("Min Transaction ID for journal {} is {}, so will recover records from journal", journalFile, journalMinTransactionId);
             journalFilesRecovered++;
 
-            try (final WriteAheadJournal<T> journal = new LengthDelimitedJournal<>(journalFile, serdeFactory, streamPool, 0L, null)) {
+            try (final WriteAheadJournal<T> journal = new LengthDelimitedJournal<>(journalFile, serdeFactory, streamPool, 0L, cipherKey)) {
                 final JournalRecovery journalRecovery = journal.recoverRecords(recoveredRecords, swapLocations);
                 final int updates = journalRecovery.getUpdateCount();
 
@@ -302,7 +305,7 @@ public class SequentialAccessWriteAheadLog<T> implements WriteAheadRepository<T>
                 journalFile = new File(journalsDirectory, String.valueOf(nextTransactionId) + ".journal");
             }
 
-            journal = new LengthDelimitedJournal<>(journalFile, serdeFactory, streamPool, nextTransactionId, null);
+            journal = new LengthDelimitedJournal<>(journalFile, serdeFactory, streamPool, nextTransactionId, cipherKey);
             journal.writeHeader();
 
             logger.debug("Created new Journal starting with Transaction ID {}", nextTransactionId);
@@ -314,7 +317,7 @@ public class SequentialAccessWriteAheadLog<T> implements WriteAheadRepository<T>
         snapshot.writeSnapshot(snapshotCapture);
 
         for (final File existingJournal : existingJournals) {
-            final WriteAheadJournal journal = new LengthDelimitedJournal<>(existingJournal, serdeFactory, streamPool, nextTransactionId, null);
+            final WriteAheadJournal journal = new LengthDelimitedJournal<>(existingJournal, serdeFactory, streamPool, nextTransactionId, cipherKey);
             journal.dispose();
         }
 

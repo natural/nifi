@@ -62,8 +62,13 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
 
 import org.apache.nifi.wali.SequentialAccessWriteAheadLog;
+import org.apache.nifi.wali.SimpleCipherInputStream;
+import org.apache.nifi.wali.SimpleCipherOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.crypto.CipherOutputStream;
+import javax.crypto.SecretKey;
 
 /**
  * <p>
@@ -106,20 +111,22 @@ public final class MinimalLockingWriteAheadLog<T> implements WriteAheadRepositor
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
     private final Lock readLock = rwLock.readLock(); // required to update a partition
     private final Lock writeLock = rwLock.writeLock(); // required for checkpoint
+    private final SecretKey cipherKey;
 
     private volatile boolean updated = false;
     private volatile boolean recovered = false;
 
-    public MinimalLockingWriteAheadLog(final Path path, final int partitionCount, final SerDe<T> serde, final SyncListener syncListener) throws IOException {
-        this(new TreeSet<>(Collections.singleton(path)), partitionCount, new SingletonSerDeFactory<>(serde), syncListener);
+
+    public MinimalLockingWriteAheadLog(final Path path, final int partitionCount, final SerDe<T> serde, final SyncListener syncListener, SecretKey cipherKey) throws IOException {
+        this(new TreeSet<>(Collections.singleton(path)), partitionCount, new SingletonSerDeFactory<>(serde), syncListener, cipherKey);
     }
 
-    public MinimalLockingWriteAheadLog(final Path path, final int partitionCount, final SerDeFactory<T> serdeFactory, final SyncListener syncListener) throws IOException {
-        this(new TreeSet<>(Collections.singleton(path)), partitionCount, serdeFactory, syncListener);
+    public MinimalLockingWriteAheadLog(final Path path, final int partitionCount, final SerDeFactory<T> serdeFactory, final SyncListener syncListener, SecretKey cipherKey) throws IOException {
+        this(new TreeSet<>(Collections.singleton(path)), partitionCount, serdeFactory, syncListener, cipherKey);
     }
 
-    public MinimalLockingWriteAheadLog(final SortedSet<Path> paths, final int partitionCount, final SerDe<T> serde, final SyncListener syncListener) throws IOException {
-        this(paths, partitionCount, new SingletonSerDeFactory<>(serde), syncListener);
+    public MinimalLockingWriteAheadLog(final SortedSet<Path> paths, final int partitionCount, final SerDe<T> serde, final SyncListener syncListener, SecretKey cipherKey) throws IOException {
+        this(paths, partitionCount, new SingletonSerDeFactory<>(serde), syncListener, cipherKey);
     }
 
     /**
@@ -132,10 +139,11 @@ public final class MinimalLockingWriteAheadLog<T> implements WriteAheadRepositor
      * expected to update the repository simultaneously
      * @param serdeFactory the factory for the serializer/deserializer for records
      * @param syncListener the listener
+     * @param cipherKey
      * @throws IOException if unable to initialize due to IO issue
      */
     @SuppressWarnings("unchecked")
-    public MinimalLockingWriteAheadLog(final SortedSet<Path> paths, final int partitionCount, final SerDeFactory<T> serdeFactory, final SyncListener syncListener) throws IOException {
+    public MinimalLockingWriteAheadLog(final SortedSet<Path> paths, final int partitionCount, final SerDeFactory<T> serdeFactory, final SyncListener syncListener, SecretKey cipherKey) throws IOException {
         this.syncListener = syncListener;
 
         requireNonNull(paths);
@@ -187,6 +195,7 @@ public final class MinimalLockingWriteAheadLog<T> implements WriteAheadRepositor
         this.partialPath = basePath.resolve("snapshot.partial");
         this.snapshotPath = basePath.resolve("snapshot");
         this.serdeFactory = serdeFactory;
+        this.cipherKey = cipherKey;
 
         final Path lockPath = basePath.resolve("wali.lock");
         lockChannel = new FileOutputStream(lockPath.toFile()).getChannel();
@@ -360,7 +369,7 @@ public final class MinimalLockingWriteAheadLog<T> implements WriteAheadRepositor
 
         // at this point, we know the snapshotPath exists because if it didn't, then we either returned null
         // or we renamed partialPath to snapshotPath. So just Recover from snapshotPath.
-        try (final DataInputStream dataIn = new DataInputStream(new BufferedInputStream(Files.newInputStream(snapshotPath, StandardOpenOption.READ)))) {
+        try (final DataInputStream dataIn = new DataInputStream(new BufferedInputStream(SimpleCipherInputStream.wrapWithKey(Files.newInputStream(snapshotPath, StandardOpenOption.READ), cipherKey)))) {
             final String waliImplementationClass = dataIn.readUTF();
             final int waliImplementationVersion = dataIn.readInt();
 
@@ -503,6 +512,7 @@ public final class MinimalLockingWriteAheadLog<T> implements WriteAheadRepositor
         final long startNanos = System.nanoTime();
 
         FileOutputStream fileOut = null;
+        OutputStream cipherOut = null;
         DataOutputStream dataOut = null;
 
         long stopTheWorldNanos = -1L;
@@ -575,7 +585,8 @@ public final class MinimalLockingWriteAheadLog<T> implements WriteAheadRepositor
 
             // perform checkpoint, writing to .partial file
             fileOut = new FileOutputStream(partialPath.toFile());
-            dataOut = new DataOutputStream(new BufferedOutputStream(fileOut));
+            cipherOut = SimpleCipherOutputStream.wrapWithKey(fileOut, cipherKey);
+            dataOut = new DataOutputStream(new BufferedOutputStream(cipherOut));
             dataOut.writeUTF(MinimalLockingWriteAheadLog.class.getName());
             dataOut.writeInt(getVersion());
             dataOut.writeUTF(serde.getClass().getName());

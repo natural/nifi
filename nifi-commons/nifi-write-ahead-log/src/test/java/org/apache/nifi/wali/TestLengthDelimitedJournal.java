@@ -27,7 +27,6 @@ import org.wali.SingletonSerDeFactory;
 import org.wali.UpdateType;
 
 import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -56,7 +55,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-public class TestLengthDelimitedJournal extends AbstractSimpleCipherTest {
+public class TestLengthDelimitedJournal extends AbstractSimpleCipherUtilTest {
     private final File journalFile = new File("target/testLengthDelimitedJournal/testJournal.journal");
     private SerDeFactory<DummyRecord> serdeFactory;
     private DummyRecordSerde serde;

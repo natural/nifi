@@ -24,15 +24,17 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- *
+ * This class extends {@link CipherInputStream} with a static factory method for constructing
+ * an input stream with an AEAD block cipher.
  */
 public class SimpleCipherInputStream extends CipherInputStream {
     protected AEADBlockCipher cipher;
 
     /**
+     * Constructs an {@link InputStream} from an existing {@link InputStream} and block cipher.
      *
-     * @param in
-     * @param cipher
+     * @param in input stream to wrap.
+     * @param cipher block cipher, initialized for decryption.
      */
     public SimpleCipherInputStream(InputStream in, AEADBlockCipher cipher) {
         super(in, cipher);
@@ -40,14 +42,15 @@ public class SimpleCipherInputStream extends CipherInputStream {
     }
 
     /**
+     * Static factory for wrapping an input stream with a block cipher.
      *
-     * @param in
-     * @param key
-     * @return
-     * @throws IOException
+     * @param in input stream to wrap.
+     * @param key cipher key.
+     * @return wrapped input stream.
+     * @throws IOException if the stream cannot be read eagerly, or if the cipher cannot be initialized.
      */
     public static InputStream wrapWithKey(InputStream in, SecretKey key) throws IOException {
-        if (key == null ) {
+        if (key == null) {
             return in;
         }
 
@@ -55,29 +58,29 @@ public class SimpleCipherInputStream extends CipherInputStream {
             in.mark(0);
         }
 
+        // Read the marker, the iv, and the aad in the same order as they're written in the SimpleCipherOutputStream:
         try {
             final int marker = in.read();
-            if (marker != SimpleCipher.MARKER_BYTE) {
+            if (marker != SimpleCipherUtil.MARKER_BYTE) {
                 if (in.markSupported()) {
                     in.reset();
                 }
                 return in;
             }
 
-            byte[] iv = new byte[SimpleCipher.IV_BYTE_LEN];
-
+            byte[] iv = new byte[SimpleCipherUtil.IV_BYTE_LEN];
             int len = in.read(iv);
             if (len != iv.length) {
                 throw new IOException("Could not read IV.");
             }
 
-            byte[] aad = new byte[SimpleCipher.AAD_BYTE_LEN];
+            byte[] aad = new byte[SimpleCipherUtil.AAD_BYTE_LEN];
             len = in.read(aad);
             if (len != aad.length) {
                 throw new IOException("Could not read AAD.");
             }
 
-            AEADBlockCipher cipher = SimpleCipher.initCipher(key, false, iv, aad);
+            AEADBlockCipher cipher = SimpleCipherUtil.initCipher(key, false, iv, aad);
             return new SimpleCipherInputStream(in, cipher);
 
         } catch (final IOException ignored) {
@@ -86,16 +89,14 @@ public class SimpleCipherInputStream extends CipherInputStream {
             }
             return in;
         }
-
-
     }
 
     @Override
     public void close() throws IOException {
         try {
             in.close();
-        } catch (final Exception ignored) {
-            throw new IOException(ignored);
+        } catch (final Exception e) {
+            throw new IOException(e);
         }
     }
 }

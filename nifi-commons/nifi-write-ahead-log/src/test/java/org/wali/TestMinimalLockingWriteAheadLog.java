@@ -119,7 +119,7 @@ public class TestMinimalLockingWriteAheadLog {
             }
         };
 
-        final WriteAheadRepository<Object> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null);
+        final WriteAheadRepository<Object> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
         try {
             final Collection<Object> initialRecs = repo.recoverRecords();
             assertTrue(initialRecs.isEmpty());
@@ -131,7 +131,7 @@ public class TestMinimalLockingWriteAheadLog {
             repo.shutdown();
         }
 
-        final WriteAheadRepository<Object> secondRepo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null);
+        final WriteAheadRepository<Object> secondRepo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
         try {
             secondRepo.recoverRecords();
         } finally {
@@ -149,7 +149,7 @@ public class TestMinimalLockingWriteAheadLog {
         assertTrue(path.toFile().mkdirs());
 
         final DummyRecordSerde serde = new DummyRecordSerde();
-        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null);
+        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
         final Collection<DummyRecord> initialRecs = repo.recoverRecords();
         assertTrue(initialRecs.isEmpty());
 
@@ -236,7 +236,7 @@ public class TestMinimalLockingWriteAheadLog {
         assertTrue(path.toFile().mkdirs());
 
         final DummyRecordSerde serde = new DummyRecordSerde();
-        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null);
+        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
         try {
             final Collection<DummyRecord> initialRecs = repo.recoverRecords();
             assertTrue(initialRecs.isEmpty());
@@ -344,7 +344,7 @@ public class TestMinimalLockingWriteAheadLog {
 
         for (int x = 0; x < numAttempts; x++) {
             final DummyRecordSerde serde = new DummyRecordSerde();
-            final WriteAheadRepository<DummyRecord> writeRepo = new MinimalLockingWriteAheadLog<>(path, 256, serde, null);
+            final WriteAheadRepository<DummyRecord> writeRepo = new MinimalLockingWriteAheadLog<>(path, 256, serde, null, null);
             final Collection<DummyRecord> writeRecords = writeRepo.recoverRecords();
             for (final DummyRecord record : writeRecords) {
                 assertEquals("B", record.getProperty("A"));
@@ -372,7 +372,7 @@ public class TestMinimalLockingWriteAheadLog {
                 cp = checkpointing.get();
             }
 
-            final WriteAheadRepository<DummyRecord> readRepo = new MinimalLockingWriteAheadLog<>(path, 256, serde, null);
+            final WriteAheadRepository<DummyRecord> readRepo = new MinimalLockingWriteAheadLog<>(path, 256, serde, null, null);
             // ensure that we are able to recover the records properly
             final Collection<DummyRecord> readRecords = readRepo.recoverRecords();
             for (final DummyRecord record : readRecords) {
@@ -391,7 +391,7 @@ public class TestMinimalLockingWriteAheadLog {
         assertTrue(path.toFile().mkdirs());
 
         final DummyRecordSerde serde = new DummyRecordSerde();
-        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null);
+        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
         final Collection<DummyRecord> initialRecs = repo.recoverRecords();
         assertTrue(initialRecs.isEmpty());
 
@@ -412,7 +412,7 @@ public class TestMinimalLockingWriteAheadLog {
         System.out.println("Took " + millis + " millis to insert 1,000,000 records each in its own transaction");
         repo.shutdown();
 
-        final WriteAheadRepository<DummyRecord> recoverRepo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null);
+        final WriteAheadRepository<DummyRecord> recoverRepo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
         final Collection<DummyRecord> recoveredRecords = recoverRepo.recoverRecords();
         assertFalse(recoveredRecords.isEmpty());
         assertEquals(100000, recoveredRecords.size());
@@ -431,7 +431,7 @@ public class TestMinimalLockingWriteAheadLog {
         Files.createDirectories(path);
 
         final DummyRecordSerde serde = new DummyRecordSerde();
-        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null);
+        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
         final Collection<DummyRecord> initialRecs = repo.recoverRecords();
         assertTrue(initialRecs.isEmpty());
 
@@ -463,7 +463,7 @@ public class TestMinimalLockingWriteAheadLog {
         repo.shutdown();
 
         serde.setThrowIOEAfterNSerializeEdits(-1);
-        final WriteAheadRepository<DummyRecord> recoverRepo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null);
+        final WriteAheadRepository<DummyRecord> recoverRepo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
         final Collection<DummyRecord> recoveredRecords = recoverRepo.recoverRecords();
         assertFalse(recoveredRecords.isEmpty());
         assertEquals(3, recoveredRecords.size());
@@ -500,7 +500,7 @@ public class TestMinimalLockingWriteAheadLog {
         Files.createDirectories(path);
 
         final DummyRecordSerde serde = new DummyRecordSerde();
-        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null);
+        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
         final Collection<DummyRecord> initialRecs = repo.recoverRecords();
         assertTrue(initialRecs.isEmpty());
 
@@ -538,7 +538,7 @@ public class TestMinimalLockingWriteAheadLog {
             fos.write(withNuls);
         }
 
-        final WriteAheadRepository<DummyRecord> recoverRepo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null);
+        final WriteAheadRepository<DummyRecord> recoverRepo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
         final Collection<DummyRecord> recoveredRecords = recoverRepo.recoverRecords();
         assertFalse(recoveredRecords.isEmpty());
         assertEquals(3, recoveredRecords.size());
@@ -574,7 +574,7 @@ public class TestMinimalLockingWriteAheadLog {
         Files.createDirectories(path);
 
         final DummyRecordSerde serde = new DummyRecordSerde();
-        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null);
+        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
         final Collection<DummyRecord> initialRecs = repo.recoverRecords();
         assertTrue(initialRecs.isEmpty());
 
@@ -609,7 +609,7 @@ public class TestMinimalLockingWriteAheadLog {
             fos.write(withNuls);
         }
 
-        final WriteAheadRepository<DummyRecord> recoverRepo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null);
+        final WriteAheadRepository<DummyRecord> recoverRepo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
         final Collection<DummyRecord> recoveredRecords = recoverRepo.recoverRecords();
         assertFalse(recoveredRecords.isEmpty());
         assertEquals(1, recoveredRecords.size());
@@ -645,7 +645,7 @@ public class TestMinimalLockingWriteAheadLog {
         Files.createDirectories(path);
 
         final DummyRecordSerde serde = new DummyRecordSerde();
-        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null);
+        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
         final Collection<DummyRecord> initialRecs = repo.recoverRecords();
         assertTrue(initialRecs.isEmpty());
 
@@ -698,7 +698,7 @@ public class TestMinimalLockingWriteAheadLog {
         repo.shutdown();
         serde.setThrowIOEAfterNSerializeEdits(-1);
 
-        final WriteAheadRepository<DummyRecord> recoverRepo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null);
+        final WriteAheadRepository<DummyRecord> recoverRepo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
         final Collection<DummyRecord> recoveredRecords = recoverRepo.recoverRecords();
         assertFalse(recoveredRecords.isEmpty());
         assertEquals(3, recoveredRecords.size());
@@ -716,7 +716,7 @@ public class TestMinimalLockingWriteAheadLog {
         paths.add(path.resolve("stripe-2"));
 
         final DummyRecordSerde serde = new DummyRecordSerde();
-        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(paths, numPartitions, serde, null);
+        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(paths, numPartitions, serde, null, null);
         final Collection<DummyRecord> initialRecs = repo.recoverRecords();
         assertTrue(initialRecs.isEmpty());
 
@@ -810,7 +810,7 @@ public class TestMinimalLockingWriteAheadLog {
             }
         };
 
-        final WriteAheadRepository<SimpleRecord> writeRepo = new MinimalLockingWriteAheadLog<>(path, 1, failOnThirdWriteSerde, null);
+        final WriteAheadRepository<SimpleRecord> writeRepo = new MinimalLockingWriteAheadLog<>(path, 1, failOnThirdWriteSerde, null, null);
         final Collection<SimpleRecord> initialRecs = writeRepo.recoverRecords();
         assertTrue(initialRecs.isEmpty());
 
@@ -895,7 +895,7 @@ public class TestMinimalLockingWriteAheadLog {
         Files.createDirectories(path);
 
         final DummyRecordSerde serde = new DummyRecordSerde();
-        final WriteAheadRepository<DummyRecord> writeRepo = new MinimalLockingWriteAheadLog<>(path, 256, serde, null);
+        final WriteAheadRepository<DummyRecord> writeRepo = new MinimalLockingWriteAheadLog<>(path, 256, serde, null, null);
         final Collection<DummyRecord> initialRecs = writeRepo.recoverRecords();
         assertTrue(initialRecs.isEmpty());
 
@@ -910,7 +910,7 @@ public class TestMinimalLockingWriteAheadLog {
 
         writeRepo.shutdown();
 
-        final WriteAheadRepository<DummyRecord> recoverRepo = new MinimalLockingWriteAheadLog<>(path, 6, serde, null);
+        final WriteAheadRepository<DummyRecord> recoverRepo = new MinimalLockingWriteAheadLog<>(path, 6, serde, null, null);
         final Collection<DummyRecord> records = recoverRepo.recoverRecords();
         final List<DummyRecord> list = new ArrayList<>(records);
         assertEquals(1, list.size());

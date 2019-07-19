@@ -24,7 +24,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.security.SecureRandom;
 
 
-class AbstractSimpleCipherTest {
+class AbstractSimpleCipherUtilTest {
     static SecureRandom random = new SecureRandom();
     final SecretKey[] cipherKeys = new SecretKey[4];
 

@@ -16,107 +16,50 @@
  */
 package org.apache.nifi.wali;
 
-import org.bouncycastle.crypto.engines.AESEngine;
 import org.bouncycastle.crypto.io.CipherOutputStream;
 import org.bouncycastle.crypto.modes.AEADBlockCipher;
-import org.bouncycastle.crypto.modes.EAXBlockCipher;
-import org.bouncycastle.crypto.params.AEADParameters;
-import org.bouncycastle.crypto.params.KeyParameter;
 
 import javax.crypto.SecretKey;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.security.SecureRandom;
-
-class SimpleCipher {
-    static byte MARKER_BYTE = 0x7f;
-    static int IV_BYTE_LEN = 20;
-    static int AAD_BYTE_LEN = 32;
-    static int MAC_BIT_LEN = 128;
-    static SecureRandom random = new SecureRandom();
-
-    /**
-     *
-     * @param key
-     * @param encrypt
-     * @param iv
-     * @param aad
-     * @return
-     */
-    static AEADBlockCipher initCipher(SecretKey key, boolean encrypt, byte[] iv, byte[] aad) {
-        if (key == null) {
-            return null;
-        }
-        final AEADParameters param = new AEADParameters(new KeyParameter(key.getEncoded()), MAC_BIT_LEN, iv, aad);
-        AEADBlockCipher cipher = new EAXBlockCipher(new AESEngine());
-        cipher.init(encrypt, param);
-        return cipher;
-    }
-
-    /**
-     *
-     * @return
-     */
-    static byte[] initIV() {
-        return randomBytes(IV_BYTE_LEN);
-    }
-
-    /**
-     *
-     * @return
-     */
-    static byte[] initAAD() {
-        return randomBytes(AAD_BYTE_LEN);
-    }
-
-    /**
-     *
-     * @param size
-     * @return
-     */
-    static byte[] randomBytes(int size) {
-        byte[] bytes = new byte[size];
-        random.nextBytes(bytes);
-        return bytes;
-    }
-}
-
 
 /**
- *
+ * This class extends {@link CipherOutputStream} with a static factory method for constructing
+ * an input stream with an AEAD block cipher.
  */
 public class SimpleCipherOutputStream extends CipherOutputStream {
     /**
+     * Constructs an {@link OutputStream} from an existing {@link OutputStream} and block cipher.
      *
-     * @param out
-     * @param cipher
+     * @param out output stream to wrap.
+     * @param cipher block cipher, initialized for encryption.
      */
     public SimpleCipherOutputStream(OutputStream out, AEADBlockCipher cipher) {
         super(out, cipher);
     }
 
     /**
+     * Static factory for wrapping an output stream with a block cipher.
      *
-     * @param out
-     * @param key
-     * @return
-     * @throws IOException
+     * @param out output stream to wrap.
+     * @param key cipher key.
+     * @return wrapped output stream.
+     * @throws IOException if the stream cannot be written eagerly, or if the cipher cannot be initialized.
      */
     public static OutputStream wrapWithKey(OutputStream out, SecretKey key) throws IOException {
         if (key == null) {
             return out;
         }
 
-        byte[] iv = SimpleCipher.initIV();
-        byte[] aad = SimpleCipher.initAAD();
-        AEADBlockCipher cipher = SimpleCipher.initCipher(key, true, iv, aad);
+        byte[] iv = SimpleCipherUtil.createIV();
+        byte[] aad = SimpleCipherUtil.createAAD();
+        AEADBlockCipher cipher = SimpleCipherUtil.initCipher(key, true, iv, aad);
 
-        out.write(SimpleCipher.MARKER_BYTE);
+        // write our initial bits:
+        out.write(SimpleCipherUtil.MARKER_BYTE);
         out.write(iv);
         out.write(aad);
 
         return new SimpleCipherOutputStream(out, cipher);
     }
-
-
 }
