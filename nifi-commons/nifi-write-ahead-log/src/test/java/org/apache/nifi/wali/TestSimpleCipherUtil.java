@@ -21,12 +21,12 @@ import org.junit.Assert;
 import org.junit.Test;
 
 
-public class SimpleCipherUtilTest extends AbstractSimpleCipherTest {
+public class TestSimpleCipherUtil extends TestAbstractSimpleCipher {
     private AEADBlockCipher cipher = null;
 
     @Test
     public void testStaticConstants() {
-        // this shows the various class values are sane:
+        // This shows the various class values are sane:
         Assert.assertNotNull(SimpleCipherUtil.random);
         Assert.assertTrue(SimpleCipherUtil.IV_BYTE_LEN >= 12);
         Assert.assertTrue(SimpleCipherUtil.AAD_BYTE_LEN >= 32);
@@ -36,18 +36,18 @@ public class SimpleCipherUtilTest extends AbstractSimpleCipherTest {
 
     @Test
     public void testCreateCipherWithAllParams() {
-        // this shows we can create a cipher for encryption:
+        // This shows we can create a cipher for encryption:
         cipher = SimpleCipherUtil.initCipher(cipherKey, true, SimpleCipherUtil.createIV(), SimpleCipherUtil.createAAD());
         Assert.assertNotNull(cipher);
 
-        // this shows we can create a cipher for decryption:
+        // This shows we can create a cipher for decryption:
         cipher = SimpleCipherUtil.initCipher(cipherKey, false, SimpleCipherUtil.createIV(), SimpleCipherUtil.createAAD());
         Assert.assertNotNull(cipher);
     }
 
     @Test
     public void testCreateCipherWithoutKey() {
-        // this shows we cannot create a cipher without a key:
+        // This shows we cannot create a cipher without a key:
         cipher = SimpleCipherUtil.initCipher(null, true, SimpleCipherUtil.createIV(), SimpleCipherUtil.createAAD());
         Assert.assertNull(cipher);
 
@@ -57,7 +57,7 @@ public class SimpleCipherUtilTest extends AbstractSimpleCipherTest {
 
     @Test
     public void testCreateCipherWithoutIV() {
-        // this shows we cannot create a cipher without an iv:
+        // This shows we cannot create a cipher without an iv:
         cipher = SimpleCipherUtil.initCipher(cipherKey, true, null, SimpleCipherUtil.createAAD());
         Assert.assertNull(cipher);
 
@@ -67,7 +67,7 @@ public class SimpleCipherUtilTest extends AbstractSimpleCipherTest {
 
     @Test
     public void testCreateCipherWithoutAAD() {
-        // this shows we cannot create a cipher without aad bytes:
+        // This shows we cannot create a cipher without aad bytes:
         cipher = SimpleCipherUtil.initCipher(cipherKey, true, SimpleCipherUtil.createIV(), null);
         Assert.assertNull(cipher);
 
@@ -78,6 +78,8 @@ public class SimpleCipherUtilTest extends AbstractSimpleCipherTest {
     @Test
     public void testCreateIVCommonCase() {
         byte [] iv = SimpleCipherUtil.createIV();
+
+        // This shows the IV is made as expected.
         Assert.assertNotNull(iv);
         Assert.assertEquals(SimpleCipherUtil.IV_BYTE_LEN, iv.length);
     }
@@ -85,6 +87,8 @@ public class SimpleCipherUtilTest extends AbstractSimpleCipherTest {
     @Test
     public void testCreateAADCommonCase() {
         byte[] aad = SimpleCipherUtil.createAAD();
+
+        // This shows the AAD byte vector is made as expected.
         Assert.assertNotNull(aad);
         Assert.assertEquals(SimpleCipherUtil.AAD_BYTE_LEN, aad.length);
     }
@@ -94,14 +98,17 @@ public class SimpleCipherUtilTest extends AbstractSimpleCipherTest {
         int[] lengths = new int[]{0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181};
 
         for (int length : lengths) {
+            // This shows we can construct arrays of random (but known) length
             byte[] some = SimpleCipherUtil.randomBytes(length);
             byte[] more = SimpleCipherUtil.randomBytes(length);
-
             Assert.assertEquals(length, some.length);
             Assert.assertEquals(length, more.length);
+
+            // This shows that two different arrays are in fact different
             Assert.assertNotSame(some, more);
             Assert.assertNotEquals(some, more);
 
+            // This shows the two arrays have (mostly) different content
             if (length > 8) {
                 int same = 0;
                 for (int i = 0; i < some.length; i++) {

@@ -175,8 +175,8 @@ public class LengthDelimitedJournal<T> implements WriteAheadJournal<T> {
         } catch (final Throwable t) {
             poison(t);
 
-            final IOException ioe = (t instanceof IOException) ? (IOException) t : new IOException("Failed to initCipher journal file " + journalFile, t);
-            logger.error("Failed to initCipher new journal file {} due to {}", journalFile, ioe.toString(), ioe);
+            final IOException ioe = (t instanceof IOException) ? (IOException) t : new IOException("Failed to create journal file " + journalFile, t);
+            logger.error("Failed to create new journal file {} due to {}", journalFile, ioe.toString(), ioe);
             throw ioe;
         }
 

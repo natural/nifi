@@ -21,23 +21,29 @@ import org.junit.Before;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.security.SecureRandom;
 
 
-class AbstractSimpleCipherTest {
+class TestAbstractSimpleCipher {
     static SecureRandom random = new SecureRandom();
-    final SecretKey[] cipherKeys = new SecretKey[4];
 
-    byte[] secret;
+    SecretKey[] cipherKeys;
     SecretKey cipherKey;
+
+    byte[] bigSecret;
+    byte[] littleSecret;
 
     @Before
     public void setupSecretAndKey() {
-        secret = randomBytes(randomInt(1024*1024*10));
-        cipherKey = new SecretKeySpec(randomBytes(32), SimpleCipherUtil.ALGO);
+        bigSecret = randomBytes(randomInt(1024*1024*10));
+        littleSecret = randomBytes(randomInt(4096));
 
+        cipherKeys = new SecretKey[4];
         cipherKeys[0] = null;
-        cipherKeys[1] = new SecretKeySpec(randomBytes(32), SimpleCipherUtil.ALGO);
+        cipherKey = cipherKeys[1] = new SecretKeySpec(randomBytes(32), SimpleCipherUtil.ALGO);
         cipherKeys[2] = new SecretKeySpec(randomBytes(16), SimpleCipherUtil.ALGO);
         cipherKeys[3] = null;
     }
@@ -50,5 +56,15 @@ class AbstractSimpleCipherTest {
 
     static int randomInt(int size) {
         return random.nextInt(size);
+    }
+
+    static byte[] readAll(InputStream in, int size) throws IOException {
+        byte[] dest = new byte[size];
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        int len;
+        while ((len = in.read(dest, 0, dest.length)) != -1) {
+            buffer.write(dest, 0, len);
+        }
+        return buffer.toByteArray();
     }
 }

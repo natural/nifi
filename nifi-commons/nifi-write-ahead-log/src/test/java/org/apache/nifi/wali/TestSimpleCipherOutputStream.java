@@ -25,28 +25,23 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-
-public class SimpleCipherOutputStreamTest extends AbstractSimpleCipherTest {
+/**
+ * NB:  refer to {@link TestSimpleCipherInputStream} for the majority of the stream tests.
+ */
+public class TestSimpleCipherOutputStream extends TestAbstractSimpleCipher {
     @Test
     public void testCipherOutputStream() throws IOException {
         ByteArrayOutputStream cipherByteOutputStream = new ByteArrayOutputStream();
-        OutputStream stream = SimpleCipherOutputStream.wrapWithKey(cipherByteOutputStream, cipherKey);
+        OutputStream outputStream = SimpleCipherOutputStream.wrapWithKey(cipherByteOutputStream, cipherKey);
 
-        stream.write(secret);
-        stream.close();
+        outputStream.write(bigSecret);
+        outputStream.close();
 
         byte[] cipherText = cipherByteOutputStream.toByteArray();
         ByteArrayInputStream cipherByteInputStream = new ByteArrayInputStream(cipherText);
-        InputStream cipherInputStream = SimpleCipherInputStream.wrapWithKey(cipherByteInputStream, cipherKey);
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        InputStream inputStream = SimpleCipherInputStream.wrapWithKey(cipherByteInputStream, cipherKey);
 
-        byte[] plainText = new byte[((SimpleCipherInputStream) cipherInputStream).cipher.getOutputSize(cipherText.length)];
-        int len;
-        while ((len = cipherInputStream.read(plainText, 0, plainText.length)) != -1) {
-            buffer.write(plainText, 0, len);
-        }
-
-        Assert.assertArrayEquals(secret, buffer.toByteArray());
+        byte[] plainText = readAll(inputStream, bigSecret.length * 2);
+        Assert.assertArrayEquals(bigSecret, plainText);
     }
-
 }

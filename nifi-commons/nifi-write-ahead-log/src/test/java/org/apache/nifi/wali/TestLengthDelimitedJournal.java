@@ -55,7 +55,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-public class TestLengthDelimitedJournal extends AbstractSimpleCipherTest {
+public class TestLengthDelimitedJournal extends TestAbstractSimpleCipher {
     private final File journalFile = new File("target/testLengthDelimitedJournal/testJournal.journal");
     private SerDeFactory<DummyRecord> serdeFactory;
     private DummyRecordSerde serde;

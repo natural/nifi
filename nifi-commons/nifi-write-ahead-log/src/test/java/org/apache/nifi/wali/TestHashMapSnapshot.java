@@ -41,7 +41,7 @@ import org.wali.UpdateType;
 import javax.crypto.SecretKey;
 
 
-public class TestHashMapSnapshot extends AbstractSimpleCipherTest {
+public class TestHashMapSnapshot extends TestAbstractSimpleCipher {
     private final File storageDirectory = new File("target/test-hashmap-snapshot");
     private DummyRecordSerde serde;
     private SerDeFactory<DummyRecord> serdeFactory;
