@@ -90,6 +90,7 @@ public class WriteAheadFlowFileRepository implements FlowFileRepository, SyncLis
     private static final String MINIMAL_LOCKING_WALI = "org.wali.MinimalLockingWriteAheadLog";
     private static final String DEFAULT_WAL_IMPLEMENTATION = SEQUENTIAL_ACCESS_WAL;
 
+    // This needs to change to handle a key provider and/or multiple keys.  And consider key rotation whilst doing that.
     private static final String FLOWFILE_ENCRYPTION_KEY = "nifi.flowfile.repository.encryption.key.1";
 
     private final String walImplementation;

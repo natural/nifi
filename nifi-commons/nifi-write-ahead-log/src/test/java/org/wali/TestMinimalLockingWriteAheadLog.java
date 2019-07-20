@@ -322,6 +322,7 @@ public class TestMinimalLockingWriteAheadLog {
 
         final AtomicReference<WriteAheadRepository<DummyRecord>> writeRepoRef = new AtomicReference<>();
         final AtomicBoolean checkpointing = new AtomicBoolean(false);
+        final SecretKey testKey = null; // this test is broken at the moment, so here's an explicit declaration
 
         final Thread bgThread = new Thread(new Runnable() {
             @Override
@@ -353,7 +354,7 @@ public class TestMinimalLockingWriteAheadLog {
 
         for (int x = 0; x < numAttempts; x++) {
             final DummyRecordSerde serde = new DummyRecordSerde();
-            final WriteAheadRepository<DummyRecord> writeRepo = new MinimalLockingWriteAheadLog<>(path, 256, serde, null, null);
+            final WriteAheadRepository<DummyRecord> writeRepo = new MinimalLockingWriteAheadLog<>(path, 256, serde, null, testKey);
             final Collection<DummyRecord> writeRecords = writeRepo.recoverRecords();
             for (final DummyRecord record : writeRecords) {
                 assertEquals("B", record.getProperty("A"));
@@ -381,7 +382,7 @@ public class TestMinimalLockingWriteAheadLog {
                 cp = checkpointing.get();
             }
 
-            final WriteAheadRepository<DummyRecord> readRepo = new MinimalLockingWriteAheadLog<>(path, 256, serde, null, null);
+            final WriteAheadRepository<DummyRecord> readRepo = new MinimalLockingWriteAheadLog<>(path, 256, serde, null, testKey);
             // ensure that we are able to recover the records properly
             final Collection<DummyRecord> readRecords = readRepo.recoverRecords();
             for (final DummyRecord record : readRecords) {
