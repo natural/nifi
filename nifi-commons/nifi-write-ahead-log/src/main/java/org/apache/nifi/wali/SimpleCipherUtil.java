@@ -29,7 +29,7 @@ import java.security.SecureRandom;
  * Utility class for various cipher values and methods.
  *
  */
-class SimpleCipherUtil {
+public class SimpleCipherUtil {
     // NB:  the cipher output stream uses this value to distinguish cipher text streams from (probably) plain text streams.
     // Using a magic value is suboptimal but for our use cases it gives us a measure of predictability:
     static byte MARKER_BYTE = 0x7f;
@@ -37,7 +37,7 @@ class SimpleCipherUtil {
     static int AAD_BYTE_LEN = 32;
     static int MAC_BIT_LEN = 128;
 
-    static final String ALGO = "AES";
+    public static final String ALGO = "AES";
     static SecureRandom random = new SecureRandom();
 
     /**
@@ -79,7 +79,7 @@ class SimpleCipherUtil {
      * @param length length of new array
      * @return byte array filled with random data.
      */
-    static byte[] randomBytes(int length) {
+    public static byte[] randomBytes(int length) {
         byte[] bytes = new byte[length];
         random.nextBytes(bytes);
         return bytes;

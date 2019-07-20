@@ -90,6 +90,8 @@ public class WriteAheadFlowFileRepository implements FlowFileRepository, SyncLis
     private static final String MINIMAL_LOCKING_WALI = "org.wali.MinimalLockingWriteAheadLog";
     private static final String DEFAULT_WAL_IMPLEMENTATION = SEQUENTIAL_ACCESS_WAL;
 
+    private static final String FLOWFILE_ENCRYPTION_KEY = "nifi.flowfile.repository.encryption.key.1";
+
     private final String walImplementation;
     private final NiFiProperties nifiProperties;
 
@@ -168,6 +170,10 @@ public class WriteAheadFlowFileRepository implements FlowFileRepository, SyncLis
                 final String dirName = nifiProperties.getProperty(propertyName);
                 recoveryFiles.add(new File(dirName));
             }
+            if (propertyName.startsWith(FLOWFILE_ENCRYPTION_KEY)) {
+                String keyMaterial = nifiProperties.getProperty(propertyName);
+                cipherKey = new SecretKeySpec(keyMaterial.getBytes(), "AES");
+            }
         }
 
         if (walImplementation.equals(SEQUENTIAL_ACCESS_WAL)) {
@@ -182,9 +188,6 @@ public class WriteAheadFlowFileRepository implements FlowFileRepository, SyncLis
         checkpointDelayMillis = FormatUtils.getTimeDuration(nifiProperties.getFlowFileRepositoryCheckpointInterval(), TimeUnit.MILLISECONDS);
 
         checkpointExecutor = Executors.newSingleThreadScheduledExecutor();
-
-        // TODO:  load key(s) from properties
-        cipherKey = new SecretKeySpec("9f08a87b6cf8fd387681aa3cbc694447".getBytes(), "AES");
     }
 
     @Override

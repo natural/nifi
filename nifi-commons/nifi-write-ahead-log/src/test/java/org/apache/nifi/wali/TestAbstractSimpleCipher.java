@@ -43,9 +43,11 @@ class TestAbstractSimpleCipher {
 
         cipherKeys = new SecretKey[4];
         cipherKeys[0] = null;
-        cipherKey = cipherKeys[1] = new SecretKeySpec(randomBytes(32), SimpleCipherUtil.ALGO);
+        cipherKeys[1] = new SecretKeySpec(randomBytes(32), SimpleCipherUtil.ALGO);
         cipherKeys[2] = new SecretKeySpec(randomBytes(16), SimpleCipherUtil.ALGO);
         cipherKeys[3] = null;
+
+        cipherKey = cipherKeys[1];
     }
 
     static byte[] randomBytes(int size) {

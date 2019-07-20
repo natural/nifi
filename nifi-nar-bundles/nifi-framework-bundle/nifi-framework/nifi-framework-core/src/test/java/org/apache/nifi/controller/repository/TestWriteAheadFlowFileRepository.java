@@ -42,6 +42,7 @@ import org.apache.nifi.processor.FlowFileFilter;
 import org.apache.nifi.util.MockFlowFile;
 import org.apache.nifi.util.NiFiProperties;
 import org.apache.nifi.util.file.FileUtils;
+import org.apache.nifi.wali.SimpleCipherUtil;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -326,7 +327,7 @@ public class TestWriteAheadFlowFileRepository {
 
         final ResourceClaimManager claimManager = new StandardResourceClaimManager();
         final StandardRepositoryRecordSerdeFactory serdeFactory = new StandardRepositoryRecordSerdeFactory(claimManager);
-        final SecretKey cipherKey = new SecretKeySpec("42dcf480efe68e036bd759b17c1f38f3".getBytes(), "AES");
+        final SecretKey cipherKey = new SecretKeySpec(SimpleCipherUtil.randomBytes(32), SimpleCipherUtil.ALGO);
         final WriteAheadRepository<RepositoryRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serdeFactory, null, cipherKey);
         final Collection<RepositoryRecord> initialRecs = repo.recoverRecords();
         assertTrue(initialRecs.isEmpty());
