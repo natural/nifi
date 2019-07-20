@@ -58,12 +58,13 @@ public class TestSimpleCipherInputStream extends TestAbstractSimpleCipher {
         }
     }
 
+    // This test shows that we cannot de-cipher modified (tampered, corrupted) cipher text.
     @Test
     public void testCipherInputStreamTampering() throws IOException {
         ByteArrayOutputStream cipherByteOutputStream = new ByteArrayOutputStream();
         OutputStream outputStream = SimpleCipherOutputStream.wrapWithKey(cipherByteOutputStream, cipherKey);
 
-        outputStream.write(littleSecret);
+        outputStream.write(smallSecret);
         outputStream.close();
 
         byte[] cipherText = cipherByteOutputStream.toByteArray();
@@ -82,7 +83,7 @@ public class TestSimpleCipherInputStream extends TestAbstractSimpleCipher {
             InputStream cipherInputStream = SimpleCipherInputStream.wrapWithKey(cipherByteInputStream, cipherKey);
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 
-            byte[] plainText = new byte[littleSecret.length*2];
+            byte[] plainText = new byte[smallSecret.length*2];
             int len;
 
             try {
@@ -112,9 +113,7 @@ public class TestSimpleCipherInputStream extends TestAbstractSimpleCipher {
 
         ByteArrayInputStream cipherByteInputStream = new ByteArrayInputStream(cipherText);
         InputStream inputStream = SimpleCipherInputStream.wrapWithKey(cipherByteInputStream, null);
-
-        byte[] plainText = readAll(inputStream, cipherText.length);
-        Assert.assertEquals(plainText.length, cipherText.length);
+        Assert.assertArrayEquals(cipherText, readAll(inputStream, cipherText.length));
     }
 
     // This shows how a non-ciphered output stream interacts with a ciphered input stream.
@@ -131,13 +130,11 @@ public class TestSimpleCipherInputStream extends TestAbstractSimpleCipher {
 
         ByteArrayInputStream cipherByteInputStream = new ByteArrayInputStream(cipherText);
         InputStream inputStream = SimpleCipherInputStream.wrapWithKey(cipherByteInputStream, cipherKey);
-
-        byte[] plainText = readAll(inputStream, cipherText.length);
-        Assert.assertEquals(plainText.length, cipherText.length);
+        Assert.assertArrayEquals(cipherText, readAll(inputStream, cipherText.length));
     }
 
     // This shows how input streams are handled when the input stream is so short that the cipher cannot initialize.
-    // The current implementation behavior is to return the original input stream as-is.
+    // The current implementation returns the original input stream as-is.
     @Test
     public void testTruncatedInputs() throws IOException {
         int[] sizes = new int[]{

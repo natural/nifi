@@ -34,12 +34,12 @@ class TestAbstractSimpleCipher {
     SecretKey cipherKey;
 
     byte[] bigSecret;
-    byte[] littleSecret;
+    byte[] smallSecret;
 
     @Before
     public void setupSecretAndKey() {
         bigSecret = randomBytes(randomInt(1024*1024*10));
-        littleSecret = randomBytes(randomInt(4096));
+        smallSecret = randomBytes(randomInt(4096));
 
         cipherKeys = new SecretKey[4];
         cipherKeys[0] = null;

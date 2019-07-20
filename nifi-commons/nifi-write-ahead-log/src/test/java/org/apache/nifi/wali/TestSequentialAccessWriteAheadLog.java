@@ -331,7 +331,7 @@ public class TestSequentialAccessWriteAheadLog extends TestAbstractSimpleCipher 
         final DummyRecordSerde serde = new DummyRecordSerde();
         final SerDeFactory<DummyRecord> serdeFactory = new SingletonSerDeFactory<>(serde);
 
-        final WriteAheadRepository<DummyRecord> repo = new SequentialAccessWriteAheadLog<>(path.toFile(), serdeFactory);
+        final WriteAheadRepository<DummyRecord> repo = new SequentialAccessWriteAheadLog<>(path.toFile(), serdeFactory, null, cipherKey);
         final Collection<DummyRecord> initialRecs = repo.recoverRecords();
         assertTrue(initialRecs.isEmpty());
 

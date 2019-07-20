@@ -86,10 +86,6 @@ public class SequentialAccessWriteAheadLog<T> implements WriteAheadRepository<T>
     private volatile long nextTransactionId = 0L;
     private SecretKey cipherKey;
 
-    public SequentialAccessWriteAheadLog(final File storageDirectory, final SerDeFactory<T> serdeFactory) throws IOException {
-        this(storageDirectory, serdeFactory, SyncListener.NOP_SYNC_LISTENER, null);
-    }
-
     public SequentialAccessWriteAheadLog(final File storageDirectory, final SerDeFactory<T> serdeFactory, final SyncListener syncListener, SecretKey cipherKey) throws IOException {
         if (!storageDirectory.exists() && !storageDirectory.mkdirs()) {
             throw new IOException("Directory " + storageDirectory + " does not exist and cannot be created");
