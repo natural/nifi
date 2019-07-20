@@ -2477,6 +2477,13 @@ implementation.
 |`nifi.flowfile.repository.always.sync`|If set to `true`, any change to the repository will be synchronized to the disk, meaning that NiFi will ask the operating system not to cache the information. This is very expensive and can significantly reduce NiFi performance. However, if it is `false`, there could be the potential for data loss if either there is a sudden power loss or the operating system crashes. The default value is `false`.
 |====
 
+==== Encryption
+
+The FlowFile repository can be configured to encrypt all files as they are written to disk.  To enable this encryption,
+set the `nifi.flowfile.repository.always.key.1` property to a 16 or 32 bit value like this:
+
+|`nifi.flowfile.repository.cipher.key.1`*| The flow file cipher key.
+
 === Swap Management
 
 NiFi keeps FlowFile information in memory (the JVM)
