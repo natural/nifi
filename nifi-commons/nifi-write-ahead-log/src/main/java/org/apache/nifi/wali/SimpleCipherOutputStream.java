@@ -29,7 +29,7 @@ import java.io.OutputStream;
  *
  * Note that the {@link CipherOutputStream} implementation writes the MAC at the end of the stream during `close`.
  * If streams using this class aren't closed properly, the result may be a stream without a MAC written, which
- * causes a MAC authentication failure in the reader.
+ * causes a MAC authentication failure in the input stream.
  *
  */
 public class SimpleCipherOutputStream extends CipherOutputStream {

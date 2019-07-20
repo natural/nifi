@@ -30,6 +30,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UTFDataFormatException;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -212,7 +213,7 @@ public final class MinimalLockingWriteAheadLog<T> implements WriteAheadRepositor
 
             final Path partitionBasePath = pathIterator.next();
 
-            partitions[i] = new Partition<>(partitionBasePath.resolve("partition-" + i), serdeFactory, i, getVersion());
+            partitions[i] = new Partition<>(partitionBasePath.resolve("partition-" + i), serdeFactory, i, getVersion(), cipherKey);
         }
     }
 
@@ -370,7 +371,12 @@ public final class MinimalLockingWriteAheadLog<T> implements WriteAheadRepositor
         // at this point, we know the snapshotPath exists because if it didn't, then we either returned null
         // or we renamed partialPath to snapshotPath. So just Recover from snapshotPath.
         try (final DataInputStream dataIn = new DataInputStream(new BufferedInputStream(SimpleCipherInputStream.wrapWithKey(Files.newInputStream(snapshotPath, StandardOpenOption.READ), cipherKey)))) {
-            final String waliImplementationClass = dataIn.readUTF();
+            String waliImplementationClass;
+            try {
+                waliImplementationClass = dataIn.readUTF();
+            } catch (final java.io.UTFDataFormatException e) {
+                throw new IOException("malformed input");
+            }
             final int waliImplementationVersion = dataIn.readInt();
 
             if (!waliImplementationClass.equals(MinimalLockingWriteAheadLog.class.getName())) {
@@ -709,8 +715,9 @@ public final class MinimalLockingWriteAheadLog<T> implements WriteAheadRepositor
         private final Logger logger = LoggerFactory.getLogger(MinimalLockingWriteAheadLog.class);
 
         private final Queue<Path> recoveryFiles;
+        private final SecretKey cipherKey;
 
-        public Partition(final Path path, final SerDeFactory<S> serdeFactory, final int partitionIndex, final int writeAheadLogVersion) throws IOException {
+        public Partition(final Path path, final SerDeFactory<S> serdeFactory, final int partitionIndex, final int writeAheadLogVersion, SecretKey cipherKey) throws IOException {
             this.editDirectory = path;
             this.serdeFactory = serdeFactory;
 
@@ -726,6 +733,7 @@ public final class MinimalLockingWriteAheadLog<T> implements WriteAheadRepositor
 
             this.description = "Partition-" + partitionIndex;
             this.writeAheadLogVersion = writeAheadLogVersion;
+            this.cipherKey = cipherKey;
         }
 
         public boolean tryClaim() {
@@ -797,8 +805,10 @@ public final class MinimalLockingWriteAheadLog<T> implements WriteAheadRepositor
             this.serde = serdeFactory.createSerDe(null);
             final Path editPath = getNewEditPath();
             final FileOutputStream fos = new FileOutputStream(editPath.toFile());
+            final OutputStream cipherOut = SimpleCipherOutputStream.wrapWithKey(fos, cipherKey);
+
             try {
-                final DataOutputStream outStream = new DataOutputStream(new BufferedOutputStream(fos));
+                final DataOutputStream outStream = new DataOutputStream(new BufferedOutputStream(cipherOut));
                 outStream.writeUTF(MinimalLockingWriteAheadLog.class.getName());
                 outStream.writeInt(writeAheadLogVersion);
                 outStream.writeUTF(serde.getClass().getName());
@@ -925,8 +935,9 @@ public final class MinimalLockingWriteAheadLog<T> implements WriteAheadRepositor
             final String expectedStartsWith = MinimalLockingWriteAheadLog.class.getName();
             try {
                 try (final FileInputStream fis = new FileInputStream(file);
-                        final InputStream bufferedIn = new BufferedInputStream(fis);
-                        final DataInputStream in = new DataInputStream(bufferedIn)) {
+                     final InputStream cipherIn = SimpleCipherInputStream.wrapWithKey(fis, cipherKey);
+                     final InputStream bufferedIn = new BufferedInputStream(cipherIn);
+                     final DataInputStream in = new DataInputStream(bufferedIn)) {
                     final String waliImplClassName = in.readUTF();
                     if (!expectedStartsWith.equals(waliImplClassName)) {
                         return false;
@@ -976,7 +987,7 @@ public final class MinimalLockingWriteAheadLog<T> implements WriteAheadRepositor
         }
 
         private DataInputStream createDataInputStream(final Path path) throws IOException {
-            return new DataInputStream(new BufferedInputStream(Files.newInputStream(path)));
+            return new DataInputStream(new BufferedInputStream(SimpleCipherInputStream.wrapWithKey(Files.newInputStream(path), cipherKey)));
         }
 
         private DataInputStream getRecoveryStream() throws IOException {
@@ -1094,7 +1105,8 @@ public final class MinimalLockingWriteAheadLog<T> implements WriteAheadRepositor
 
             this.serde = serdeFactory.createSerDe(null);
             final FileOutputStream fos = new FileOutputStream(newEditPath.toFile());
-            final DataOutputStream outStream = new DataOutputStream(new BufferedOutputStream(fos));
+            final OutputStream cipherOut = SimpleCipherOutputStream.wrapWithKey(fos, cipherKey);
+            final DataOutputStream outStream = new DataOutputStream(new BufferedOutputStream(cipherOut));
             outStream.writeUTF(MinimalLockingWriteAheadLog.class.getName());
             outStream.writeInt(writeAheadLogVersion);
             outStream.writeUTF(serde.getClass().getName());

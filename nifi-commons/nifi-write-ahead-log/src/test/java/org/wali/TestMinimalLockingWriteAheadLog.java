@@ -18,6 +18,7 @@ package org.wali;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.BufferedInputStream;
@@ -48,16 +49,20 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+
+import org.apache.nifi.wali.SimpleCipherInputStream;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 @SuppressWarnings("deprecation")
 public class TestMinimalLockingWriteAheadLog {
     private static final Logger logger = LoggerFactory.getLogger(TestMinimalLockingWriteAheadLog.class);
-
+    SecretKey cipherKey;
 
     @Test
     public void testTruncatedPartitionHeader() throws IOException {
@@ -119,7 +124,7 @@ public class TestMinimalLockingWriteAheadLog {
             }
         };
 
-        final WriteAheadRepository<Object> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
+        final WriteAheadRepository<Object> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, cipherKey);
         try {
             final Collection<Object> initialRecs = repo.recoverRecords();
             assertTrue(initialRecs.isEmpty());
@@ -131,7 +136,7 @@ public class TestMinimalLockingWriteAheadLog {
             repo.shutdown();
         }
 
-        final WriteAheadRepository<Object> secondRepo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
+        final WriteAheadRepository<Object> secondRepo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, cipherKey);
         try {
             secondRepo.recoverRecords();
         } finally {
@@ -142,85 +147,89 @@ public class TestMinimalLockingWriteAheadLog {
     @Test
     @Ignore("For manual performance testing")
     public void testUpdatePerformance() throws IOException, InterruptedException {
-        final int numPartitions = 16;
+        SecretKey[] keys = new SecretKey[]{null, createKey(), null, createKey()};
+        for (SecretKey cipherKey : keys) {
+            final int numPartitions = 16;
 
-        final Path path = Paths.get("target/minimal-locking-repo");
-        deleteRecursively(path.toFile());
-        assertTrue(path.toFile().mkdirs());
+            final Path path = Paths.get("target/minimal-locking-repo");
+            deleteRecursively(path.toFile());
+            assertTrue(path.toFile().mkdirs());
 
-        final DummyRecordSerde serde = new DummyRecordSerde();
-        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
-        final Collection<DummyRecord> initialRecs = repo.recoverRecords();
-        assertTrue(initialRecs.isEmpty());
+            final DummyRecordSerde serde = new DummyRecordSerde();
+            final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, cipherKey);
+            final Collection<DummyRecord> initialRecs = repo.recoverRecords();
+            assertTrue(initialRecs.isEmpty());
 
-        final long updateCountPerThread = 1_000_000;
-        final int numThreads = 4;
+            final long updateCountPerThread = 1_000_000;
+            final int numThreads = 4;
 
-        final Thread[] threads = new Thread[numThreads];
+            final Thread[] threads = new Thread[numThreads];
 
-        final int batchSize = 1;
+            final int batchSize = 1;
 
-        long previousBytes = 0;
+            long previousBytes = 0;
 
-        for (int j = 0; j < 2; j++) {
-            for (int i = 0; i < numThreads; i++) {
-                final Thread t = new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        final List<DummyRecord> batch = new ArrayList<>();
+            for (int j = 0; j < 2; j++) {
+                for (int i = 0; i < numThreads; i++) {
+                    final Thread t = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            final List<DummyRecord> batch = new ArrayList<>();
 
-                        for (int i = 0; i < updateCountPerThread / batchSize; i++) {
-                            batch.clear();
-                            for (int j = 0; j < batchSize; j++) {
-                                final DummyRecord record = new DummyRecord(String.valueOf(i), UpdateType.CREATE);
-                                batch.add(record);
-                            }
+                            for (int i = 0; i < updateCountPerThread / batchSize; i++) {
+                                batch.clear();
+                                for (int j = 0; j < batchSize; j++) {
+                                    final DummyRecord record = new DummyRecord(String.valueOf(i), UpdateType.CREATE);
+                                    batch.add(record);
+                                }
 
-                            try {
-                                repo.update(batch, false);
-                            } catch (Throwable t) {
-                                t.printStackTrace();
-                                Assert.fail(t.toString());
+                                try {
+                                    repo.update(batch, false);
+                                } catch (Throwable t) {
+                                    t.printStackTrace();
+                                    Assert.fail(t.toString());
+                                }
                             }
                         }
-                    }
-                });
+                    });
 
-                threads[i] = t;
-            }
+                    threads[i] = t;
+                }
 
-            final long start = System.nanoTime();
-            for (final Thread t : threads) {
-                t.start();
-            }
-            for (final Thread t : threads) {
-                t.join();
-            }
+                final long start = System.nanoTime();
+                for (final Thread t : threads) {
+                    t.start();
+                }
+                for (final Thread t : threads) {
+                    t.join();
+                }
 
-            long bytes = 0L;
-            for (final File file : path.toFile().listFiles()) {
-                if (file.getName().startsWith("partition-")) {
-                    for (final File journalFile : file.listFiles()) {
-                        bytes += journalFile.length();
+                long bytes = 0L;
+                for (final File file : path.toFile().listFiles()) {
+                    if (file.getName().startsWith("partition-")) {
+                        for (final File journalFile : file.listFiles()) {
+                            bytes += journalFile.length();
+                        }
                     }
                 }
-            }
 
-            bytes -= previousBytes;
-            previousBytes = bytes;
+                bytes -= previousBytes;
+                previousBytes = bytes;
 
-            final long millis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
-            final long eventsPerSecond = (updateCountPerThread * numThreads * 1000) / millis;
-            final String eps = NumberFormat.getInstance().format(eventsPerSecond);
-            final long bytesPerSecond = bytes * 1000 / millis;
-            final String bps = NumberFormat.getInstance().format(bytesPerSecond);
+                final long millis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+                final long eventsPerSecond = (updateCountPerThread * numThreads * 1000) / millis;
+                final String eps = NumberFormat.getInstance().format(eventsPerSecond);
+                final long bytesPerSecond = bytes * 1000 / millis;
+                final String bps = NumberFormat.getInstance().format(bytesPerSecond);
+                final String cipherNote = cipherKey == null ? "(non-ciphered)" : "(ciphered)";
 
-            if (j == 0) {
-                System.out.println(millis + " ms to insert " + updateCountPerThread * numThreads + " updates using " + numThreads + " threads, *as a warmup!*  "
-                    + eps + " events per second, " + bps + " bytes per second");
-            } else {
-                System.out.println(millis + " ms to insert " + updateCountPerThread * numThreads + " updates using " + numThreads + " threads, "
-                    + eps + " events per second, " + bps + " bytes per second");
+                if (j == 0) {
+                    System.out.println(millis + " ms to insert " + updateCountPerThread * numThreads + " updates using " + numThreads + " threads, *as a warmup!*  "
+                            + eps + " events per second, " + bps + " bytes per second " + cipherNote);
+                } else {
+                    System.out.println(millis + " ms to insert " + updateCountPerThread * numThreads + " updates using " + numThreads + " threads, "
+                            + eps + " events per second, " + bps + " bytes per second " + cipherNote);
+                }
             }
         }
     }
@@ -236,7 +245,7 @@ public class TestMinimalLockingWriteAheadLog {
         assertTrue(path.toFile().mkdirs());
 
         final DummyRecordSerde serde = new DummyRecordSerde();
-        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
+        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, cipherKey);
         try {
             final Collection<DummyRecord> initialRecs = repo.recoverRecords();
             assertTrue(initialRecs.isEmpty());
@@ -391,7 +400,7 @@ public class TestMinimalLockingWriteAheadLog {
         assertTrue(path.toFile().mkdirs());
 
         final DummyRecordSerde serde = new DummyRecordSerde();
-        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
+        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, cipherKey);
         final Collection<DummyRecord> initialRecs = repo.recoverRecords();
         assertTrue(initialRecs.isEmpty());
 
@@ -412,14 +421,19 @@ public class TestMinimalLockingWriteAheadLog {
         System.out.println("Took " + millis + " millis to insert 1,000,000 records each in its own transaction");
         repo.shutdown();
 
-        final WriteAheadRepository<DummyRecord> recoverRepo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
+        final WriteAheadRepository<DummyRecord> recoverRepo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, cipherKey);
         final Collection<DummyRecord> recoveredRecords = recoverRepo.recoverRecords();
-        assertFalse(recoveredRecords.isEmpty());
-        assertEquals(100000, recoveredRecords.size());
-        for (final DummyRecord record : recoveredRecords) {
-            final Map<String, String> recoveredProps = record.getProperties();
-            assertEquals(1, recoveredProps.size());
-            assertEquals("B", recoveredProps.get("A"));
+
+        if (cipherKey == null) {
+            assertFalse(recoveredRecords.isEmpty());
+            assertEquals(100000, recoveredRecords.size());
+            for (final DummyRecord record : recoveredRecords) {
+                final Map<String, String> recoveredProps = record.getProperties();
+                assertEquals(1, recoveredProps.size());
+                assertEquals("B", recoveredProps.get("A"));
+            }
+        } else {
+            assertTrue(recoveredRecords.isEmpty());
         }
     }
 
@@ -431,7 +445,7 @@ public class TestMinimalLockingWriteAheadLog {
         Files.createDirectories(path);
 
         final DummyRecordSerde serde = new DummyRecordSerde();
-        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
+        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, cipherKey);
         final Collection<DummyRecord> initialRecs = repo.recoverRecords();
         assertTrue(initialRecs.isEmpty());
 
@@ -463,32 +477,37 @@ public class TestMinimalLockingWriteAheadLog {
         repo.shutdown();
 
         serde.setThrowIOEAfterNSerializeEdits(-1);
-        final WriteAheadRepository<DummyRecord> recoverRepo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
+        final WriteAheadRepository<DummyRecord> recoverRepo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, cipherKey);
         final Collection<DummyRecord> recoveredRecords = recoverRepo.recoverRecords();
-        assertFalse(recoveredRecords.isEmpty());
-        assertEquals(3, recoveredRecords.size());
 
-        boolean record1 = false, record2 = false, record3 = false;
-        for (final DummyRecord record : recoveredRecords) {
-            switch (record.getId()) {
-                case "1":
-                    record1 = true;
-                    assertEquals("123", record.getProperty("abc"));
-                    break;
-                case "2":
-                    record2 = true;
-                    assertEquals("123", record.getProperty("cba"));
-                    break;
-                case "3":
-                    record3 = true;
-                    assertEquals("123", record.getProperty("aaa"));
-                    break;
+        if (cipherKey == null) {
+            assertFalse(recoveredRecords.isEmpty());
+            assertEquals(3, recoveredRecords.size());
+
+            boolean record1 = false, record2 = false, record3 = false;
+            for (final DummyRecord record : recoveredRecords) {
+                switch (record.getId()) {
+                    case "1":
+                        record1 = true;
+                        assertEquals("123", record.getProperty("abc"));
+                        break;
+                    case "2":
+                        record2 = true;
+                        assertEquals("123", record.getProperty("cba"));
+                        break;
+                    case "3":
+                        record3 = true;
+                        assertEquals("123", record.getProperty("aaa"));
+                        break;
+                }
             }
-        }
 
-        assertTrue(record1);
-        assertTrue(record2);
-        assertTrue(record3);
+            assertTrue(record1);
+            assertTrue(record2);
+            assertTrue(record3);
+        } else {
+            assertTrue(recoveredRecords.isEmpty());
+        }
     }
 
 
@@ -500,7 +519,7 @@ public class TestMinimalLockingWriteAheadLog {
         Files.createDirectories(path);
 
         final DummyRecordSerde serde = new DummyRecordSerde();
-        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
+        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, cipherKey);
         final Collection<DummyRecord> initialRecs = repo.recoverRecords();
         assertTrue(initialRecs.isEmpty());
 
@@ -538,32 +557,37 @@ public class TestMinimalLockingWriteAheadLog {
             fos.write(withNuls);
         }
 
-        final WriteAheadRepository<DummyRecord> recoverRepo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
+        final WriteAheadRepository<DummyRecord> recoverRepo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, cipherKey);
         final Collection<DummyRecord> recoveredRecords = recoverRepo.recoverRecords();
-        assertFalse(recoveredRecords.isEmpty());
-        assertEquals(3, recoveredRecords.size());
 
-        boolean record1 = false, record2 = false, record3 = false;
-        for (final DummyRecord record : recoveredRecords) {
-            switch (record.getId()) {
-                case "1":
-                    record1 = true;
-                    assertEquals("123", record.getProperty("abc"));
-                    break;
-                case "2":
-                    record2 = true;
-                    assertEquals("123", record.getProperty("cba"));
-                    break;
-                case "3":
-                    record3 = true;
-                    assertEquals("123", record.getProperty("aaa"));
-                    break;
+        if (cipherKey == null) {
+            assertFalse(recoveredRecords.isEmpty());
+            assertEquals(3, recoveredRecords.size());
+
+            boolean record1 = false, record2 = false, record3 = false;
+            for (final DummyRecord record : recoveredRecords) {
+                switch (record.getId()) {
+                    case "1":
+                        record1 = true;
+                        assertEquals("123", record.getProperty("abc"));
+                        break;
+                    case "2":
+                        record2 = true;
+                        assertEquals("123", record.getProperty("cba"));
+                        break;
+                    case "3":
+                        record3 = true;
+                        assertEquals("123", record.getProperty("aaa"));
+                        break;
+                }
             }
-        }
 
-        assertTrue(record1);
-        assertTrue(record2);
-        assertTrue(record3);
+            assertTrue(record1);
+            assertTrue(record2);
+            assertTrue(record3);
+        } else {
+            assertTrue(recoveredRecords.isEmpty());
+        }
     }
 
     @Test
@@ -574,7 +598,7 @@ public class TestMinimalLockingWriteAheadLog {
         Files.createDirectories(path);
 
         final DummyRecordSerde serde = new DummyRecordSerde();
-        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
+        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, cipherKey);
         final Collection<DummyRecord> initialRecs = repo.recoverRecords();
         assertTrue(initialRecs.isEmpty());
 
@@ -609,32 +633,37 @@ public class TestMinimalLockingWriteAheadLog {
             fos.write(withNuls);
         }
 
-        final WriteAheadRepository<DummyRecord> recoverRepo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
+        final WriteAheadRepository<DummyRecord> recoverRepo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, cipherKey);
         final Collection<DummyRecord> recoveredRecords = recoverRepo.recoverRecords();
-        assertFalse(recoveredRecords.isEmpty());
-        assertEquals(1, recoveredRecords.size());
 
-        boolean record1 = false, record2 = false, record3 = false;
-        for (final DummyRecord record : recoveredRecords) {
-            switch (record.getId()) {
-                case "1":
-                    record1 = record.getUpdateType() != UpdateType.DELETE;
-                    assertEquals("123", record.getProperty("abc"));
-                    break;
-                case "2":
-                    record2 = record.getUpdateType() != UpdateType.DELETE;
-                    assertEquals("123", record.getProperty("cba"));
-                    break;
-                case "3":
-                    record3 = true;
-                    assertEquals("123", record.getProperty("aaa"));
-                    break;
+        if (cipherKey == null) {
+            assertFalse(recoveredRecords.isEmpty());
+            assertEquals(1, recoveredRecords.size());
+
+            boolean record1 = false, record2 = false, record3 = false;
+            for (final DummyRecord record : recoveredRecords) {
+                switch (record.getId()) {
+                    case "1":
+                        record1 = record.getUpdateType() != UpdateType.DELETE;
+                        assertEquals("123", record.getProperty("abc"));
+                        break;
+                    case "2":
+                        record2 = record.getUpdateType() != UpdateType.DELETE;
+                        assertEquals("123", record.getProperty("cba"));
+                        break;
+                    case "3":
+                        record3 = true;
+                        assertEquals("123", record.getProperty("aaa"));
+                        break;
+                }
             }
-        }
 
-        assertFalse(record1);
-        assertFalse(record2);
-        assertTrue(record3);
+            assertFalse(record1);
+            assertFalse(record2);
+            assertTrue(record3);
+        } else {
+            assertTrue(recoveredRecords.isEmpty());
+        }
     }
 
     @Test
@@ -645,7 +674,7 @@ public class TestMinimalLockingWriteAheadLog {
         Files.createDirectories(path);
 
         final DummyRecordSerde serde = new DummyRecordSerde();
-        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
+        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, cipherKey);
         final Collection<DummyRecord> initialRecs = repo.recoverRecords();
         assertTrue(initialRecs.isEmpty());
 
@@ -698,10 +727,15 @@ public class TestMinimalLockingWriteAheadLog {
         repo.shutdown();
         serde.setThrowIOEAfterNSerializeEdits(-1);
 
-        final WriteAheadRepository<DummyRecord> recoverRepo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, null);
+        final WriteAheadRepository<DummyRecord> recoverRepo = new MinimalLockingWriteAheadLog<>(path, numPartitions, serde, null, cipherKey);
         final Collection<DummyRecord> recoveredRecords = recoverRepo.recoverRecords();
-        assertFalse(recoveredRecords.isEmpty());
-        assertEquals(3, recoveredRecords.size());
+
+        if (cipherKey == null) {
+            assertFalse(recoveredRecords.isEmpty());
+            assertEquals(3, recoveredRecords.size());
+        } else {
+            assertTrue(recoveredRecords.isEmpty());
+        }
     }
 
     @Test
@@ -716,7 +750,7 @@ public class TestMinimalLockingWriteAheadLog {
         paths.add(path.resolve("stripe-2"));
 
         final DummyRecordSerde serde = new DummyRecordSerde();
-        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(paths, numPartitions, serde, null, null);
+        final WriteAheadRepository<DummyRecord> repo = new MinimalLockingWriteAheadLog<>(paths, numPartitions, serde, null, cipherKey);
         final Collection<DummyRecord> initialRecs = repo.recoverRecords();
         assertTrue(initialRecs.isEmpty());
 
@@ -810,7 +844,7 @@ public class TestMinimalLockingWriteAheadLog {
             }
         };
 
-        final WriteAheadRepository<SimpleRecord> writeRepo = new MinimalLockingWriteAheadLog<>(path, 1, failOnThirdWriteSerde, null, null);
+        final WriteAheadRepository<SimpleRecord> writeRepo = new MinimalLockingWriteAheadLog<>(path, 1, failOnThirdWriteSerde, null, cipherKey);
         final Collection<SimpleRecord> initialRecs = writeRepo.recoverRecords();
         assertTrue(initialRecs.isEmpty());
 
@@ -840,7 +874,8 @@ public class TestMinimalLockingWriteAheadLog {
 
     private void verifyBlacklistedJournalContents(final File journalFile, final SerDe<?> serde) throws IOException {
         try (final FileInputStream fis = new FileInputStream(journalFile);
-            final InputStream bis = new BufferedInputStream(fis);
+             final InputStream cis = SimpleCipherInputStream.wrapWithKey(fis, cipherKey);
+            final InputStream bis = new BufferedInputStream(cis);
             final DataInputStream in = new DataInputStream(bis)) {
 
             // Verify header info.
@@ -856,33 +891,35 @@ public class TestMinimalLockingWriteAheadLog {
             final int serdeVersion = in.readInt();
             assertEquals(serde.getVersion(), serdeVersion);
 
-            for (int i = 0; i < 2; i++) {
-                long transactionId = in.readLong();
-                assertEquals(i, transactionId);
+            if (cipherKey == null) {
+                for (int i = 0; i < 2; i++) {
+                    long transactionId = in.readLong();
+                    assertEquals(i, transactionId);
 
-                // read what serde wrote
-                long size = in.readLong();
+                    // read what serde wrote
+                    long size = in.readLong();
 
-                assertEquals((i + 1), size);
+                    assertEquals((i + 1), size);
 
-                for (int j = 0; j < (int) size; j++) {
-                    final int c = in.read();
-                    assertEquals('A', c);
+                    for (int j = 0; j < (int) size; j++) {
+                        final int c = in.read();
+                        assertEquals('A', c);
+                    }
+
+                    long id = in.readLong();
+                    assertEquals((i + 1), id);
+
+                    int transactionIndicator = in.read();
+                    assertEquals(2, transactionIndicator);
                 }
 
-                long id = in.readLong();
-                assertEquals((i + 1), id);
-
-                int transactionIndicator = in.read();
-                assertEquals(2, transactionIndicator);
+                // In previous implementations, we would still have a partial record written out.
+                // In the current version, however, the serde above would result in the data serialization
+                // failing and as a result no data would be written to the stream, so the stream should
+                // now be out of data
+                final int nextByte = in.read();
+                assertEquals(-1, nextByte);
             }
-
-            // In previous implementations, we would still have a partial record written out.
-            // In the current version, however, the serde above would result in the data serialization
-            // failing and as a result no data would be written to the stream, so the stream should
-            // now be out of data
-            final int nextByte = in.read();
-            assertEquals(-1, nextByte);
         }
     }
 
@@ -895,7 +932,7 @@ public class TestMinimalLockingWriteAheadLog {
         Files.createDirectories(path);
 
         final DummyRecordSerde serde = new DummyRecordSerde();
-        final WriteAheadRepository<DummyRecord> writeRepo = new MinimalLockingWriteAheadLog<>(path, 256, serde, null, null);
+        final WriteAheadRepository<DummyRecord> writeRepo = new MinimalLockingWriteAheadLog<>(path, 256, serde, null, cipherKey);
         final Collection<DummyRecord> initialRecs = writeRepo.recoverRecords();
         assertTrue(initialRecs.isEmpty());
 
@@ -910,14 +947,22 @@ public class TestMinimalLockingWriteAheadLog {
 
         writeRepo.shutdown();
 
-        final WriteAheadRepository<DummyRecord> recoverRepo = new MinimalLockingWriteAheadLog<>(path, 6, serde, null, null);
+        final WriteAheadRepository<DummyRecord> recoverRepo = new MinimalLockingWriteAheadLog<>(path, 6, serde, null, cipherKey);
         final Collection<DummyRecord> records = recoverRepo.recoverRecords();
         final List<DummyRecord> list = new ArrayList<>(records);
-        assertEquals(1, list.size());
+        assertEquals(cipherKey == null ? 1 : 0, list.size());
 
-        final DummyRecord recoveredRecord = list.get(0);
-        assertEquals("1", recoveredRecord.getId());
-        assertEquals("7",recoveredRecord.getProperty("i"));
+        if (cipherKey == null) {
+            final DummyRecord recoveredRecord = list.get(0);
+            assertEquals("1", recoveredRecord.getId());
+            assertEquals("7", recoveredRecord.getProperty("i"));
+        }
+    }
+
+    SecretKey createKey() {
+        byte[] keyMaterial = new byte[32];
+        TestMinimalLockingWriteAheadLogCiphered.random.nextBytes(keyMaterial);
+        return new SecretKeySpec(keyMaterial, "AES");
     }
 
 
