@@ -14,10 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.properties;
+package org.apache.nifi.properties.sensitive;
 
-public interface SensitivePropertyProviderFactory {
+/**
+ * ExternalPropertyProvider is an interface for reading external values by name.
+ *
+ */
+public interface ExternalPropertyProvider {
 
-    SensitivePropertyProvider getProvider();
-
+    /**
+     * Read an external property by name.
+     *
+     * @param name the name or key of the external property
+     * @return external property value, as a string
+     */
+    String get(String name);
 }

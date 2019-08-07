@@ -23,13 +23,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.security.NoSuchAlgorithmException;
 import java.security.Security;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.Stream;
-import javax.crypto.Cipher;
+
 import org.apache.commons.lang3.StringUtils;
+import org.apache.nifi.properties.sensitive.StandardSensitivePropertyProvider;
+import org.apache.nifi.properties.sensitive.ProtectedNiFiProperties;
+import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
 import org.apache.nifi.util.NiFiProperties;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
@@ -45,9 +47,6 @@ public class NiFiPropertiesLoader {
 
     private NiFiProperties instance;
     private String keyHex;
-
-    // Future enhancement: allow for external registration of new providers
-    private static SensitivePropertyProviderFactory sensitivePropertyProviderFactory;
 
     public NiFiPropertiesLoader() {
     }
@@ -70,13 +69,13 @@ public class NiFiPropertiesLoader {
 
     /**
      * Sets the hexadecimal key used to unprotect properties encrypted with
-     * {@link AESSensitivePropertyProvider}. If the key has already been set,
+     * {@link StandardSensitivePropertyProvider}. If the key has already been set,
      * calling this method will throw a {@link RuntimeException}.
      *
      * @param keyHex the key in hexadecimal format
      */
     public void setKeyHex(String keyHex) {
-        if (this.keyHex == null || this.keyHex.trim().isEmpty()) {
+        if (StringUtils.isBlank(this.keyHex)) {
             this.keyHex = keyHex;
         } else {
             throw new RuntimeException("Cannot overwrite an existing key");
@@ -159,7 +158,7 @@ public class NiFiPropertiesLoader {
     private static String getDefaultFilePath() {
         String systemPath = System.getProperty(NiFiProperties.PROPERTIES_FILE_PATH);
 
-        if (systemPath == null || systemPath.trim().isEmpty()) {
+        if (StringUtils.isBlank(systemPath)) {
             logger.warn("The system variable {} is not set, so it is being set to '{}'", NiFiProperties.PROPERTIES_FILE_PATH, RELATIVE_PATH);
             System.setProperty(NiFiProperties.PROPERTIES_FILE_PATH, RELATIVE_PATH);
             systemPath = RELATIVE_PATH;
@@ -171,23 +170,6 @@ public class NiFiPropertiesLoader {
 
     private NiFiProperties loadDefault() {
         return load(getDefaultFilePath());
-    }
-
-    private static String getDefaultProviderKey() {
-        try {
-            return "aes/gcm/" + (Cipher.getMaxAllowedKeyLength("AES") > 128 ? "256" : "128");
-        } catch (NoSuchAlgorithmException e) {
-            return "aes/gcm/128";
-        }
-    }
-
-    private void initializeSensitivePropertyProviderFactory() {
-        sensitivePropertyProviderFactory = new AESSensitivePropertyProviderFactory(keyHex);
-    }
-
-    private SensitivePropertyProvider getSensitivePropertyProvider() {
-        initializeSensitivePropertyProviderFactory();
-        return sensitivePropertyProviderFactory.getProvider();
     }
 
     /**
@@ -213,9 +195,7 @@ public class NiFiPropertiesLoader {
             inStream = new BufferedInputStream(new FileInputStream(file));
             rawProperties.load(inStream);
             logger.info("Loaded {} properties from {}", rawProperties.size(), file.getAbsolutePath());
-
-            ProtectedNiFiProperties protectedNiFiProperties = new ProtectedNiFiProperties(rawProperties);
-            return protectedNiFiProperties;
+            return new ProtectedNiFiProperties(rawProperties, keyHex);
         } catch (final Exception ex) {
             logger.error("Cannot load properties file due to " + ex.getLocalizedMessage());
             throw new RuntimeException("Cannot load properties file due to "
@@ -246,7 +226,6 @@ public class NiFiPropertiesLoader {
         ProtectedNiFiProperties protectedNiFiProperties = readProtectedPropertiesFromDisk(file);
         if (protectedNiFiProperties.hasProtectedKeys()) {
             Security.addProvider(new BouncyCastleProvider());
-            protectedNiFiProperties.addSensitivePropertyProvider(getSensitivePropertyProvider());
         }
 
         return protectedNiFiProperties.getUnprotectedProperties();

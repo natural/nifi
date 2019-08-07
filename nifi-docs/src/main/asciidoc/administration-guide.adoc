@@ -187,6 +187,32 @@ Now that the User Interface has been secured, we can easily secure Site-to-Site 
 accomplished by setting the `nifi.remote.input.secure` and `nifi.cluster.protocol.is.secure` properties, respectively, to `true`. These communications
 will always REQUIRE two way SSL as the nodes will use their configured keystore/truststore for authentication.
 
+[[sensitive_properties]]
+=== Other Sensitive Properties
+
+In addition to using AES/GCM keys to protect sensitive properties, NiFi also supports loading (reading, decrypting) sensitive properties from property files using
+other sources of encryption and decryption, such as AWS KMS or HashiCorp Vault.
+
+To use AWS KMS, set the key property like so:
+
+`nifi.foo.key=aws/kms/03a...7b8`
+
+The key fragment (`03a...7b8`) should be a full key ID, ARN, or alias.
+
+To use HashiCorp Vault with a token, set the key property like so:
+
+`nifi.sensitive.example.key=vault/token/https://vault.example.com:8200,04b...8c9`
+
+The token fragment (`04b...8c9`) should be the full token string.
+
+To use the Vault provider with App Role authentication:
+
+`nifi.sensitive.example.key=vault/approle/https://vault.example.com:8200,role-id,secret-id`
+
+And with App ID authentication:
+
+`nifi.sensitive.example.key=vault/approle/https://vault.example.com:8200,app-id,user-id`
+
 [[tls_generation_toolkit]]
 === TLS Generation Toolkit
 
