@@ -17,38 +17,25 @@
 package org.apache.nifi.properties.sensitive.hashicorp.vault;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.nifi.properties.sensitive.ExternalProperties;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
-import org.bouncycastle.util.encoders.Hex;
+import org.apache.nifi.properties.sensitive.StandardExternalPropertyLookup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.client.ClientHttpRequestFactory;
-import org.springframework.vault.authentication.AppIdAuthentication;
-import org.springframework.vault.authentication.AppIdAuthenticationOptions;
-import org.springframework.vault.authentication.AppRoleAuthentication;
-import org.springframework.vault.authentication.AppRoleAuthenticationOptions;
-import org.springframework.vault.authentication.ClientAuthentication;
-import org.springframework.vault.authentication.IpAddressUserId;
-import org.springframework.vault.authentication.TokenAuthentication;
-import org.springframework.vault.client.SimpleVaultEndpointProvider;
-import org.springframework.vault.client.VaultClients;
-import org.springframework.vault.client.VaultEndpoint;
-import org.springframework.vault.client.VaultEndpointProvider;
-import org.springframework.vault.config.ClientHttpRequestFactoryFactory;
 
+import org.springframework.core.io.Resource;
+import org.springframework.vault.authentication.SimpleSessionManager;
+import org.springframework.vault.client.VaultEndpoint;
+import org.springframework.vault.config.ClientHttpRequestFactoryFactory;
 import org.springframework.vault.core.VaultOperations;
 import org.springframework.vault.core.VaultTemplate;
 import org.springframework.vault.support.ClientOptions;
 import org.springframework.vault.support.SslConfiguration;
-import org.springframework.vault.support.VaultResponse;
-import org.springframework.vault.support.VaultToken;
-import org.springframework.vault.support.WrappedMetadata;
-import org.springframework.web.client.RestOperations;
-import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.time.Duration;
+import java.nio.file.Paths;
+import java.security.KeyStore;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -56,262 +43,123 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Sensitive properties using Vault Wrap and Unwrap operations.
+ * Sensitive properties using Vault Transit encrypt and decrypt operations.
  */
 public class VaultSensitivePropertyProvider implements SensitivePropertyProvider {
     private static final Logger logger = LoggerFactory.getLogger(VaultSensitivePropertyProvider.class);
-
-    static final String PROVIDER_NAME = "HashiCorp Vault Sensitive Property Provider";
-    static final String VAULT_PARAM_DELIMITER = ",";
+    private static final String PROVIDER_NAME = "HashiCorp Vault Sensitive Property Provider";
     static final String VAULT_KEY_DELIMITER = "/";
     static final String VAULT_PREFIX = "vault";
+
     static final String VAULT_AUTH_TOKEN = "token";
     static final String VAULT_AUTH_APP_ID = "appid";
     static final String VAULT_AUTH_APP_ROLE = "approle";
-    static final Set<String> VAULT_AUTH_TYPES = new HashSet<>(Arrays.asList(VAULT_AUTH_TOKEN, VAULT_AUTH_APP_ID, VAULT_AUTH_APP_ROLE));
+    static final String VAULT_AUTH_CUBBYHOLE = "cubbyhole";
 
-    private static final Duration DEFAULT_WRAP_DURATION = Duration.ofDays(365);
-    private static String authType;
-    private static VaultOperations vaultClient;
-    private static String vaultParams;
+    private static final Set<String> VAULT_AUTH_TYPES = new HashSet<>(Arrays.asList(
+            VAULT_AUTH_TOKEN,
+            VAULT_AUTH_APP_ID,
+            VAULT_AUTH_APP_ROLE,
+            VAULT_AUTH_CUBBYHOLE
+    ));
 
-    /**
-     * Constructs a {@link SensitivePropertyProvider} that uses Vault wrap and unwrap.
-     *
-     * @param clientMaterial client authentication and configuration string
-     */
-    public VaultSensitivePropertyProvider(String clientMaterial) {
-        authType = extractAuthType(clientMaterial);
-        vaultParams = extractParams(clientMaterial);
-        String vaultUri = extractUri(vaultParams);
+    private final VaultOperations vaultOperations;
+    private final ExternalProperties externalProperties;
+    private final String transitKeyId;
+    private final String authType;
 
-        if (StringUtils.isBlank(authType) || StringUtils.isBlank(vaultParams) || StringUtils.isBlank(vaultUri)) {
-            throw new SensitivePropertyProtectionException("Invalid Vault client material.");
-        }
-
-        RestTemplate restTemplate = getRestTemplate(vaultUri);
-        ClientAuthentication vaultAuth;
-
-        switch (authType) {
-            case VAULT_AUTH_APP_ID:
-                vaultAuth = getAppIdClient(restTemplate);
-                break;
-            case VAULT_AUTH_APP_ROLE:
-                vaultAuth = getAppRoleClient(restTemplate);
-                break;
-            case VAULT_AUTH_TOKEN:
-                vaultAuth = getTokenClient();
-                break;
-            default:
-                throw new SensitivePropertyProtectionException("Unknown Vault authentication type.");
-        }
-
-        VaultEndpoint endpoint = VaultEndpoint.from(URI.create(vaultUri));
-        vaultClient = new VaultTemplate(endpoint, vaultAuth);
-    }
-
-    private ClientAuthentication getTokenClient() {
-        String token = extractToken(vaultParams);
-        return new TokenAuthentication(token);
-    }
-
-    private ClientAuthentication getAppRoleClient(RestTemplate restTemplate) {
-        String roleId = extractRoleId(vaultParams);
-        String secretId = extractSecretId(vaultParams);
-
-        if (StringUtils.isBlank(roleId) || StringUtils.isBlank(secretId)) {
-            throw new SensitivePropertyProtectionException("Missing Vault app role value(s).");
-        }
-        AppRoleAuthenticationOptions appRoleOptions = AppRoleAuthenticationOptions.builder()
-                .roleId(AppRoleAuthenticationOptions.RoleId.provided(roleId))
-                .secretId(AppRoleAuthenticationOptions.SecretId.provided(secretId))
-                .build();
-
-        return new AppRoleAuthentication(appRoleOptions, restTemplate);
-    }
-
-    private ClientAuthentication getAppIdClient(RestTemplate restTemplate) {
-        String appId = extractAppId(vaultParams);
-
-        if (StringUtils.isBlank(appId)) {
-            throw new SensitivePropertyProtectionException("Missing Vault app id value.");
-        }
-        AppIdAuthenticationOptions appIdOptions = AppIdAuthenticationOptions.builder()
-                .appId(appId)
-                .userIdMechanism(new IpAddressUserId()) // wha?
-                .build();
-
-        return new AppIdAuthentication(appIdOptions, restTemplate);
-    }
-
-    private RestTemplate getRestTemplate(String vaultUri) {
-        RestOperations restOperations;
-        ClientAuthentication vaultAuth;
-
-        VaultEndpoint vaultEndpoint = null;
-        try {
-            vaultEndpoint = VaultEndpoint.from(new URI(vaultUri));
-        } catch (URISyntaxException e) {
-            throw new SensitivePropertyProtectionException(e);
-        }
-
-        VaultEndpointProvider vaultEndpointProvider = SimpleVaultEndpointProvider.of(vaultEndpoint);
-        ClientOptions options = new ClientOptions();
-        SslConfiguration sslConfig = SslConfiguration.unconfigured();
-        ClientHttpRequestFactory clientHttpRequestFactory = ClientHttpRequestFactoryFactory.create(options, sslConfig);
-        return VaultClients.createRestTemplate(vaultEndpointProvider, clientHttpRequestFactory);
+    public VaultSensitivePropertyProvider(String keyId) {
+        this(keyId, new StandardExternalPropertyLookup(getDefaultPropertiesFilename(), getDefaultPropertiesMapping()));
     }
 
     /**
-     * Extract the auth token from the decoded parameter string, the first parameter after the URI.
+     * Constructs a {@link SensitivePropertyProvider} that uses Vault encrypt and decrypt values.
      *
-     * Applies to token auth only.
-     *
-     * @param vaultParams decoded vault parameters string
-     * @return auth token
+     * @param keyId vault key spec, in the form "vault/{auth-type}/{transit-key-id}"
      */
-    private static String extractToken(String vaultParams) {
-        String[] parts = vaultParams.split(VAULT_PARAM_DELIMITER, 2);
-        if (parts.length >= 2) {
+    public VaultSensitivePropertyProvider(String keyId, ExternalProperties externalProperties) {
+        this.externalProperties = externalProperties;
+        transitKeyId = getTransitKey(keyId);
+        authType = getVaultAuthentication(keyId);
+
+        String serverUri = getVaultUri();
+
+        if (StringUtils.isBlank(authType) || StringUtils.isBlank(serverUri) || StringUtils.isBlank(transitKeyId)) {
+            throw new SensitivePropertyProtectionException("Invalid Vault client materials.");
+        }
+
+        VaultEndpoint vaultEndpoint = VaultEndpoint.from(URI.create(serverUri));
+        StandardVaultConfiguration config = new StandardVaultConfiguration(vaultEndpoint, externalProperties);
+
+        Resource keyStore = config.getVaultSslKeyStore();
+        Resource trustStore = config.getVaultSslTrustStore();
+        SslConfiguration sslConf = SslConfiguration.NONE;
+
+        if (keyStore != null || trustStore != null) {
+            String storeType = KeyStore.getDefaultType();
+            SslConfiguration.KeyStoreConfiguration keyStoreConf = new SslConfiguration.KeyStoreConfiguration(keyStore, config.getVaultSslKeyStorePassword(), storeType);
+            SslConfiguration.KeyStoreConfiguration trustStoreConf = new SslConfiguration.KeyStoreConfiguration(trustStore, config.getVaultSslTrustStorePassword(), storeType);
+            sslConf = new SslConfiguration(keyStoreConf, trustStoreConf);
+        }
+
+        vaultOperations = new VaultTemplate(vaultEndpoint, ClientHttpRequestFactoryFactory.create(new ClientOptions(), sslConf), new SimpleSessionManager(config.clientAuthentication()));
+    }
+
+    /**
+     * Extract the Vault URI from the external properties.
+     *
+     * @return Vault server URI
+     */
+    private String getVaultUri() {
+        return this.externalProperties.get("vault.uri");
+    }
+
+    /**
+     * Extract the Vault auth method from the external properties.
+     *
+     * @return auth method
+     * @param keySpec
+     */
+    private String getVaultAuthentication(String keySpec) {
+        String authProp = this.externalProperties.get("vault.authentication");
+        String[] parts = keySpec.split(VAULT_KEY_DELIMITER);
+        if (parts.length == 3 && VAULT_AUTH_TYPES.contains(parts[1])) {
             return parts[1];
         }
-        return null;
+        return authProp;
+    }
+
+    private static String getTransitKey(String keyId) {
+        String[] parts = keyId.split(VAULT_KEY_DELIMITER, 3);
+        return parts.length == 3 ? parts[2] : "";
     }
 
     /**
-     * Extract the app role id from the decoded parameter string, the first parameter after the URI.
-     *
-     * Applies to app role auth only.
-     *
-     * @param vaultParams decoded vault parameters string
-     * @return app role id
+     * Creates a Vault key spec string for token authentication.
      */
-    private static String extractRoleId(String vaultParams) {
-        String[] parts = vaultParams.split(VAULT_PARAM_DELIMITER, 3);
-        if (parts.length >= 3) {
-            return parts[1];
-        }
-        return null;
+    static String formatForTokenAuth(String keyId) {
+        return VAULT_PREFIX + VAULT_KEY_DELIMITER + VAULT_AUTH_TOKEN + VAULT_KEY_DELIMITER + keyId;
     }
 
     /**
-     * Extract the app secret id from the decoded parameter string, the second parameter after the URI.
-     *
-     * Applies to app role auth only.
-     *
-     * @param vaultParams decoded vault parameters string
-     * @return app secret id
+     * Creates a Vault key spec string for token authentication.
      */
-    private static String extractSecretId(String vaultParams) {
-        String[] parts = vaultParams.split(VAULT_PARAM_DELIMITER, 3);
-        if (parts.length >= 3) {
-            return parts[2];
-        }
-        return null;
+    static String formatForCubbyholeAuth(String keyId) {
+        return VAULT_PREFIX + VAULT_KEY_DELIMITER + VAULT_AUTH_CUBBYHOLE + VAULT_KEY_DELIMITER + keyId;
     }
 
     /**
-     * Extract the app id from the decoded parameter string, the first parameter after the URI.
-     *
-     * Applies to app id auth only.
-     *
-     * @param vaultParams decoded vault parameters string
-     * @return app id
+     * Creates a Vault key spec string for app role authentication.
      */
-    private static String extractAppId(String vaultParams) {
-        String[] parts = vaultParams.split(VAULT_PARAM_DELIMITER, 3);
-        if (parts.length >= 2) {
-            return parts[1];
-        }
-        return null;
+    static String formatForAppRoleAuth(String keyId) {
+        return VAULT_PREFIX + VAULT_KEY_DELIMITER + VAULT_AUTH_APP_ROLE + VAULT_KEY_DELIMITER + keyId;
     }
 
     /**
-     * Extract the user id from the decoded parameter string, the second parameter after the URI.
-     *
-     * Applies to app id auth only.
-     *
-     * @param vaultParams decoded vault parameters string
-     * @return user id
+     * Creates a Vault key spec string for app id authentication.
      */
-    private static String extractUserId(String vaultParams) {
-        String[] parts = vaultParams.split(VAULT_PARAM_DELIMITER, 3);
-        if (parts.length >= 2) {
-            return parts[2];
-        }
-        return null;
-    }
-
-    /**
-     * Extract the Vault URI from the decoded parameter string, which is always the first value.
-     *
-     * Applies to all auth types.
-     *
-     * @param vaultParams decoded vault parameters string
-     * @return Vault client URI
-     */
-    private static String extractUri(String vaultParams) {
-        if (vaultParams == null) {
-            return null;
-        }
-        String[] parts = vaultParams.split(VAULT_PARAM_DELIMITER, 2);
-        if (parts.length >= 1) {
-            return parts[0];
-        }
-        return null;
-    }
-
-    /**
-     * Extract the Vault client parameters from the given key material.
-     *
-     * @param clientMaterial key in the form of "vault/auth-type/client-param,..."
-     * @return decoded Vault client parameters
-     */
-    private static String extractParams(String clientMaterial) {
-        String[] parts = clientMaterial.split(VAULT_KEY_DELIMITER, 3);
-        if (parts.length >= 3) {
-            return parts[2];
-        }
-        return null;
-    }
-
-    /**
-     * Extract the Vault auth method from the given key material.
-     *
-     * @param clientMaterial key in the form of "vault/auth-type/client-param,..."
-     * @return decoded Vault client auth method
-     */
-    private static String extractAuthType(String clientMaterial) {
-        for (String authType : VAULT_AUTH_TYPES) {
-            if (clientMaterial.startsWith(VAULT_PREFIX + VAULT_KEY_DELIMITER + authType + VAULT_KEY_DELIMITER)) {
-                String[] parts = clientMaterial.split(VAULT_KEY_DELIMITER, 3);
-                return parts[1];
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Creates a Vault client material string for token authentication given a URI and token.
-     */
-    static String formatForToken(String uri, String token) {
-        return VAULT_PREFIX + VAULT_KEY_DELIMITER + VAULT_AUTH_TOKEN + VAULT_KEY_DELIMITER + uri + VAULT_PARAM_DELIMITER + token;
-    }
-
-    /**
-     * Creates a Vault client material string for app role authentication given a URI, role, and secret.
-     */
-    static String formatForAppRole(String uri, String roleId, String secretId) {
-        String params = uri + VAULT_PARAM_DELIMITER + roleId + VAULT_PARAM_DELIMITER + secretId;
-        return VAULT_PREFIX + VAULT_KEY_DELIMITER + VAULT_AUTH_APP_ROLE + VAULT_KEY_DELIMITER + params;
-    }
-
-    /**
-     * Creates a Vault client material string for app id authentication given a URI, app id, and user id.
-     */
-    static String formatForAppId(String uri, String appId, String userId) {
-        String params = uri + VAULT_PARAM_DELIMITER + appId + VAULT_PARAM_DELIMITER + userId;
-        return VAULT_PREFIX + VAULT_KEY_DELIMITER + VAULT_AUTH_APP_ID + VAULT_KEY_DELIMITER + params;
+    static String formatForAppIdAuth(String keyId) {
+        return VAULT_PREFIX + VAULT_KEY_DELIMITER + VAULT_AUTH_APP_ID + VAULT_KEY_DELIMITER + keyId;
     }
 
     /**
@@ -322,7 +170,6 @@ public class VaultSensitivePropertyProvider implements SensitivePropertyProvider
     @Override
     public String getName() {
         return PROVIDER_NAME;
-
     }
 
     /**
@@ -332,7 +179,7 @@ public class VaultSensitivePropertyProvider implements SensitivePropertyProvider
      */
     @Override
     public String getIdentifierKey() {
-        return VAULT_PREFIX + VAULT_KEY_DELIMITER + authType + VAULT_KEY_DELIMITER + vaultParams;
+        return VAULT_PREFIX + VAULT_KEY_DELIMITER + authType + VAULT_KEY_DELIMITER + transitKeyId;
     }
 
     /**
@@ -347,17 +194,11 @@ public class VaultSensitivePropertyProvider implements SensitivePropertyProvider
         if (unprotectedValue == null || StringUtils.isBlank(unprotectedValue)) {
             throw new IllegalArgumentException("Cannot encrypt an empty value");
         }
-
-        // Vault often throws an exception when wrapping a plain string payload, so we use a map instead:
-        Map<String, String> plainMap = new HashMap<>();
-        plainMap.put(VAULT_PREFIX, unprotectedValue);
-
-        WrappedMetadata vaultResponse = vaultWrap(vaultClient, plainMap, DEFAULT_WRAP_DURATION);
-        if (vaultResponse != null) {
-            return vaultResponse.getToken().getToken();
+        String vaultResponse = vaultTransitEncrypt(vaultOperations, transitKeyId, unprotectedValue);
+        if (vaultResponse == null) {
+            throw new SensitivePropertyProtectionException("Empty response during wrap.");
         }
-
-        throw new SensitivePropertyProtectionException("Empty response during wrap.");
+        return vaultResponse;
     }
 
     /**
@@ -369,83 +210,90 @@ public class VaultSensitivePropertyProvider implements SensitivePropertyProvider
      */
     @Override
     public String unprotect(String protectedValue) throws SensitivePropertyProtectionException {
-        VaultResponse vaultResponse = vaultUnwrap(vaultClient, protectedValue);
+        String vaultResponse = vaultTransitDecrypt(vaultOperations, transitKeyId, protectedValue);
         if (vaultResponse == null) {
             throw new SensitivePropertyProtectionException("Empty response during unwrap.");
         }
-
-        // The value was previously in a map, so here we pluck it out:
-        Map<String, Object> responseData = vaultResponse.getData();
-        if (responseData == null) {
-            throw new SensitivePropertyProtectionException("Empty data in response.");
-        }
-
-        if (responseData.containsKey(VAULT_PREFIX)) {
-            return responseData.get(VAULT_PREFIX).toString();
-        }
-
-        throw new SensitivePropertyProtectionException("Data key missing from response.");
+        return vaultResponse;
     }
 
     /**
      * True when the client specifies a key like 'vault/token/...'.
      *
-     * @param scheme name of encryption or protection scheme
+     * @param material name of encryption or protection scheme
      * @return true if this class can provide protected values
      */
-    public static boolean isProviderFor(String scheme) {
-        if (StringUtils.isBlank(scheme)) {
+    public static boolean isProviderFor(String material) {
+        if (StringUtils.isBlank(material)) {
             return false;
         }
-
-        String[] parts = scheme.split(VAULT_KEY_DELIMITER, 3);
-
+        String[] parts = material.split(VAULT_KEY_DELIMITER, 3);
         if (parts.length < 3) {
             return false;
         }
-
         if (!StringUtils.equals(parts[0], VAULT_PREFIX)) {
             return false;
         }
-
         return VAULT_AUTH_TYPES.contains(parts[1]);
     }
 
     /**
      * Returns a printable representation of this instance.
      *
-     * @param clientMaterial Vault client material
+     * @param key Vault client material
      * @return printable string
      */
-    public static String toPrintableString(String clientMaterial) {
-        String authType = extractAuthType(clientMaterial);
-        String hash = Hex.toHexString(clientMaterial.getBytes());
-        String suffix = hash.substring(0, 8) + "..." + hash.substring(hash.length()-8, hash.length());
-
-        return VAULT_PREFIX + VAULT_KEY_DELIMITER + authType + VAULT_KEY_DELIMITER + "hash:" + suffix;
+    public static String toPrintableString(String key) {
+        return key;
     }
 
     /**
      * Unwraps the given vault (string) token.
      *
-     * @param client Vault client
-     * @param token previously wrapped token
-     * @return response from Vault
+     * @param vaultOperations Vault client
+     * @param keyId transit key id
+     * @param cipherText encrypted text to decrypt
+     * @return deciphered text
      */
-    static VaultResponse vaultUnwrap(VaultOperations client, String token) {
-        return client.opsForWrapping().read(VaultToken.of(token));
+    static String vaultTransitDecrypt(VaultOperations vaultOperations, String keyId, String cipherText) {
+        return vaultOperations.opsForTransit().decrypt(keyId, cipherText);
     }
 
     /**
      * Wraps the given map.
      *
-     * @param client Vault client
-     * @param data arbitrary map of string to string
-     * @param duration validity as Duration
-     * @return wrapped data wrapped in more metadata
+     * @param vaultOperations Vault client
+     * @param keyId transit key id
+     * @param plainText plaintext to encrypt
+     * @return ciphered text
      */
-    static WrappedMetadata vaultWrap(VaultOperations client, Map<String, String> data, Duration duration) {
-        return client.opsForWrapping().wrap(data, duration);
+    static String vaultTransitEncrypt(VaultOperations vaultOperations, String keyId, String plainText) {
+        return vaultOperations.opsForTransit().encrypt(keyId, plainText);
     }
 
+    private static String getDefaultPropertiesFilename() {
+        String home = System.getenv("NIFI_HOME");
+        return Paths.get(StringUtils.isBlank(home) ? "." : home, "conf", "vault.properties").toString();
+    }
+
+    private static Map<String, String> getDefaultPropertiesMapping() {
+        Map<String, String> map = new HashMap<>();
+        map.put("vault.uri", "VAULT_ADDR");
+        map.put("vault.authentication", "VAULT_AUTH");
+        map.put("vault.token", "VAULT_TOKEN");
+
+        map.put("vault.app-role.role-id", "VAULT_ROLE_ID");
+        map.put("vault.app-role.secret-id", "VAULT_SECRET_ID");
+
+        map.put("vault.app-id.app-id", "VAULT_APP_ID");
+        map.put("vault.app-id.user-id", "VAULT_USER_ID");
+
+        map.put("vault.ssl.key-store", "VAULT_SSL_KEY_STORE");
+        map.put("vault.ssl.key-store-password", "VAULT_SSL_KEY_STORE_PASSWORD");
+        map.put("vault.ssl.trust-store", "VAULT_SSL_TRUST_STORE");
+        map.put("vault.ssl.trust-store-password", "VAULT_SSL_TRUST_STORE_PASSWORD");
+
+        return map;
+    }
 }
+

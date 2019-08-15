@@ -17,10 +17,10 @@
 package org.apache.nifi.properties.sensitive;
 
 /**
- * ExternalPropertyProvider is an interface for reading external values by name.
+ * ExternalProperties is an interface for reading external values by name.
  *
  */
-public interface ExternalPropertyProvider {
+public interface ExternalProperties {
 
     /**
      * Read an external property by name.

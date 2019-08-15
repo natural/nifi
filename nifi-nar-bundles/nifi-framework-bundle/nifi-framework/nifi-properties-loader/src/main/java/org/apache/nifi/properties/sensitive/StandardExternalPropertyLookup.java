@@ -21,29 +21,39 @@ import org.apache.commons.lang3.StringUtils;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 /**
  * Slurps property values from the usual places in the usual order.
  *
  */
-public class StandardExternalPropertyLookup implements ExternalPropertyProvider  {
+public class StandardExternalPropertyLookup implements ExternalProperties {
     private final File propFile;
+    private final Map<String, String> envNameMap;
 
     /**
-     * Create a {@link StandardExternalPropertyLookup} without a property file.
+     * Create a {@link StandardExternalPropertyLookup} without a property file or environment name map.
      */
     public StandardExternalPropertyLookup() {
-        this(null);
+        this(null, null);
+    }
+
+
+    public StandardExternalPropertyLookup(String defaultPropertiesFilename) {
+        this(defaultPropertiesFilename, null);
     }
 
     /**
      * Create a {@link StandardExternalPropertyLookup} with the given property file.
      *
      * @param propertiesFilename final lookup location, or null for none.
+     * @param envNameMap mapping of property names to environment name
      */
-    public StandardExternalPropertyLookup(String propertiesFilename) {
+    public StandardExternalPropertyLookup(String propertiesFilename, Map<String, String> envNameMap) {
         this.propFile = StringUtils.isNotBlank(propertiesFilename) ? new File(propertiesFilename) : null;
+        this.envNameMap = envNameMap != null ? envNameMap : new HashMap<>();
     }
 
     /**
@@ -73,7 +83,7 @@ public class StandardExternalPropertyLookup implements ExternalPropertyProvider 
         }
 
         // check env second
-        value = System.getenv(name);
+        value = System.getenv(envNameMap.getOrDefault(name, name));
         if (value != null) {
             return value;
         }

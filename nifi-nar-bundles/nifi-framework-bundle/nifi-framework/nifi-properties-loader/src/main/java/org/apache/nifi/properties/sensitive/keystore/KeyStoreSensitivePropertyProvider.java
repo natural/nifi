@@ -17,7 +17,7 @@
 package org.apache.nifi.properties.sensitive.keystore;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.nifi.properties.sensitive.ExternalPropertyProvider;
+import org.apache.nifi.properties.sensitive.ExternalProperties;
 import org.apache.nifi.properties.sensitive.SensitivePropertyConfigurationException;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProtectionException;
 import org.apache.nifi.properties.sensitive.SensitivePropertyProvider;
@@ -38,7 +38,9 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-
+/**
+ * Sensitive properties using KeyStore keys with an inner AES SPP.
+ */
 public class KeyStoreSensitivePropertyProvider implements SensitivePropertyProvider {
     private static final Logger logger = LoggerFactory.getLogger(KeyStoreSensitivePropertyProvider.class);
 
@@ -55,27 +57,27 @@ public class KeyStoreSensitivePropertyProvider implements SensitivePropertyProvi
             KEYSTORE_TYPE_PKCS12,
             KEYSTORE_TYPE_BKS));
 
-    private final ExternalPropertyProvider externalProps;
-    private final SensitivePropertyProvider wrappedSpp;
+    private final ExternalProperties externalProperties;
+    private final SensitivePropertyProvider wrappedSensitivePropertyProvider;
     private final String storeType;
     private final String keyAlias;
 
     /**
      * Constructor, as expected by the standard sensitive property provider implementation.
      *
-     * @param clientMaterial string in the form "keystore/jcecks/user-key-alias"
+     * @param keyId string in the form "keystore/jcecks/user-key-alias"
      */
-    public KeyStoreSensitivePropertyProvider(String clientMaterial)  {
-        this(clientMaterial, null, null);
+    public KeyStoreSensitivePropertyProvider(String keyId)  {
+        this(keyId, null, null);
     }
 
-    public KeyStoreSensitivePropertyProvider(String clientMaterial, KeyStoreProvider keyStoreProvider, ExternalPropertyProvider externalProps)  {
-        if (externalProps == null) {
-            externalProps = new StandardExternalPropertyLookup(getDefaultPropertiesFilename());
+    public KeyStoreSensitivePropertyProvider(String keyId, KeyStoreProvider keyStoreProvider, ExternalProperties externalProperties)  {
+        if (externalProperties == null) {
+            externalProperties = new StandardExternalPropertyLookup(getDefaultPropertiesFilename());
         }
-        this.externalProps = externalProps;
+        this.externalProperties = externalProperties;
 
-        String[] parts = clientMaterial.split(MATERIAL_DELIMITER);
+        String[] parts = keyId.split(MATERIAL_DELIMITER);
         String storeType = parts.length > 0 ? parts[1] : "";
         String keyAlias = parts.length > 1 ? parts[2] : "";
 
@@ -89,24 +91,22 @@ public class KeyStoreSensitivePropertyProvider implements SensitivePropertyProvi
         try {
             KeyStore store = keyStoreProvider.getKeyStore();
             Key secretKey = store.getKey(keyAlias, getKeyPassword().toCharArray());
-            this.wrappedSpp = new AESSensitivePropertyProvider(secretKey.getEncoded());
-
+            this.wrappedSensitivePropertyProvider = new AESSensitivePropertyProvider(secretKey.getEncoded());
         } catch (final IOException | NoSuchAlgorithmException | UnrecoverableKeyException | KeyStoreException e) {
             throw new SensitivePropertyConfigurationException(e);
         }
-
     }
 
     private String getKeyPassword() {
-        return externalProps.get("KEYSTORE_KEY_PASSWORD");
+        return externalProperties.get("KEYSTORE_KEY_PASSWORD");
     }
 
     private String getStorePassword() {
-        return externalProps.get("KEYSTORE_PASSWORD");
+        return externalProperties.get("KEYSTORE_PASSWORD");
     }
 
     private String getStoreUri() {
-        return externalProps.get("KEYSTORE_FILE");
+        return externalProperties.get("KEYSTORE_FILE");
     }
 
     private static String getDefaultPropertiesFilename() {
@@ -147,7 +147,7 @@ public class KeyStoreSensitivePropertyProvider implements SensitivePropertyProvi
      */
     @Override
     public String protect(String unprotectedValue) throws SensitivePropertyProtectionException {
-        return wrappedSpp.protect(unprotectedValue);
+        return wrappedSensitivePropertyProvider.protect(unprotectedValue);
     }
 
     /**
@@ -159,6 +159,30 @@ public class KeyStoreSensitivePropertyProvider implements SensitivePropertyProvi
      */
     @Override
     public String unprotect(String protectedValue) throws SensitivePropertyProtectionException {
-        return wrappedSpp.unprotect(protectedValue);
+        return wrappedSensitivePropertyProvider.unprotect(protectedValue);
+    }
+
+    /**
+     * True when the client specifies a key like 'keystore/pkcs12/...'.
+     *
+     * @param material name of encryption or protection scheme
+     * @return true if this class can provide protected values
+     */
+    public static boolean isProviderFor(String material) {
+        if (StringUtils.isBlank(material)) {
+            return false;
+        }
+        String[] parts = material.split(MATERIAL_DELIMITER, 3);
+        return parts.length == 3 && parts[0].equals(MATERIAL_PREFIX) && KEYSTORE_TYPES.contains(parts[1]);
+    }
+
+    /**
+     * Returns a printable representation of a key.
+     *
+     * @param key key material or key id
+     * @return printable string
+     */
+    public static String toPrintableString(String key) {
+        return key;
     }
 }
