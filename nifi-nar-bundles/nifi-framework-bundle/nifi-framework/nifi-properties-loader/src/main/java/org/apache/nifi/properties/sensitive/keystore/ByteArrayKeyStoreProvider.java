@@ -24,7 +24,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 
 /**
- * KeyStores as byte arrays.
+ * Key Stores backed by byte arrays.  This class is used only by the KeyStore Sensitive Property Provider Integration Tests.
  *
  */
 class ByteArrayKeyStoreProvider implements KeyStoreProvider {
@@ -52,7 +52,6 @@ class ByteArrayKeyStoreProvider implements KeyStoreProvider {
         } catch (IOException | NoSuchAlgorithmException | CertificateException | KeyStoreException e) {
             throw new IOException("Error loading Key Store.", e);
         }
-
         return store;
     }
 }

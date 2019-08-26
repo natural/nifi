@@ -16,6 +16,7 @@
  */
 package org.apache.nifi.security.util;
 
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.util.encoders.Hex;
 
 import javax.crypto.Cipher;
@@ -23,9 +24,12 @@ import javax.crypto.NoSuchPaddingException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
-import java.util.Arrays;
+import java.security.Security;
 
 
+/**
+ * Common functionality for ciphers:  pre-initialized ciphers, IVs, random value generators, etc.
+ */
 public class CipherUtils {
     final static SecureRandom random = new SecureRandom();
     public final static int IV_LENGTH = 12;
@@ -41,24 +45,56 @@ public class CipherUtils {
         return bytes;
     }
 
-
+    /**
+     * Generates an IV of 12 bytes filled with zeros.
+     *
+     * @return the IV
+     */
     public static byte[] zeroIV() {
         byte[] bytes = new byte[IV_LENGTH];
-        Arrays.fill(bytes, (byte) 0);
+        // All bytes are initialized to zero, but if they were not, we would do this:
+        // Arrays.fill(bytes, (byte) 0);
         return bytes;
     }
 
 
+    /**
+     * Generates an un-initialized AES/GCM cipher.
+     *
+     * @return AES/GCM/NoPadding cipher, un-initialized
+     * @throws NoSuchPaddingException
+     * @throws NoSuchAlgorithmException
+     * @throws NoSuchProviderException
+     */
     public static Cipher blockCipher() throws NoSuchPaddingException, NoSuchAlgorithmException, NoSuchProviderException {
+        Security.addProvider(new BouncyCastleProvider());
         return Cipher.getInstance("AES/GCM/NoPadding", "BC");
     }
 
+    /**
+     * Generates a string of random hex characters.
+     *
+     * @param size Number of bytes to generate; hex string will be 2x as long as this.
+     * @return string of random hex values.
+     */
     public static String getRandomHex(int size) {
+        if (size < 0) {
+            throw new IllegalArgumentException("Random hex string size too small");
+        }
+        if (size*2 >= Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Random hex string size too large");
+        }
         byte[] bytes = new byte[size];
         random.nextBytes(bytes);
         return Hex.toHexString(bytes);
     }
 
+    /**
+     * Generates a random int within the given range.
+     * @param lower lower range
+     * @param upper upper range
+     * @return integer value such that upper >= value >= lower
+     */
     public static int getRandomInt(int lower, int upper) {
         int value = random.nextInt(upper);
         while (value < lower) {

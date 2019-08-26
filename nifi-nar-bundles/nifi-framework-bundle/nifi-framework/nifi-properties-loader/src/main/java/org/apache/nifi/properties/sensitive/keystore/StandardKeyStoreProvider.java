@@ -24,7 +24,6 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 
-
 /**
  * KeyStores read from the file system.
  *
@@ -34,6 +33,13 @@ public class StandardKeyStoreProvider implements KeyStoreProvider {
     private final String storeType;
     private final String storePassword;
 
+    /**
+     * Creates a StandardKeyStoreProvider.
+     *
+     * @param filename  key store filename
+     * @param storeType key store type, e.g., JCEKS
+     * @param storePassword key store password
+     */
     StandardKeyStoreProvider(String filename, String storeType, String storePassword) {
         this.filename = filename;
         this.storeType = storeType;
