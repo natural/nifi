@@ -46,9 +46,10 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 
-@EventDriven
-@SideEffectFree
-@SupportsBatching
+/**
+ * The VerifyPGP processor attempts to verify a flow file signature when triggered.  The processor uses a
+ * {@link PGPKeyMaterialControllerService} to provide verification keys.
+ */
 @InputRequirement(InputRequirement.Requirement.INPUT_REQUIRED)
 @Tags({"verify", "OpenPGP", "PGP", "GPG"})
 @CapabilityDescription("Verifies a FlowFile using a PGP key.")
@@ -103,13 +104,6 @@ public class VerifyPGP extends AbstractProcessorPGP {
         properties.add(PGP_KEY_SERVICE);
         properties.add(SIGNATURE_ATTRIBUTE);
         return properties;
-    }
-
-    @Override
-    protected Collection<ValidationResult> customValidate(final ValidationContext context) {
-        // Instead, validate here that the controller has a public key, or "can verify"
-        final List<ValidationResult> validationResults = new ArrayList<>(super.customValidate(context));
-        return validationResults;
     }
 
     private VerifyStreamSession buildVerifySession(ProcessContext context, FlowFile flowFile) throws DecoderException {

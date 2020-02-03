@@ -16,6 +16,8 @@
  */
 package org.apache.nifi.processors.standard.pgp;
 
+import org.apache.nifi.annotation.documentation.CapabilityDescription;
+import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnEnabled;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.ValidationContext;
@@ -46,7 +48,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-
+@CapabilityDescription("Defines key materials for PGP processors.")
+@Tags({"pgp", "gpg", "encryption", "credentials", "provider"})
 public class PGPKeyMaterialControllerService extends AbstractControllerService implements PGPKeyMaterialService {
     final static String CONTROLLER_NAME = "PGP Key Material Controller Service";
 
@@ -154,16 +157,6 @@ public class PGPKeyMaterialControllerService extends AbstractControllerService i
     }
 
 
-    @OnEnabled
-    public void onConfigured(final ConfigurationContext context) throws InitializationException {
-        ComponentLog logger = getLogger();
-        logger.warn("CUSTOM ON CONFIGURED IF YOU NEED IT: " + context);
-        if (false) {
-            throw new InitializationException("flop");
-        }
-    }
-
-
     @Override
     public PGPPublicKey getPublicKey(PropertyContext context) {
         List<PGPPublicKey> keys = null;
@@ -179,7 +172,6 @@ public class PGPKeyMaterialControllerService extends AbstractControllerService i
             } catch (FileNotFoundException ignored) {
             }
         }
-
 
         if (keys == null || keys.size() == 0)
             return null;
@@ -212,7 +204,6 @@ public class PGPKeyMaterialControllerService extends AbstractControllerService i
             try {
                 decryptor = new JcePBESecretKeyDecryptorBuilder().setProvider("BC").build(privateKeyPassPhrase);
             } catch (PGPException e) {
-                e.printStackTrace();
                 return null;
             }
         }
@@ -225,7 +216,6 @@ public class PGPKeyMaterialControllerService extends AbstractControllerService i
             try {
                 keys = StaticKeyMaterialProvider.getSecretKeys(new FileInputStream(new File(context.getProperty(SECRET_KEYRING_FILE).getValue())));
             } catch (FileNotFoundException e) {
-                // e.printStackTrace();
                 return null;
             }
         }
@@ -237,7 +227,6 @@ public class PGPKeyMaterialControllerService extends AbstractControllerService i
             try {
                 return StaticKeyMaterialProvider.getSecretKeyFromUser(keys, secretKeyUserId).extractPrivateKey(decryptor);
             } catch (PGPException e) {
-                // e.printStackTrace();
                 return null;
             }
         }
@@ -245,16 +234,12 @@ public class PGPKeyMaterialControllerService extends AbstractControllerService i
         for (PGPSecretKey key : keys) {
             if (!key.isPrivateKeyEmpty()) {
                 try {
-                    //PGPSecretKey k = StaticKeyMaterialProvider.getSecretKeyFromUser(keys, null);
-                    PGPPrivateKey pk = key.extractPrivateKey(decryptor);
-                    return pk;
-
-                } catch (final Exception e) {
-                    e.printStackTrace();
+                    return key.extractPrivateKey(decryptor);
+                } catch (final Exception ignored) {
+                    // pass
                 }
             }
         }
-
         return null; // no private key available from the given config
     }
 

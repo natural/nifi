@@ -29,6 +29,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+/**
+ * This class encapsulates a verify operation over a pair of input and output streams.
+ *
+ */
 class VerifyStreamCallback implements ExtendedStreamCallback {
     private static final JcaPGPContentVerifierBuilderProvider contentVerifier = new JcaPGPContentVerifierBuilderProvider().setProvider("BC");
     private final VerifyStreamSession options;

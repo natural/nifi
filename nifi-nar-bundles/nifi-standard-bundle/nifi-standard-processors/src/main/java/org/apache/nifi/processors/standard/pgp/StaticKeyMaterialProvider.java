@@ -31,38 +31,23 @@ import org.bouncycastle.openpgp.operator.PGPDigestCalculator;
 import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-// holds a reference to static (string) key material
+// Holds a reference to static (string) key material.  This class should be cleaned up or split up.
 class StaticKeyMaterialProvider extends AbstractKeyProvider {
-    public StaticKeyMaterialProvider(File publicKey, File privateKey) throws IOException, PGPException {
-        this(publicKey, privateKey, "");
-    }
-
-    public StaticKeyMaterialProvider(File publicKey, File privateKey, String passphrase) throws IOException, PGPException {
-        this(new String(Files.readAllBytes(publicKey.toPath()), Charset.defaultCharset()), new String(Files.readAllBytes(privateKey.toPath()), Charset.defaultCharset()), passphrase);
-    }
-
-    public StaticKeyMaterialProvider(String publicKeySource, String privateKeySource) throws PGPException, IOException {
-        this(publicKeySource, privateKeySource, "");
-    }
-
-    public StaticKeyMaterialProvider(String publicKeySource, String privateKeySource, String passphrase) throws PGPException, IOException {
-        this(new ByteArrayInputStream(publicKeySource.getBytes()), new ByteArrayInputStream(privateKeySource.getBytes()), passphrase);
-    }
-
-    public StaticKeyMaterialProvider(InputStream publicKeyIn, InputStream privateKeyIn) throws IOException, PGPException {
-        this(publicKeyIn, privateKeyIn, "");
-    }
-
+    /**
+     * Creates a static key provider from the given keys.
+     *
+     * @param publicKeyIn public key stream
+     * @param privateKeyIn private key stream
+     * @param passphrase passphrase  or null
+     * @throws IOException thrown if key streams cannot be read
+     * @throws PGPException thrown if key streams are not valid
+     */
     public StaticKeyMaterialProvider(InputStream publicKeyIn, InputStream privateKeyIn, String passphrase) throws IOException, PGPException {
         PGPPublicKey publicKey = readPublicKey(publicKeyIn);
         if (publicKey == null)
@@ -78,6 +63,14 @@ class StaticKeyMaterialProvider extends AbstractKeyProvider {
     }
 
 
+    /**
+     * Reads a public key from the input stream.
+     *
+     * @param in public key stream
+     * @return PGPPublicKey or null
+     * @throws IOException thrown if key streams cannot be read
+     * @throws PGPException thrown if key streams are not valid
+     */
     public static PGPPublicKey readPublicKey(InputStream in) throws IOException, PGPException {
         JcaPGPPublicKeyRingCollection rings = new JcaPGPPublicKeyRingCollection(PGPUtil.getDecoderStream(in));
         Iterator<PGPPublicKeyRing> ringWalker = rings.iterator();
@@ -94,6 +87,14 @@ class StaticKeyMaterialProvider extends AbstractKeyProvider {
         return null;
     }
 
+    /**
+     * Reads a private key from the input stream.
+     *
+     * @param in private key stream
+     * @return PGPPrivateKey or null
+     * @throws IOException thrown if key streams cannot be read
+     * @throws PGPException thrown if key streams are not valid
+     */
     static PGPPrivateKey readPrivateKey(InputStream in, long keyId, char[] passphrase) throws IOException, PGPException {
         PGPSecretKeyRingCollection rings = new PGPSecretKeyRingCollection(PGPUtil.getDecoderStream(in), new BcKeyFingerprintCalculator());
         Iterator<PGPSecretKeyRing> ringWalker = rings.iterator();
@@ -116,10 +117,15 @@ class StaticKeyMaterialProvider extends AbstractKeyProvider {
         return null;
     }
 
+    /**
+     * Creates a list of public keys from the input stream.
+     *
+     * @param in public key or key ring stream
+     * @return List<PGPPublicKey>
+     */
     static public List<PGPPublicKey> getPublicKeys(InputStream in) {
         List<PGPPublicKey> keys = new ArrayList<>();
         JcaPGPPublicKeyRingCollection rings;
-
 
         try {
             rings = new JcaPGPPublicKeyRingCollection(PGPUtil.getDecoderStream(in));
@@ -136,7 +142,12 @@ class StaticKeyMaterialProvider extends AbstractKeyProvider {
         return keys;
     }
 
-
+    /**
+     * Creates a list of secret keys from the input stream.
+     *
+     * @param in secret key or key ring stream
+     * @return List<PGPSecretKey>
+     */
     public static List<PGPSecretKey> getSecretKeys(InputStream in) {
         List<PGPSecretKey> keys = new ArrayList<>();
         KeyFingerPrintCalculator calc = new BcKeyFingerprintCalculator();
@@ -156,7 +167,13 @@ class StaticKeyMaterialProvider extends AbstractKeyProvider {
         return keys;
     }
 
-
+    /**
+     * Returns public key matching the given user id or null.
+     *
+     * @param keys public key list
+     * @param userID public key user id to match
+     * @return public key matching given user ID or null
+     */
     static public PGPPublicKey getPublicKeyFromUser(List<PGPPublicKey> keys, String userID) {
         for (PGPPublicKey key : keys) {
             Iterator<String> ids = key.getUserIDs();
@@ -170,6 +187,13 @@ class StaticKeyMaterialProvider extends AbstractKeyProvider {
         return null;
     }
 
+    /**
+     * Returns secret key matching the given user id or null.
+     *
+     * @param keys secret key list
+     * @param userID secret key user id to match
+     * @return secret key matching given user ID or null
+     */
     static public PGPSecretKey getSecretKeyFromUser(List<PGPSecretKey> keys, String userID) {
         for (PGPSecretKey key : keys) {
             Iterator<String> ids = key.getUserIDs();
@@ -182,6 +206,13 @@ class StaticKeyMaterialProvider extends AbstractKeyProvider {
         return null;
     }
 
+    /**
+     * Returns public key matching the given key id or null.
+     *
+     * @param keys public key list
+     * @param keyID public key id to match
+     * @return public key matching given key ID or null
+     */
     public static PGPPublicKey getPublicKeyFromId(List<PGPPublicKey> keys, long keyID) {
         for (PGPPublicKey key : keys) {
             if (key.getKeyID() == keyID) {
@@ -191,6 +222,13 @@ class StaticKeyMaterialProvider extends AbstractKeyProvider {
         return null;
     }
 
+    /**
+     * Returns secret key matching the given key id or null.
+     *
+     * @param keys secret key list
+     * @param keyID secret key id to match
+     * @return secret key matching given key ID or null
+     */
     public static PGPSecretKey getSecretKeyFromId(List<PGPSecretKey> keys, long keyID) {
         for (PGPSecretKey key : keys) {
             if (key.getKeyID() == keyID) {
