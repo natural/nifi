@@ -141,7 +141,7 @@ public class EncryptPGP extends AbstractProcessorPGP {
                 new AllowableValue("13", "CAMELLIA 256")};
     }
 
-    private static String getCipherDefaultValue() {
+    static String getCipherDefaultValue() {
         return String.valueOf(PGPEncryptedData.AES_128);
     }
 }

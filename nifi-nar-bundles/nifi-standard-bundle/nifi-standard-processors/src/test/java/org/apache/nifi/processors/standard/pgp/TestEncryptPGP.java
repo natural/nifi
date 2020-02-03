@@ -1,6 +1,5 @@
 package org.apache.nifi.processors.standard.pgp;
 
-import org.apache.calcite.util.Static;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.nifi.components.AllowableValue;
 import org.apache.nifi.components.PropertyDescriptor;
@@ -31,6 +30,12 @@ import java.util.List;
 import java.util.Map;
 
 
+/**
+ * These tests cover all four PGP processors, EncryptPGP, DecryptPGP, SignPGP and VerifyPGP.
+ *
+ * The controller tests are separate but related; refer to those classes for more tests.
+ *
+ */
 public class TestEncryptPGP {
     private static final String SERVICE_ID = "pgp-key-service";
 
@@ -41,7 +46,7 @@ public class TestEncryptPGP {
 
     @Test
     public void testSomeBasicEncryptAndDecrypt() throws InitializationException {
-        String algo = "7";
+        String algo = EncryptPGP.getCipherDefaultValue();
 
         // Basic encryption via an encryption processor configured with a key material service:
         TestRunner runner = TestRunners.newTestRunner(new EncryptPGP());

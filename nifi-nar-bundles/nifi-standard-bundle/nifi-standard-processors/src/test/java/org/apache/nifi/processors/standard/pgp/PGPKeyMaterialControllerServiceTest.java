@@ -382,14 +382,6 @@ public class PGPKeyMaterialControllerServiceTest {
         runner.assertNotValid(service);
     }
 
-
-
-
-    private String tempPrivKey;
-    private String tempPubKey;
-    private StaticKeyMaterialProvider textKeys;
-
-
     @Ignore
     @Test
     public void testSomeBasicEncryptAndDecrypt() throws InitializationException {
@@ -402,7 +394,7 @@ public class PGPKeyMaterialControllerServiceTest {
 
         PGPKeyMaterialControllerService service = new PGPKeyMaterialControllerService();
         runner.addControllerService(SERVICE_ID, service);
-        runner.setProperty(service, PGPKeyMaterialControllerService.PUBLIC_KEYRING_TEXT, tempPubKey);
+        //runner.setProperty(service, PGPKeyMaterialControllerService.PUBLIC_KEYRING_TEXT, tempPubKey);
         runner.enableControllerService(service);
 
         String plainText = "hello, pgp encrypt.";
@@ -423,7 +415,7 @@ public class PGPKeyMaterialControllerServiceTest {
 
         service = new PGPKeyMaterialControllerService();
         runner.addControllerService(SERVICE_ID, service);
-        runner.setProperty(service, PGPKeyMaterialControllerService.SECRET_KEYRING_TEXT, tempPrivKey);
+        //runner.setProperty(service, PGPKeyMaterialControllerService.SECRET_KEYRING_TEXT, tempPrivKey);
         runner.enableControllerService(service);
 
         runner.enqueue(cipherBytes);
@@ -443,7 +435,7 @@ public class PGPKeyMaterialControllerServiceTest {
 
         service = new PGPKeyMaterialControllerService();
         runner.addControllerService(SERVICE_ID, service);
-        runner.setProperty(service, PGPKeyMaterialControllerService.SECRET_KEYRING_TEXT, tempPrivKey);
+        //runner.setProperty(service, PGPKeyMaterialControllerService.SECRET_KEYRING_TEXT, tempPrivKey);
         runner.enableControllerService(service);
 
         runner.enqueue(plainBytes);
@@ -464,7 +456,7 @@ public class PGPKeyMaterialControllerServiceTest {
         runner.setProperty(VerifyPGP.PGP_KEY_SERVICE, SERVICE_ID);
         service = new PGPKeyMaterialControllerService();
         runner.addControllerService(SERVICE_ID, service);
-        runner.setProperty(service, PGPKeyMaterialControllerService.PUBLIC_KEYRING_TEXT, tempPubKey);
+        //runner.setProperty(service, PGPKeyMaterialControllerService.PUBLIC_KEYRING_TEXT, tempPubKey);
         runner.enableControllerService(service);
 
 
@@ -484,22 +476,6 @@ public class PGPKeyMaterialControllerServiceTest {
     private static InputStream keyResourceStream(String name) {
         Class<PGPKeyMaterialControllerServiceTest> cls = PGPKeyMaterialControllerServiceTest.class;
         return cls.getResourceAsStream("/" + cls.getSimpleName() +  "/" + name);
-    }
-
-
-    private static void runSignAndVerify(KeyProvider keys) throws IOException, PGPException {
-        byte[] plain = Random.randomBytes(32 + Random.randomInt(4096));
-        InputStream plainInput = new ByteArrayInputStream(plain);
-        ByteArrayOutputStream sigOutput = new ByteArrayOutputStream();
-        SignStreamSession options = new SignStreamSession(keys.getPrivateKey(), PGPUtil.SHA256);
-        OutputStream plainOut = new ByteArrayOutputStream();
-        SignStreamCallback.sign(plainInput, plainOut, sigOutput, options);
-        byte[] signature = sigOutput.toByteArray();
-        VerifyStreamSession verifyOptions = new VerifyStreamSession(null, keys.getPublicKey(), new ByteArrayInputStream(signature));
-
-        boolean verified = VerifyStreamCallback.verify(verifyOptions, new ByteArrayInputStream(plain), new ByteArrayOutputStream());
-        Assert.assertNotEquals(Hex.encodeHexString(plain), Hex.encodeHexString(signature));
-        Assert.assertTrue("Signature unverified when it should have been: ", verified);
     }
 }
 
