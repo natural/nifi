@@ -32,7 +32,10 @@ import java.io.OutputStream;
 import java.util.Date;
 import java.util.zip.Deflater;
 
-
+/**
+ * This class encapsulates an encrypt operation over a pair of input and output streams.
+ *
+ */
 class EncryptStreamCallback implements ExtendedStreamCallback {
     private static final PGPLiteralDataGenerator literalGenerator = new PGPLiteralDataGenerator();
     private static final PGPCompressedDataGenerator compressedGenerator = new PGPCompressedDataGenerator(PGPCompressedData.ZIP, Deflater.BEST_SPEED);

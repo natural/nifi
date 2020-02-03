@@ -21,6 +21,10 @@ import org.bouncycastle.openpgp.PGPEncryptedDataGenerator;
 
 import java.security.SecureRandom;
 
+/**
+ * This is a shared base class for other encrypt stream session classes, e.g., pub key and pbe.
+ *
+ */
 class AbstractEncryptStreamSession implements EncryptStreamSession {
     static final SecureRandom random = new SecureRandom();
     PGPEncryptedDataGenerator generator;
@@ -32,16 +36,30 @@ class AbstractEncryptStreamSession implements EncryptStreamSession {
         this.armor = armor;
     }
 
+    /**
+     * Returns the encrypted data generator.
+     *
+     * @return the encrypted data generator
+     */
     public PGPEncryptedDataGenerator getDataGenerator() {
         return generator;
     }
 
+    /**
+     * Returns the armor value.
+     *
+     * @return the armor value
+     */
     public boolean getArmor() {
         return armor;
     }
 
+    /**
+     * Returns the logger.
+     *
+     * @return the logger
+     */
     public ComponentLog getLogger() {
         return logger;
     }
-
 }

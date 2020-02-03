@@ -36,7 +36,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-
+/**
+ * The DecryptPGP processor attempts to decrypt flow file contents when triggered.  The processor uses a
+ * {@link PGPKeyMaterialControllerService} to provide decryption keys.
+ */
 @InputRequirement(InputRequirement.Requirement.INPUT_REQUIRED)
 @Tags({"decryption", "OpenPGP", "PGP", "GPG"})
 @CapabilityDescription("Decrypts a FlowFile using a PGP key.")
@@ -74,12 +77,6 @@ public class DecryptPGP extends AbstractProcessorPGP {
         final List<PropertyDescriptor> properties = new ArrayList<>();
         properties.add(PGP_KEY_SERVICE);
         return properties;
-    }
-
-    @Override
-    protected Collection<ValidationResult> customValidate(final ValidationContext context) {
-        // instead, ask the controller
-        return null;
     }
 
     private DecryptStreamSession buildDecryptSession(ProcessContext context) {

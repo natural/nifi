@@ -94,7 +94,7 @@ public class PGPKeyMaterialControllerServiceTest {
                 "ed25519-signer-cv25519-encrypter",
                 "ed25519-signer-cv25519-encrypter-passphrase"
         ));
-        VALID_USER_ID = userIDs.get(0);
+        VALID_USER_ID = userIDs.get(1);
 
         // These are the known-good public keyring files, created by the script:
         manyPublicKeys = StaticKeyMaterialProvider.getPublicKeys(keyResourceStream("many-public-keys.asc"));

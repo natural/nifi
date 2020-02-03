@@ -20,6 +20,9 @@ import org.bouncycastle.openpgp.PGPPrivateKey;
 import org.bouncycastle.openpgp.PGPPublicKey;
 import org.bouncycastle.openpgp.PGPSecretKey;
 
+/**
+ * This is a shared base class for other key provider classes, e.g., test provider and static value provider.
+ */
 class AbstractKeyProvider implements KeyProvider {
     PGPPublicKey publicKey;
     PGPSecretKey secretKey;
@@ -31,16 +34,31 @@ class AbstractKeyProvider implements KeyProvider {
         this.privateKey = privateKey;
     }
 
+    /**
+     * Returns the public key, if any.
+     *
+     * @return provider public key
+     */
     @Override
     public PGPPublicKey getPublicKey() {
         return publicKey;
     }
 
+    /**
+     * Returns the secret key, if any.
+     *
+     * @return provider secret key
+     */
     @Override
     public PGPSecretKey getSecretKey() {
         return secretKey;
     }
 
+    /**
+     * Returns the private key, if any.
+     *
+     * @return provider private key
+     */
     @Override
     public PGPPrivateKey getPrivateKey() {
         return privateKey;

@@ -23,8 +23,6 @@ import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.components.AllowableValue;
 import org.apache.nifi.components.PropertyDescriptor;
-import org.apache.nifi.components.ValidationContext;
-import org.apache.nifi.components.ValidationResult;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.logging.ComponentLog;
 import org.apache.nifi.processor.ProcessContext;
@@ -35,9 +33,13 @@ import org.bouncycastle.openpgp.PGPEncryptedData;
 import org.bouncycastle.openpgp.PGPPublicKey;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+
+/**
+ * The EncryptPGP processor attempts to encrypt flow file contents when triggered.  The processor uses a
+ * {@link PGPKeyMaterialControllerService} to provide encryption keys.
+ */
 
 @InputRequirement(InputRequirement.Requirement.INPUT_REQUIRED)
 @Tags({"encryption", "decryption", "OpenPGP", "PGP", "GPG"})
@@ -51,7 +53,7 @@ public class EncryptPGP extends AbstractProcessorPGP {
     public static final PropertyDescriptor ENCRYPT_ALGORITHM = new PropertyDescriptor.Builder()
             .name("encrypt-algorithm")
             .displayName("Encryption Cipher Algorithm")
-            .description("The cipher algorithm used when encrypting data.  Decryption algorithms are detected automatically and do not need to be specified.")
+            .description("The cipher algorithm used when encrypting data.")
             .allowableValues(getCipherAllowableValues())
             .defaultValue(getCipherDefaultValue())
             .build();
@@ -61,8 +63,8 @@ public class EncryptPGP extends AbstractProcessorPGP {
             .displayName("Encryption Data Encoding")
             .description("The data encoding method used when writing encrypting data.")
             .allowableValues(
-                    new AllowableValue("0", "Raw"),
-                    new AllowableValue("1", "PGP Armor"))
+                    new AllowableValue("0", "Raw (bytes with no encoding)"),
+                    new AllowableValue("1", "PGP Armor (encoded text)"))
             .defaultValue("0")
             .build();
 
@@ -96,11 +98,6 @@ public class EncryptPGP extends AbstractProcessorPGP {
         properties.add(ENCRYPT_ALGORITHM);
         properties.add(ENCRYPT_ENCODING);
         return properties;
-    }
-
-    @Override
-    protected Collection<ValidationResult> customValidate(final ValidationContext context) {
-        return null;
     }
 
     private EncryptStreamSession buildEncryptSession(ProcessContext context) {

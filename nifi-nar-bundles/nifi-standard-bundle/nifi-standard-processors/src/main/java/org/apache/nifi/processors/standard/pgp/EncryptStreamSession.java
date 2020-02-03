@@ -16,17 +16,11 @@
  */
 package org.apache.nifi.processors.standard.pgp;
 
-import net.sf.saxon.functions.Abs;
 import org.apache.nifi.logging.ComponentLog;
 import org.bouncycastle.openpgp.PGPEncryptedDataGenerator;
-import org.bouncycastle.openpgp.PGPPublicKey;
-import org.bouncycastle.openpgp.operator.jcajce.JcePBEKeyEncryptionMethodGenerator;
-import org.bouncycastle.openpgp.operator.jcajce.JcePGPDataEncryptorBuilder;
-import org.bouncycastle.openpgp.operator.jcajce.JcePublicKeyKeyEncryptionMethodGenerator;
-
-import java.security.SecureRandom;
 
 /**
+ * EncryptStreamSession provides an input stream and a logger.
  *
  */
 interface EncryptStreamSession {

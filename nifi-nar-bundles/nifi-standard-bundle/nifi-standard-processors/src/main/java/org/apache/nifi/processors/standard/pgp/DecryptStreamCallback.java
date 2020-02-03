@@ -35,7 +35,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Iterator;
 
-
+/**
+ * This class encapsulates a decrypt operation over a pair of input and output streams.
+ *
+ */
 class DecryptStreamCallback implements ExtendedStreamCallback {
     private final DecryptStreamSession options;
 

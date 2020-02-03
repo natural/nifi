@@ -2,7 +2,12 @@ package org.apache.nifi.processors.standard.pgp;
 
 import org.apache.calcite.util.Static;
 import org.apache.commons.codec.binary.Hex;
+import org.apache.nifi.components.AllowableValue;
+import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.processor.Relationship;
+import org.apache.nifi.processors.standard.EncryptContent;
 import org.apache.nifi.reporting.InitializationException;
+import org.apache.nifi.security.util.KeyDerivationFunction;
 import org.apache.nifi.util.MockFlowFile;
 import org.apache.nifi.util.TestRunner;
 import org.apache.nifi.util.TestRunners;
@@ -11,6 +16,7 @@ import org.bouncycastle.openpgp.PGPException;
 import org.bouncycastle.openpgp.PGPUtil;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
@@ -22,6 +28,7 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 public class TestEncryptPGP {
@@ -153,5 +160,107 @@ public class TestEncryptPGP {
         boolean verified = VerifyStreamCallback.verify(verifyOptions, new ByteArrayInputStream(plain), new ByteArrayOutputStream());
         Assert.assertNotEquals(Hex.encodeHexString(plain), Hex.encodeHexString(signature));
         Assert.assertTrue("Signature unverified: ", verified);
+    }
+
+    @Ignore
+    @Test
+    public void testEncryptContentBenchmarks() throws IOException, InterruptedException {
+        TestRunner testEnc = TestRunners.newTestRunner(new EncryptContent());
+
+        ProcessorBenchmark.run(
+                "EncryptContent/PBE",
+                testEnc,
+                EncryptContent.REL_SUCCESS,
+                EncryptContent.REL_FAILURE,
+
+                () -> {
+                    return new HashMap<>() {{
+                        put("PGP", new HashMap<>() {{
+                            put(EncryptContent.ENCRYPTION_ALGORITHM, "PGP");
+                        }});
+
+                        put("PGP+armor", new HashMap<>() {{
+                            put(EncryptContent.ENCRYPTION_ALGORITHM, "PGP_ASCII_ARMOR");
+                        }});
+                    }};
+                },
+
+                (TestRunner runner, Map<PropertyDescriptor, String> config) -> {
+                    testEnc.setProperty(EncryptContent.PASSWORD, Random.randomBytes(32).toString());
+                    testEnc.setProperty(EncryptContent.KEY_DERIVATION_FUNCTION, KeyDerivationFunction.NONE.name());
+                    testEnc.setProperty(EncryptContent.PGP_SYMMETRIC_ENCRYPTION_CIPHER, "1");
+                    testEnc.setProperty(EncryptContent.MODE, EncryptContent.ENCRYPT_MODE);
+                    for (PropertyDescriptor prop : config.keySet()) {
+                        testEnc.setProperty(prop, config.get(prop));
+                    }
+                },
+
+                (TestRunner runner, Map<PropertyDescriptor, String> config) -> {
+                    testEnc.setProperty(EncryptContent.MODE, EncryptContent.DECRYPT_MODE);
+                }
+        );
+
+        TestRunner testPGP = TestRunners.newTestRunner(new EncryptPGP());
+        // testPGP.addControllerService("pgp-", service, new HashMap<>());
+
+        ProcessorBenchmark.run(
+                "EncryptPGP/PBE",
+                testPGP,
+                EncryptPGP.REL_SUCCESS,
+                EncryptPGP.REL_FAILURE,
+
+                () -> {
+                    Map<String, Map<PropertyDescriptor, String>> configs = new HashMap<>();
+
+                    for (AllowableValue allowableValue : EncryptPGP.ENCRYPT_ALGORITHM.getAllowableValues()) {
+                        configs.put(allowableValue.getDisplayName(),
+                                new HashMap<>() {{ put(EncryptPGP.ENCRYPT_ALGORITHM, allowableValue.getValue()); }});
+                    }
+
+                    return configs;
+                },
+
+                (TestRunner runner, Map<PropertyDescriptor, String> config) -> {
+                    // testPGP.setProperty(service, Random.randomBytes(32).toString());
+                    testPGP.setProperty(EncryptPGP.ENCRYPT_ENCODING, "0");
+
+                    for (PropertyDescriptor key : config.keySet()) {
+                        testPGP.setProperty(key, config.get(key));
+                    }
+                },
+
+                (TestRunner runner, Map<PropertyDescriptor, String> config) -> {
+                    // testPGP.setProperty(EncryptContentPGP.MODE, EncryptContentPGP.DECRYPT_MODE);
+                }
+        );
+    }
+
+    private static MockFlowFile runProcessor(TestRunner runner, Relationship success, Relationship failure, Map<PropertyDescriptor, String> forward, Map<PropertyDescriptor, String> reverse) throws IOException {
+        byte[] body = Random.randomBytes(1024*1024);
+        for (Map.Entry<PropertyDescriptor, String> property : forward.entrySet()) {
+            runner.setProperty(property.getKey(), property.getValue());
+        }
+        runner.setThreadCount(1);
+        runner.enqueue(body);
+        runner.clearTransferState();
+        runner.run(1);
+        runner.assertAllFlowFilesTransferred(success, 1);
+        Assert.assertEquals(runner.getFlowFilesForRelationship(failure).size(), 0);
+        MockFlowFile flowFile = runner.getFlowFilesForRelationship(success).get(0);
+        // todo:  intermediate check against new parameter "differentInBetween"
+        runner.assertQueueEmpty();
+        for (Map.Entry<PropertyDescriptor, String> property : reverse.entrySet()) {
+            runner.setProperty(property.getKey(), property.getValue());
+        }
+        runner.enqueue(flowFile);
+        runner.clearTransferState();
+        runner.run(1);
+        runner.assertAllFlowFilesTransferred(success, 1);
+        Assert.assertEquals(runner.getFlowFilesForRelationship(failure).size(), 0);
+        flowFile = runner.getFlowFilesForRelationship(success).get(0);
+        flowFile.assertContentEquals(body);
+        // System.out.println("Decrypted: " + Hex.encodeHexString(Arrays.copyOf(flowFile.toByteArray(), 32)));
+        // System.out.println("Original : " + Hex.encodeHexString(Arrays.copyOf(body, 32)));
+        return flowFile;
     }
 }

@@ -21,6 +21,10 @@ import org.bouncycastle.openpgp.PGPEncryptedData;
 import org.bouncycastle.openpgp.PGPException;
 import java.io.InputStream;
 
+/**
+ * DecryptStreamSession provides an input stream and a logger.
+ *
+ */
 interface DecryptStreamSession {
     InputStream getInputStream(PGPEncryptedData packet) throws PGPException;
     ComponentLog getLogger();

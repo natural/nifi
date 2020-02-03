@@ -21,6 +21,9 @@ import org.bouncycastle.openpgp.PGPPublicKey;
 import org.bouncycastle.openpgp.PGPSecretKey;
 
 
+/**
+ * Simple interface for classes that provide keys.
+ */
 public interface KeyProvider {
     PGPPublicKey getPublicKey();
     PGPSecretKey getSecretKey();

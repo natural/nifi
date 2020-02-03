@@ -54,6 +54,11 @@ public abstract class AbstractProcessorPGP extends AbstractProcessor {
                 .build();
     }
 
+    /**
+     * Returns the relationships for a pgp processor, one success and one failure.
+     *
+     * @return processor relationships
+     */
     @Override
     public Set<Relationship> getRelationships() {
         return Set.of(REL_SUCCESS, REL_FAILURE);

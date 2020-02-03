@@ -21,7 +21,7 @@ import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.processor.io.StreamCallback;
 
 /**
- *
+ * This interface allows us to process a flow file after the stream processing.
  */
 interface ExtendedStreamCallback extends StreamCallback {
     default void postProcess(ProcessSession session, FlowFile flowFile) {};
