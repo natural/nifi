@@ -22,7 +22,7 @@ import org.bouncycastle.openpgp.PGPPublicKey;
 import java.io.InputStream;
 
 /**
- *
+ * This class encapsulates a public key verify session.
  */
 public class VerifyStreamSession {
     final ComponentLog logger;
