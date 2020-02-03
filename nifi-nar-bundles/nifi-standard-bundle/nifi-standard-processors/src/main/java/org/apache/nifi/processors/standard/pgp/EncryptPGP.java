@@ -102,9 +102,15 @@ public class EncryptPGP extends AbstractProcessorPGP {
 
     private EncryptStreamSession buildEncryptSession(ProcessContext context) {
         final PGPKeyMaterialService service = context.getProperty(PGP_KEY_SERVICE).asControllerService(PGPKeyMaterialService.class);
-        final PGPPublicKey publicKey = service.getPublicKey();
         int algo = getEncryptAlgorithm(context);
         boolean armor = 1 == getEncryptionEncoding(context);
+
+        char[] passphrase = service.getPBEPassPhrase();
+        if (passphrase != null && passphrase.length != 0) {
+            return new PBEEncryptStreamSession(getLogger(), passphrase, algo, armor);
+        }
+
+        final PGPPublicKey publicKey = service.getPublicKey();
         return new PublicKeyEncryptKeySession(getLogger(), publicKey, algo, armor);
     }
 

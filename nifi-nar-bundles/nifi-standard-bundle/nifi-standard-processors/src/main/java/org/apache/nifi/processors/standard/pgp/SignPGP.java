@@ -45,6 +45,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * The SignPGP processor attempts to create a signature of flow file contents when triggered.  The processor uses a
+ * {@link PGPKeyMaterialControllerService} to provide signature keys.
+ */
 
 @EventDriven
 @SideEffectFree

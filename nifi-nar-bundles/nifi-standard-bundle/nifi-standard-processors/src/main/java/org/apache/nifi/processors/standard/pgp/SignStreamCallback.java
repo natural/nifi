@@ -31,9 +31,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-
+/**
+ * This class encapsulates a sign operation over a pair of input and output streams.
+ *
+ */
 class SignStreamCallback implements ExtendedStreamCallback {
     private final SignStreamSession options;
+    public static final int KEY_ALGORITHM = 1;
 
     SignStreamCallback(SignStreamSession options) {
         this.options = options;
@@ -49,8 +53,7 @@ class SignStreamCallback implements ExtendedStreamCallback {
      * @throws PGPException when the input cannot be read as PGP data
      */
     static void sign(InputStream input, OutputStream output, OutputStream signature, SignStreamSession options) throws IOException, PGPException {
-        int keyAlgorithm = 1; // options.privateKey.getPublicKeyPacket().getAlgorithm();
-        JcaPGPContentSignerBuilder builder = new JcaPGPContentSignerBuilder(keyAlgorithm, options.signHashAlgorithm).setProvider("BC");
+        JcaPGPContentSignerBuilder builder = new JcaPGPContentSignerBuilder(KEY_ALGORITHM, options.signHashAlgorithm).setProvider("BC");
         PGPSignatureGenerator generator = new PGPSignatureGenerator(builder);
         generator.init(PGPSignature.BINARY_DOCUMENT, options.privateKey);
         copyAndUpdate(input, output, generator);

@@ -22,7 +22,7 @@ import org.apache.nifi.processor.ProcessSession;
 import org.bouncycastle.openpgp.PGPPrivateKey;
 
 /**
- *
+ * This class encapsulates a private key signing session.
  */
 public class SignStreamSession {
     FlowFile flowFile;

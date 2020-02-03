@@ -23,7 +23,6 @@ import org.apache.nifi.components.ValidationResult;
 import org.apache.nifi.context.PropertyContext;
 import org.apache.nifi.controller.AbstractControllerService;
 import org.apache.nifi.controller.ConfigurationContext;
-import org.apache.nifi.controller.ControllerServiceInitializationContext;
 import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.logging.ComponentLog;
 import org.apache.nifi.processor.util.StandardValidators;
@@ -34,16 +33,12 @@ import org.bouncycastle.openpgp.PGPPrivateKey;
 import org.bouncycastle.openpgp.PGPPublicKey;
 import org.bouncycastle.openpgp.PGPSecretKey;
 import org.bouncycastle.openpgp.operator.PBESecretKeyDecryptor;
-import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.Security;
 import java.util.ArrayList;
@@ -264,6 +259,14 @@ public class PGPKeyMaterialControllerService extends AbstractControllerService i
     }
 
     @Override
+    public char[] getPBEPassPhrase(PropertyContext context) {
+        if (context.getProperty(PBE_PASS_PHRASE).isSet()) {
+            return context.getProperty(PBE_PASS_PHRASE).getValue().toCharArray();
+        }
+        return null;
+    }
+
+    @Override
     public PGPPublicKey getPublicKey() {
         return getPublicKey(getConfigurationContext());
     }
@@ -273,13 +276,10 @@ public class PGPKeyMaterialControllerService extends AbstractControllerService i
         return getPrivateKey(getConfigurationContext());
     }
 
-    private char[] getPBEPassPhrase(PropertyContext context) {
-        if (context.getProperty(PBE_PASS_PHRASE).isSet()) {
-            return context.getProperty(PBE_PASS_PHRASE).getValue().toCharArray();
-        }
-        return null;
+    @Override
+    public char[] getPBEPassPhrase() {
+        return getPBEPassPhrase(getConfigurationContext());
     }
-
 
     @Override
     public Collection<ValidationResult> validateForEncrypt(PropertyContext context) {
@@ -354,4 +354,5 @@ public class PGPKeyMaterialControllerService extends AbstractControllerService i
                 .build());
         return problems;
     }
+
 }

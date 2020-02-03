@@ -23,11 +23,18 @@ import org.bouncycastle.openpgp.PGPPublicKey;
 import java.util.Collection;
 
 
+/**
+ * This defines the interface for the PGP key material service.
+ *
+ */
 public interface PGPKeyMaterialService extends ControllerService {
     PGPPublicKey getPublicKey(PropertyContext context);
     PGPPrivateKey getPrivateKey(PropertyContext context);
+    char[] getPBEPassPhrase(PropertyContext context);
+
     PGPPublicKey getPublicKey();
     PGPPrivateKey getPrivateKey();
+    char[] getPBEPassPhrase();
 
     Collection<ValidationResult> validateForEncrypt(PropertyContext context);
     Collection<ValidationResult> validateForDecrypt(PropertyContext context);

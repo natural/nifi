@@ -23,7 +23,7 @@ import org.bouncycastle.openpgp.operator.jcajce.JcePGPDataEncryptorBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePublicKeyKeyEncryptionMethodGenerator;
 
 /**
- *
+ * This class encapsulates a public key encryption session.
  */
 class PublicKeyEncryptKeySession extends AbstractEncryptStreamSession {
     PublicKeyEncryptKeySession(ComponentLog logger, PGPPublicKey publicKey, int algo, boolean armor) {

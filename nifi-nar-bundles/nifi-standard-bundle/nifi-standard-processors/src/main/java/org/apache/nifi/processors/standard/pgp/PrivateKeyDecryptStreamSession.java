@@ -26,6 +26,10 @@ import org.bouncycastle.openpgp.operator.jcajce.JcePublicKeyDataDecryptorFactory
 
 import java.io.InputStream;
 
+/**
+ * This class encapsulates a decryption session with a private key.
+ *
+ */
 class PrivateKeyDecryptStreamSession implements DecryptStreamSession {
     private final PublicKeyDataDecryptorFactory pkFactory;
     final ComponentLog logger;
