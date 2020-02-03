@@ -17,11 +17,18 @@
 package org.apache.nifi.processors.standard.pgp;
 
 import org.apache.nifi.logging.ComponentLog;
-import org.bouncycastle.openpgp.PGPEncryptedData;
-import org.bouncycastle.openpgp.PGPException;
-import java.io.InputStream;
+import org.bouncycastle.openpgp.PGPEncryptedDataGenerator;
+import org.bouncycastle.openpgp.PGPPublicKey;
+import org.bouncycastle.openpgp.operator.jcajce.JcePGPDataEncryptorBuilder;
+import org.bouncycastle.openpgp.operator.jcajce.JcePublicKeyKeyEncryptionMethodGenerator;
 
-interface DecryptStreamSession {
-    InputStream getInputStream(PGPEncryptedData packet) throws PGPException;
-    ComponentLog getLogger();
+/**
+ *
+ */
+class PublicKeyEncryptKeySession extends AbstractEncryptStreamSession {
+    PublicKeyEncryptKeySession(ComponentLog logger, PGPPublicKey publicKey, int algo, boolean armor) {
+        super(logger, armor);
+        generator = new PGPEncryptedDataGenerator(new JcePGPDataEncryptorBuilder(algo).setWithIntegrityPacket(true).setSecureRandom(random).setProvider("BC"));
+        generator.addMethod(new JcePublicKeyKeyEncryptionMethodGenerator(publicKey).setProvider("BC"));
+    }
 }

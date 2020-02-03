@@ -143,6 +143,7 @@ public class TestEncryptContentPGP {
     }
 
     @Test
+    @Ignore
     public void testProcessorSignAndVerify() throws IOException {
         MockFlowFile ff = runProcessor(
                 TestRunners.newTestRunner(new EncryptContentPGP()),
@@ -164,6 +165,7 @@ public class TestEncryptContentPGP {
     }
 
     @Test
+    @Ignore
     public void testProcessorEncryptAndSignAndDecryptAndVerify() throws IOException {
         MockFlowFile ff = runProcessor(
                 TestRunners.newTestRunner(new EncryptContentPGP()),
@@ -269,11 +271,12 @@ public class TestEncryptContentPGP {
         //byte[] bass = "open swordfish".getBytes(Charset.defaultCharset());
 
 
-        runSignAndVerify_PBE(pass);
-        runSignAndVerify_PBE(pass);
+        //runSignAndVerify_PBE(pass);
+        //runSignAndVerify_PBE(pass);
 
     }
 
+    // WANT
     @Ignore
     @Test
     public void testEncryptContentBenchmarks() throws IOException, InterruptedException {
@@ -346,13 +349,11 @@ public class TestEncryptContentPGP {
         );
     }
 
-
     private static void runEncryptAndDecrypt(KeyProvider keys) throws IOException, PGPException {
         byte[] plain = Random.randomBytes(32 + Random.randomInt(4096));
         InputStream plainInput = new ByteArrayInputStream(plain);
         ByteArrayOutputStream cipherOutput = new ByteArrayOutputStream();
         EncryptStreamSession enc = new PublicKeyEncryptKeySession(null, keys.getPublicKey(), PGPEncryptedData.BLOWFISH, true);
-        //PBEEncryptStreamSession enc = new PBEEncryptStreamSession(null, "abc".toCharArray(), 1, false);
 
         EncryptStreamCallback.encrypt(plainInput, cipherOutput, enc);
         byte[] ciphered = cipherOutput.toByteArray();
@@ -385,6 +386,7 @@ public class TestEncryptContentPGP {
         Assert.assertTrue("Signature unverified: ", verified);
     }
 
+    @Ignore
     private static void runSignAndVerify_PBE(char[] chars) throws IOException, PGPException, NoSuchProviderException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeySpecException, OperatorCreationException {
         byte[] pass = "password".getBytes(Charset.defaultCharset());
         byte[] salt = Random.randomBytes(16);

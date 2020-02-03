@@ -15,13 +15,22 @@
  * limitations under the License.
  */
 package org.apache.nifi.processors.standard.pgp;
+import org.apache.nifi.components.ValidationResult;
+import org.apache.nifi.context.PropertyContext;
+import org.apache.nifi.controller.ControllerService;
+import org.bouncycastle.openpgp.PGPPrivateKey;
+import org.bouncycastle.openpgp.PGPPublicKey;
+import java.util.Collection;
 
-import org.apache.nifi.logging.ComponentLog;
-import org.bouncycastle.openpgp.PGPEncryptedData;
-import org.bouncycastle.openpgp.PGPException;
-import java.io.InputStream;
 
-interface DecryptStreamSession {
-    InputStream getInputStream(PGPEncryptedData packet) throws PGPException;
-    ComponentLog getLogger();
+public interface PGPKeyMaterialService extends ControllerService {
+    PGPPublicKey getPublicKey(PropertyContext context);
+    PGPPrivateKey getPrivateKey(PropertyContext context);
+    PGPPublicKey getPublicKey();
+    PGPPrivateKey getPrivateKey();
+
+    Collection<ValidationResult> validateForEncrypt(PropertyContext context);
+    Collection<ValidationResult> validateForDecrypt(PropertyContext context);
+    Collection<ValidationResult> validateForSign(PropertyContext context);
+    Collection<ValidationResult> validateForVerify(PropertyContext context);
 }

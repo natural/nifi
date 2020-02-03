@@ -22,7 +22,6 @@ import org.bouncycastle.openpgp.PGPEncryptedDataList;
 import org.bouncycastle.openpgp.PGPException;
 import org.bouncycastle.openpgp.PGPLiteralData;
 import org.bouncycastle.openpgp.PGPObjectFactory;
-import org.bouncycastle.openpgp.PGPOnePassSignatureList;
 import org.bouncycastle.openpgp.PGPPBEEncryptedData;
 import org.bouncycastle.openpgp.PGPPrivateKey;
 import org.bouncycastle.openpgp.PGPPublicKeyEncryptedData;
@@ -36,9 +35,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Iterator;
 
-/**
- *
- */
+
 class DecryptStreamCallback implements ExtendedStreamCallback {
     private final DecryptStreamSession options;
 

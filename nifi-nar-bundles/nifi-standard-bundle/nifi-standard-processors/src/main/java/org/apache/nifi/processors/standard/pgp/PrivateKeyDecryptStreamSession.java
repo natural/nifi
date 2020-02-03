@@ -19,9 +19,29 @@ package org.apache.nifi.processors.standard.pgp;
 import org.apache.nifi.logging.ComponentLog;
 import org.bouncycastle.openpgp.PGPEncryptedData;
 import org.bouncycastle.openpgp.PGPException;
+import org.bouncycastle.openpgp.PGPPrivateKey;
+import org.bouncycastle.openpgp.PGPPublicKeyEncryptedData;
+import org.bouncycastle.openpgp.operator.PublicKeyDataDecryptorFactory;
+import org.bouncycastle.openpgp.operator.jcajce.JcePublicKeyDataDecryptorFactoryBuilder;
+
 import java.io.InputStream;
 
-interface DecryptStreamSession {
-    InputStream getInputStream(PGPEncryptedData packet) throws PGPException;
-    ComponentLog getLogger();
+class PrivateKeyDecryptStreamSession implements DecryptStreamSession {
+    private final PublicKeyDataDecryptorFactory pkFactory;
+    final ComponentLog logger;
+
+    PrivateKeyDecryptStreamSession(ComponentLog logger, PGPPrivateKey privateKey) {
+        this.logger = logger;
+        pkFactory = new JcePublicKeyDataDecryptorFactoryBuilder().setProvider("BC").build(privateKey);
+    }
+
+    public InputStream getInputStream(PGPEncryptedData packet) throws PGPException {
+        return ((PGPPublicKeyEncryptedData) packet).getDataStream(pkFactory);
+    }
+
+    @Override
+    public ComponentLog getLogger() {
+        return logger;
+    }
+
 }

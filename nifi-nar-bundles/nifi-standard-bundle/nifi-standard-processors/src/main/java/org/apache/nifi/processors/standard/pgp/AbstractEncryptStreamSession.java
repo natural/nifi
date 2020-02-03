@@ -17,11 +17,31 @@
 package org.apache.nifi.processors.standard.pgp;
 
 import org.apache.nifi.logging.ComponentLog;
-import org.bouncycastle.openpgp.PGPEncryptedData;
-import org.bouncycastle.openpgp.PGPException;
-import java.io.InputStream;
+import org.bouncycastle.openpgp.PGPEncryptedDataGenerator;
 
-interface DecryptStreamSession {
-    InputStream getInputStream(PGPEncryptedData packet) throws PGPException;
-    ComponentLog getLogger();
+import java.security.SecureRandom;
+
+class AbstractEncryptStreamSession implements EncryptStreamSession {
+    static final SecureRandom random = new SecureRandom();
+    PGPEncryptedDataGenerator generator;
+    private ComponentLog logger;
+    private boolean armor;
+
+    AbstractEncryptStreamSession(ComponentLog logger, boolean armor) {
+        this.logger = logger;
+        this.armor = armor;
+    }
+
+    public PGPEncryptedDataGenerator getDataGenerator() {
+        return generator;
+    }
+
+    public boolean getArmor() {
+        return armor;
+    }
+
+    public ComponentLog getLogger() {
+        return logger;
+    }
+
 }

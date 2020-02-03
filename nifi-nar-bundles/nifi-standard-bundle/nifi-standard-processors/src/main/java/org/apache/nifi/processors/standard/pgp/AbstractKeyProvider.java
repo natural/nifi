@@ -16,12 +16,33 @@
  */
 package org.apache.nifi.processors.standard.pgp;
 
-import org.apache.nifi.logging.ComponentLog;
-import org.bouncycastle.openpgp.PGPEncryptedData;
-import org.bouncycastle.openpgp.PGPException;
-import java.io.InputStream;
+import org.bouncycastle.openpgp.PGPPrivateKey;
+import org.bouncycastle.openpgp.PGPPublicKey;
+import org.bouncycastle.openpgp.PGPSecretKey;
 
-interface DecryptStreamSession {
-    InputStream getInputStream(PGPEncryptedData packet) throws PGPException;
-    ComponentLog getLogger();
+class AbstractKeyProvider implements KeyProvider {
+    PGPPublicKey publicKey;
+    PGPSecretKey secretKey;
+    PGPPrivateKey privateKey;
+
+    void init(PGPPublicKey publicKey, PGPSecretKey secretKey, PGPPrivateKey privateKey) {
+        this.publicKey = publicKey;
+        this.secretKey = secretKey;
+        this.privateKey = privateKey;
+    }
+
+    @Override
+    public PGPPublicKey getPublicKey() {
+        return publicKey;
+    }
+
+    @Override
+    public PGPSecretKey getSecretKey() {
+        return secretKey;
+    }
+
+    @Override
+    public PGPPrivateKey getPrivateKey() {
+        return privateKey;
+    }
 }
