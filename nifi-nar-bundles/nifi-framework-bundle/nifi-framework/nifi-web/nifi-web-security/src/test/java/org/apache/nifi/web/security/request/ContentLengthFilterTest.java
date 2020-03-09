@@ -69,9 +69,9 @@ public class ContentLengthFilterTest {
     public void testRequestsWithMissingContentLengthHeader() throws Exception {
         configureAndStartServer(readFullyAndRespondOK, -1);
 
-        // This shows that the ContentLengthFilter rejects a request that does not have a content-length header.
+        // This shows that the ContentLengthFilter allows a request that does not have a content-length header.
         String response = localConnector.getResponse("POST / HTTP/1.0\r\n\r\n");
-        Assert.assertTrue(StringUtils.containsIgnoreCase(response, "411 Length Required"));
+        Assert.assertFalse(StringUtils.containsIgnoreCase(response, "411 Length Required"));
     }
 
 

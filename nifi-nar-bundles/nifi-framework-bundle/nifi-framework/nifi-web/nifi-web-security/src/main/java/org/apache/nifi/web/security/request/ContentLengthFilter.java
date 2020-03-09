@@ -54,10 +54,11 @@ public class ContentLengthFilter implements Filter {
         String maxLength = config.getInitParameter(MAX_LENGTH_INIT_PARAM);
         int length = maxLength == null ? MAX_LENGTH_DEFAULT : Integer.parseInt(maxLength);
         if (length < 0) {
-            length = MAX_LENGTH_DEFAULT;
-            // throw new ServletException("Invalid max request length.");
+            // length = MAX_LENGTH_DEFAULT;
+            throw new ServletException("Invalid max request length.");
         }
         maxContentLength = length;
+        logger.info("Max content length set: " + maxLength + "b");
     }
 
     @Override
@@ -69,28 +70,23 @@ public class ContentLengthFilter implements Filter {
         // that don't use it.  So even though an attacker may provide a large body in a GET request, the body should go
         // unread and a size filter is unneeded at best.  See RFC 2616 section 14.13, and RFC 1945 section 10.4.
         boolean willReadInputStream = httpMethod.equalsIgnoreCase("POST") || httpMethod.equalsIgnoreCase("PUT");
-        if (!willReadInputStream || maxContentLength <= 0) {
-            logger.info("skipping check of request with method {} and maximum {}", httpMethod, maxContentLength);
+        if (!willReadInputStream) {
+            logger.info("No length check of request with method {} and maximum {}", httpMethod, maxContentLength);
             next.doFilter(request, response);
             return;
         }
 
         HttpServletResponse httpResponse = (HttpServletResponse) response;
         int contentLength = request.getContentLength();
-        if (contentLength < 0) {
-            // Request without a content length is rejected:
-            logger.info("request rejected with negative or unknown content-length {}", contentLength);
-            httpResponse.setContentType("text/plain");
-            httpResponse.setStatus(HttpServletResponse.SC_LENGTH_REQUIRED);
-        } else if (contentLength > maxContentLength) {
+        if (contentLength > maxContentLength) {
             // Request with a client-specified length greater than our max is rejected:
-            logger.info("request rejected with content-length {} greater than maximum {}", contentLength, maxContentLength);
+            logger.info("Content length check rejected request with content-length {} greater than maximum {}", contentLength, maxContentLength);
             httpResponse.setContentType("text/plain");
             httpResponse.getOutputStream().write("Payload Too large".getBytes());
             httpResponse.setStatus(HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE);
         } else {
             // If or when the request is read, this limits the read to our max:
-            logger.info("request allowed with content-length {} less than maximum {}", contentLength, maxContentLength);
+            logger.info("Content length check allowed request with content-length {} less than maximum {}", contentLength, maxContentLength);
             next.doFilter(new LimitedContentLengthRequest(httpRequest, maxContentLength), response);
         }
     }

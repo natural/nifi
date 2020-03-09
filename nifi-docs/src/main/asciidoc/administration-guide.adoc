@@ -3247,6 +3247,9 @@ For example, when running in a Docker container or behind a proxy (e.g. localhos
 host[:port] that NiFi is bound to.
 |`nifi.web.proxy.context.path`|A comma separated list of allowed HTTP X-ProxyContextPath, X-Forwarded-Context, or X-Forwarded-Prefix header values to consider. By default, this value is
 blank meaning all requests containing a proxy context path are rejected. Configuring this property would allow requests where the proxy path is contained in this listing.
+|`nifi.web.max.content.size`|The maximum size for regular PUT and POST requests.  The default value is `10 MB`.
+|`nifi.web.max.content.size.large`|The alternate, larger maximum size for PUT and POST requests.  The default value is `100 MB`.
+|`nifi.web.max.content.size.large.path.*`|The paths for larger PUT and POST.  The default is a single key with value `/nifi-api`.
 |====
 
 [[security_properties]]

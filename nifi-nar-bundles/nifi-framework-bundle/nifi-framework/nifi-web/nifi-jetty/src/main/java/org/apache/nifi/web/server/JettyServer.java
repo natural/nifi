@@ -592,7 +592,6 @@ public class JettyServer implements NiFiServer, ExtensionUiLoader {
         // add HTTP security headers to all responses
         final String ALL_PATHS = "/*";
         ArrayList<Class<? extends Filter>> filters = new ArrayList<>(Arrays.asList(
-                ContentLengthFilter.class,
                 XFrameOptionsFilter.class,
                 ContentSecurityPolicyFilter.class,
                 XSSProtectionFilter.class));
@@ -600,6 +599,7 @@ public class JettyServer implements NiFiServer, ExtensionUiLoader {
             filters.add(StrictTransportSecurityFilter.class);
         }
         filters.forEach( (filter) -> addFilters(filter, ALL_PATHS, webappContext));
+        addContentLengthFilter(contextPath, ALL_PATHS, webappContext);
 
         try {
             // configure the class loader - webappClassLoader -> jetty nar -> web app's nar -> ...
@@ -610,6 +610,25 @@ public class JettyServer implements NiFiServer, ExtensionUiLoader {
 
         logger.info("Loading WAR: " + warFile.getAbsolutePath() + " with context path set to " + contextPath);
         return webappContext;
+    }
+
+    private void addContentLengthFilter(String contextPath, String pathSpec, WebAppContext webappContext) {
+        final FilterHolder holder = new FilterHolder(ContentLengthFilter.class);
+        final Map<String, String> largePaths = props.getWebMaxContentSizeLargePaths();
+        int size;
+
+        if (!largePaths.containsKey(contextPath)) {
+            size = DataUnit.parseDataSize(props.getWebMaxContentSize(), DataUnit.B).intValue();
+        } else {
+            size = DataUnit.parseDataSize(props.getWebMaxContentSizeLarge(), DataUnit.B).intValue();
+        }
+        holder.setInitParameters(new HashMap<String, String>() {{
+            put("maxContentLength", String.valueOf(size));
+        }});
+
+        logger.info("Adding Content Length Filter to context at pathSpec: " + contextPath + " with max size: " + size + "b");
+        // NB: the use of pathSpec vs contextPath
+        webappContext.addFilter(holder, pathSpec, EnumSet.allOf(DispatcherType.class));
     }
 
     private void addFilters(Class<? extends Filter> clazz, String path, WebAppContext webappContext) {

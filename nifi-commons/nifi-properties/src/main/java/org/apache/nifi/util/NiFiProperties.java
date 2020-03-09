@@ -193,6 +193,9 @@ public abstract class NiFiProperties {
     public static final String WEB_MAX_HEADER_SIZE = "nifi.web.max.header.size";
     public static final String WEB_PROXY_CONTEXT_PATH = "nifi.web.proxy.context.path";
     public static final String WEB_PROXY_HOST = "nifi.web.proxy.host";
+    public static final String WEB_MAX_CONTENT_SIZE = "nifi.web.max.content.size";
+    public static final String WEB_MAX_CONTENT_SIZE_LARGE = "nifi.web.max.content.size.large";
+    public static final String WEB_MAX_CONTENT_SIZE_LARGE_PREFIX = "nifi.web.max.content.size.large.path.";
 
     // ui properties
     public static final String UI_BANNER_TEXT = "nifi.ui.banner.text";
@@ -266,6 +269,9 @@ public abstract class NiFiProperties {
     public static final int DEFAULT_WEB_THREADS = 200;
     public static final String DEFAULT_WEB_MAX_HEADER_SIZE = "16 KB";
     public static final String DEFAULT_WEB_WORKING_DIR = "./work/jetty";
+    public static final String DEFAULT_WEB_MAX_CONTENT_SIZE = "10 MB";
+    public static final String DEFAULT_WEB_MAX_CONTENT_SIZE_LARGE = "100 MB";
+    public static final String DEFAULT_WEB_MAX_CONTENT_SIZE_LARGE_PATHS = "/nifi-api";
     public static final String DEFAULT_NAR_WORKING_DIR = "./work/nar";
     public static final String DEFAULT_COMPONENT_DOCS_DIRECTORY = "./work/docs/components";
     public static final String DEFAULT_NAR_LIBRARY_DIR = "./lib";
@@ -641,6 +647,25 @@ public abstract class NiFiProperties {
 
     public String getWebMaxHeaderSize() {
         return getProperty(WEB_MAX_HEADER_SIZE, DEFAULT_WEB_MAX_HEADER_SIZE);
+    }
+
+    public String getWebMaxContentSize() {
+        return getProperty(WEB_MAX_CONTENT_SIZE, DEFAULT_WEB_MAX_CONTENT_SIZE);
+    }
+
+    public String getWebMaxContentSizeLarge() {
+        return getProperty(WEB_MAX_CONTENT_SIZE_LARGE, DEFAULT_WEB_MAX_CONTENT_SIZE_LARGE);
+    }
+
+    public Map<String, String> getWebMaxContentSizeLargePaths() {
+        final Map<String, String> paths = new HashMap<>();
+        for (String propertyName : getPropertyKeys()) {
+            if (StringUtils.startsWith(propertyName, WEB_MAX_CONTENT_SIZE_LARGE_PREFIX)) {
+                final String key = StringUtils.substringAfter(propertyName, WEB_MAX_CONTENT_SIZE_LARGE_PREFIX);
+                paths.put(key, getProperty(propertyName));
+            }
+        }
+        return paths;
     }
 
     public int getWebThreads() {
