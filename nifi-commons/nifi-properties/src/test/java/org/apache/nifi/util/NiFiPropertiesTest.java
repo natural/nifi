@@ -261,4 +261,42 @@ public class NiFiPropertiesTest {
         // Expect RuntimeException thrown
         assertEquals(Integer.parseInt(portValue), clusterProtocolAddress.getPort());
     }
+
+    @Test
+    public void testShouldHaveReasonableMaxContentLengthValues() {
+        // Arrange with default values:
+        NiFiProperties properties = NiFiProperties.createBasicNiFiProperties(null, new HashMap<String, String>() {{
+        }});
+
+        // Assert defaults match expectations:
+        assertEquals(properties.getWebMaxContentSize(), "10 MB");
+        assertEquals(properties.getWebMaxContentSizeLarge(), "100 MB");
+
+        // Re-arrange with specific values:
+        final String size = "size value";
+        final String large = "large size value";
+        properties = NiFiProperties.createBasicNiFiProperties(null, new HashMap<String, String>() {{
+            put(NiFiProperties.WEB_MAX_CONTENT_SIZE, size);
+            put(NiFiProperties.WEB_MAX_CONTENT_SIZE_LARGE, large);
+        }});
+
+        // Assert specific values are used:
+        assertEquals(properties.getWebMaxContentSize(),  size);
+        assertEquals(properties.getWebMaxContentSizeLarge(), large);
+
+        // Re-arrange with large paths:
+        final String path = "default";
+        final String other = "other";
+        properties = NiFiProperties.createBasicNiFiProperties(null, new HashMap<String, String>() {{
+            put(NiFiProperties.WEB_MAX_CONTENT_SIZE_LARGE_PATH_PREFIX + path, path);
+            put(NiFiProperties.WEB_MAX_CONTENT_SIZE_LARGE_PATH_PREFIX + other, other);
+        }});
+
+        // Assert specific paths are used:
+        final Map<String, String> paths = properties.getWebMaxContentSizeLargePaths();
+        assertTrue(paths.containsKey(path));
+        assertTrue(paths.containsKey(other));
+        assertEquals(path, paths.get(path));
+        assertEquals(other, paths.get(other));
+    }
 }

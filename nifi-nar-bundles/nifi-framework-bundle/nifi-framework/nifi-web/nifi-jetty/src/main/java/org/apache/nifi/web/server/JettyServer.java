@@ -617,7 +617,7 @@ public class JettyServer implements NiFiServer, ExtensionUiLoader {
         final Map<String, String> largePaths = props.getWebMaxContentSizeLargePaths();
         int size;
 
-        if (!largePaths.containsKey(contextPath)) {
+        if (!largePaths.containsValue(contextPath)) {
             size = DataUnit.parseDataSize(props.getWebMaxContentSize(), DataUnit.B).intValue();
         } else {
             size = DataUnit.parseDataSize(props.getWebMaxContentSizeLarge(), DataUnit.B).intValue();

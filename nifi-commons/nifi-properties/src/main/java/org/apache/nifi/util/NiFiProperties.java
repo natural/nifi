@@ -195,7 +195,7 @@ public abstract class NiFiProperties {
     public static final String WEB_PROXY_HOST = "nifi.web.proxy.host";
     public static final String WEB_MAX_CONTENT_SIZE = "nifi.web.max.content.size";
     public static final String WEB_MAX_CONTENT_SIZE_LARGE = "nifi.web.max.content.size.large";
-    public static final String WEB_MAX_CONTENT_SIZE_LARGE_PREFIX = "nifi.web.max.content.size.large.path.";
+    public static final String WEB_MAX_CONTENT_SIZE_LARGE_PATH_PREFIX = "nifi.web.max.content.size.large.path.";
 
     // ui properties
     public static final String UI_BANNER_TEXT = "nifi.ui.banner.text";
@@ -659,10 +659,9 @@ public abstract class NiFiProperties {
 
     public Map<String, String> getWebMaxContentSizeLargePaths() {
         final Map<String, String> paths = new HashMap<>();
-        for (String propertyName : getPropertyKeys()) {
-            if (StringUtils.startsWith(propertyName, WEB_MAX_CONTENT_SIZE_LARGE_PREFIX)) {
-                final String key = StringUtils.substringAfter(propertyName, WEB_MAX_CONTENT_SIZE_LARGE_PREFIX);
-                paths.put(key, getProperty(propertyName));
+        for (final String key : getPropertyKeys()) {
+            if (StringUtils.startsWith(key, WEB_MAX_CONTENT_SIZE_LARGE_PATH_PREFIX)) {
+                paths.put(StringUtils.substringAfter(key, WEB_MAX_CONTENT_SIZE_LARGE_PATH_PREFIX), getProperty(key));
             }
         }
         return paths;

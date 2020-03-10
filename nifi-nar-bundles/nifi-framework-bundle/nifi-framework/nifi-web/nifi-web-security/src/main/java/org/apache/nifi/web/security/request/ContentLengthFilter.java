@@ -54,7 +54,6 @@ public class ContentLengthFilter implements Filter {
         String maxLength = config.getInitParameter(MAX_LENGTH_INIT_PARAM);
         int length = maxLength == null ? MAX_LENGTH_DEFAULT : Integer.parseInt(maxLength);
         if (length < 0) {
-            // length = MAX_LENGTH_DEFAULT;
             throw new ServletException("Invalid max request length.");
         }
         maxContentLength = length;
@@ -69,7 +68,7 @@ public class ContentLengthFilter implements Filter {
         // Check the HTTP method because the spec says clients don't have to send a content-length header for methods
         // that don't use it.  So even though an attacker may provide a large body in a GET request, the body should go
         // unread and a size filter is unneeded at best.  See RFC 2616 section 14.13, and RFC 1945 section 10.4.
-        boolean willReadInputStream = httpMethod.equalsIgnoreCase("POST") || httpMethod.equalsIgnoreCase("PUT");
+        boolean willReadInputStream = maxContentLength > 0 && (httpMethod.equalsIgnoreCase("POST") || httpMethod.equalsIgnoreCase("PUT"));
         if (!willReadInputStream) {
             logger.info("No length check of request with method {} and maximum {}", httpMethod, maxContentLength);
             next.doFilter(request, response);

@@ -144,7 +144,9 @@
         <nifi.web.max.header.size>16 KB</nifi.web.max.header.size>
         <nifi.web.proxy.context.path />
         <nifi.web.proxy.host />
-
+        <nifi.web.max.content.size>10 MB</nifi.web.max.content.size>
+        <nifi.web.max.content.size.large>100 MB</nifi.web.max.content.size.large>
+        <nifi.web.max.content.size.large.path.default>/nifi-api</nifi.web.max.content.size.large.path.default>
         <!-- nifi.properties: security properties -->
         <nifi.security.keystore />
         <nifi.security.keystoreType />
